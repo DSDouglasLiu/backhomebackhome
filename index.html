@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>活動車流人流退場管理系統</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root{
+      --bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
+      --card-bg: rgba(255,255,255,0.75);
+      --text: #0f172a;
+    }
+    body.dark{
+      --bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
+      --card-bg: rgba(15,23,42,0.55);
+      --text: #e2e8f0;
+    }
+    body{
+      margin:0;
+      min-height:100vh;
+      background:var(--bg);
+      backdrop-filter: blur(14px);
+      font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;
+      color:var(--text);
+    }
+    .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
+    h1{margin:0 0 16px;}
+    .card{background:var(--card-bg);border:1px solid rgba(255,255,255,0.3);border-radius:16px;padding:16px;margin:12px 0;}
+    .hide{display:none;}
+    .sheet-tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;}
+    .btn-tab{background:transparent;border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:6px 10px;font-size:.78rem;cursor:pointer;color:inherit;}
+    .btn-tab.active{background:rgba(255,255,255,.25);}
+    .veh-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+    .veh-card{background:rgba(255,255,255,0.85);border-radius:14px;border:1px solid rgba(148,163,184,0.25);padding:12px;}
+    body.dark .veh-card{background:rgba(15,23,42,0.28);}
+    .veh-title{font-weight:600;display:flex;justify-content:space-between;gap:6px;}
+    .steps{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+    .step-btn{border:1px solid rgba(148,163,184,0.4);border-radius:12px;padding:3px 8px;background:rgba(255,255,255,0.7);font-size:.7rem;cursor:pointer;color:#000;}
+    .step-btn.done{background:rgba(34,197,94,0.08);border-color:rgba(34,197,94,0.5);}
+    .step-btn.locked{opacity:.4;pointer-events:none;}
+    .step-time{font-size:.65rem;opacity:.7;margin-left:4px;}
+    .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;}
+    .notif.show{opacity:1;transform:translateY(0);}
+    @media(max-width:768px){.veh-list{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+      <div>
+        <h1>活動車流人流退場管理系統</h1>
+        <div style="font-size:.7rem;opacity:.6;">(外部前端版，給 Google Sites 嵌 URL 用)</div>
+      </div>
+      <div id="signin"></div>
+      <div id="userInfo" class="hide" style="font-size:.75rem;"></div>
+    </div>
+
+    <div id="tabs" class="card hide">
+      <div class="sheet-tabs" id="sheetTabs"></div>
+    </div>
+
+    <div id="content" class="hide">
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:.85rem;">目前工作表：<b id="currentSheet"></b></div>
+          <div style="font-size:.7rem;opacity:.6;">點一下狀態＝寫入時間，有值再點會問你要不要改時間</div>
+        </div>
+        <button onclick="reloadSheet()">重新載入</button>
+      </div>
+      <div id="vehList" class="veh-list"></div>
+    </div>
+  </div>
+
+  <div id="notif" class="notif"></div>
+
+<script>
+/* ① 這裡換成你的 client ID */
+const GOOGLE_CLIENT_ID = '504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com';
+/* ② 這裡換成你部署出來的 Apps Script Web App URL */
+const API_BASE = 'https://script.google.com/macros/s/你的exec/exec';
+
+const SHEET_CONFIGS = [
+  { key:'地區專車車訊（遊覽車平台）', sheet:'地區專車車訊（遊覽車平台）', steps:[
+    '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車已上遊覽車平台','車已離開遊覽車平台'
+  ]},
+  { key:'地區專車退場（禪堂平台）', sheet:'地區專車退場（禪堂平台）', steps:[
+    '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車已離開禪堂平台'
+  ]},
+  { key:'水陸專車退場', sheet:'水陸專車退場', steps:[
+    '已 Call 車排車隊','已排好車隊','退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','車已離開遊覽車平台'
+  ]},
+  { key:'國光號退場', sheet:'國光號退場', steps:[
+    '是否經過長庚','退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台','上車人數'
+  ]},
+  { key:'288法青退場', sheet:'288法青退場', steps:[
+    '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
+  ]}
+];
+
+let currentUser = null;
+let currentSheetKey = SHEET_CONFIGS[0].key;
+let sheetData = [];
+
+window.onload = function(){
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredential
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('signin'),
+    { theme:'outline', size:'large' }
+  );
+  buildTabs();
+};
+
+async function handleCredential(resp){
+  const r = await fetch(API_BASE + '?action=verify', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ idToken: resp.credential })
+  });
+  const j = await r.json();
+  if (j.error){ showNotif('登入失敗：'+j.error,true); return; }
+  currentUser = j;
+  document.getElementById('signin').classList.add('hide');
+  const ui = document.getElementById('userInfo');
+  ui.classList.remove('hide');
+  ui.innerHTML = `${j.name||''} &lt;${j.email}&gt; ｜ 權限：<b>${j.permission}</b>`;
+  document.getElementById('tabs').classList.remove('hide');
+  document.getElementById('content').classList.remove('hide');
+  loadSheetData(currentSheetKey);
+}
+
+function buildTabs(){
+  const box = document.getElementById('sheetTabs');
+  box.innerHTML = '';
+  SHEET_CONFIGS.forEach(cfg=>{
+    const b = document.createElement('button');
+    b.className = 'btn-tab' + (cfg.key===currentSheetKey?' active':'');
+    b.textContent = cfg.key;
+    b.onclick = () => {
+      currentSheetKey = cfg.key;
+      document.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      loadSheetData(currentSheetKey);
+    };
+    box.appendChild(b);
+  });
+}
+
+async function loadSheetData(key){
+  const cfg = SHEET_CONFIGS.find(s=>s.key===key);
+  document.getElementById('currentSheet').textContent = cfg.key;
+  document.getElementById('vehList').textContent = '讀取中...';
+  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+  const j = await r.json();
+  if (j.error){ document.getElementById('vehList').textContent = '❌ '+j.error; return; }
+  sheetData = j.values || [];
+  renderVehicles(cfg, sheetData);
+}
+
+function renderVehicles(cfg, data){
+  const header = data[0] || [];
+  const box = document.getElementById('vehList');
+  box.innerHTML = '';
+  for (let i=1;i<data.length;i++){
+    const row = data[i];
+    if (!row || !row.length) continue;
+    const card = document.createElement('div');
+    card.className = 'veh-card';
+    const no = row[0] || '';
+    const area = row[1] || '';
+    const car = row[2] || '';
+    card.innerHTML = `<div class="veh-title"><span>#${no||i} ${car?('🚍'+car):''}</span><span style="font-size:.65rem;opacity:.6;">${area||''}</span></div>`;
+    const stepsBox = document.createElement('div');
+    stepsBox.className = 'steps';
+    cfg.steps.forEach(st=>{
+      const colIdx = header.indexOf(st);
+      const btn = document.createElement('button');
+      btn.className = 'step-btn';
+      btn.textContent = st;
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'step-time';
+      const t = (colIdx!==-1 && row[colIdx]) ? String(row[colIdx]) : '';
+      timeSpan.textContent = t;
+      if (t) btn.classList.add('done');
+      const prevOk = prevDone(cfg, header, row, st);
+      if (!prevOk && !t) btn.classList.add('locked');
+      btn.appendChild(timeSpan);
+      btn.onclick = () => onStepClick(cfg, i+1, header, st, t, btn, timeSpan);
+      stepsBox.appendChild(btn);
+    });
+    card.appendChild(stepsBox);
+    box.appendChild(card);
+  }
+}
+
+function prevDone(cfg, header, row, st){
+  const idx = cfg.steps.indexOf(st);
+  if (idx === 0) return true;
+  const prevName = cfg.steps[idx-1];
+  const colIdx = header.indexOf(prevName);
+  if (colIdx === -1) return true;
+  return !!row[colIdx];
+}
+
+async function onStepClick(cfg, rowNumber, header, st, oldVal, btn, span){
+  if (!currentUser) return alert('請先登入');
+  if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
+
+  let valueToWrite;
+  if (oldVal){
+    const m = prompt('此狀態已有時間，要修改嗎？', oldVal);
+    if (m===null || m==='') return;
+    valueToWrite = m;
+  }else{
+    valueToWrite = new Date().toLocaleString('zh-TW',{hour12:false});
+  }
+
+  const body = {
+    sheet: cfg.sheet,
+    email: currentUser.email,
+    writes: [{ row: rowNumber, col: colIdx+1, value: valueToWrite }]
+  };
+  const r = await fetch(API_BASE + '?action=update', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const j = await r.json();
+  if (!j.ok){ showNotif('寫入失敗：'+(j.error||'unknown'), true); return; }
+  span.textContent = valueToWrite;
+  btn.classList.add('done');
+  loadSheetData(currentSheetKey);
+  showNotif('已寫入「'+st+'」', false);
+}
+
+function reloadSheet(){ loadSheetData(currentSheetKey); }
+
+function showNotif(msg, isErr){
+  const box = document.getElementById('notif');
+  box.textContent = msg;
+  box.style.background = isErr ? 'rgba(248,113,113,.9)' : 'rgba(15,23,42,.85)';
+  box.classList.add('show');
+  setTimeout(()=>box.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
+fb

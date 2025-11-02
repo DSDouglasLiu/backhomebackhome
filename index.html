@@ -1,237 +1,240 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>活動車流人流退場管理系統</title>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <style>
-    :root{
-      --bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
-      --card-bg: rgba(255,255,255,0.75);
-      --text: #0f172a;
-    }
-    body.dark{
-      --bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
-      --card-bg: rgba(15,23,42,0.55);
-      --text: #e2e8f0;
-    }
-    body{
-      margin:0;
-      min-height:100vh;
-      background:var(--bg);
-      backdrop-filter: blur(14px);
-      font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;
-      color:var(--text);
-    }
-    .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
-    h1{margin:0 0 16px;}
-    .card{background:var(--card-bg);border:1px solid rgba(255,255,255,0.3);border-radius:16px;padding:16px;margin:12px 0;}
-    .hide{display:none;}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>活動車流人流退場管理系統</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root{
+      --bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
+      --card-bg: rgba(255,255,255,0.75);
+      --text: #0f172a;
+    }
+    body.dark{
+      --bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
+      --card-bg: rgba(15,23,42,0.55);
+      --text: #e2e8f0;
+    }
+    body{
+      margin:0;
+      min-height:100vh;
+      background:var(--bg);
+      backdrop-filter: blur(14px);
+      font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;
+      color:var(--text);
+    }
+    .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
+    h1{margin:0 0 16px;}
+    .card{background:var(--card-bg);border:1px solid rgba(255,255,255,0.3);border-radius:16px;padding:16px;margin:12px 0;}
+    .hide{display:none;}
 
-    /* tab 列 */
-    .sheet-tabs{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;}
-    .btn-tab{
-      background:#e5e7eb;
-      border:1px solid #cbd5f5;
-      border-radius:4px;
-      padding:6px 22px;
-      font-size:.8rem;
-      cursor:pointer;
-      color:#000;
-      min-width:170px;
-      text-align:center;
-    }
-    .btn-tab.active{
-      background:#1f6fe5;
-      color:#fff;
-      border-color:#1f6fe5;
-    }
-    #reloadBtn{
-      margin-left:auto;
-      background:#fff;
-      border:1px solid #cbd5f5;
-      border-radius:4px;
-      padding:6px 22px;
-      cursor:pointer;
-    }
+    /* tab 列 */
+    .sheet-tabs{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;}
+    .btn-tab{
+      background:#e5e7eb;
+      border:1px solid #cbd5f5;
+      border-radius:4px;
+      padding:6px 22px;
+      font-size:.8rem;
+      cursor:pointer;
+      color:#000;
+      min-width:170px;
+      text-align:center;
+    }
+    .btn-tab.active{
+      background:#1f6fe5;
+      color:#fff;
+      border-color:#1f6fe5;
+    }
+    #reloadBtn{
+      margin-left:auto;
+      background:#fff;
+      border:1px solid #cbd5f5;
+      border-radius:4px;
+      padding:6px 22px;
+      cursor:pointer;
+    }
 
-    /* 車卡片：一列兩輛 */
-    .veh-list{
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(480px, 1fr));
-      gap:12px;
-      margin-top:16px;
-    }
-    .veh-card{
-      background:rgba(255,255,255,0.85);
-      border-radius:14px;
-      border:1px solid rgba(148,163,184,0.25);
-      padding:14px 14px 10px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    body.dark .veh-card{background:rgba(15,23,42,0.28);}
-    .veh-title-main{font-weight:600;font-size:1rem;margin-bottom:2px;}
-    .veh-title-sub{font-size:.85rem;opacity:.7;}
+    /* 車卡片：一列兩輛 */
+    .veh-list{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(480px, 1fr));
+      gap:12px;
+      margin-top:16px;
+    }
+    .veh-card{
+      background:rgba(255,255,255,0.85);
+      border-radius:14px;
+      border:1px solid rgba(148,163,184,0.25);
+      padding:14px 14px 10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    body.dark .veh-card{background:rgba(15,23,42,0.28);}
+    .veh-title-main{font-weight:600;font-size:1rem;margin-bottom:2px;}
+    .veh-title-sub{font-size:.85rem;opacity:.7;}
 
-    .step-row{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      margin-bottom:3px; /* 上下 3px */
-    }
-    /* 未按過：藍底白字 */
-    .step-btn{
-      border:0;
-      border-radius:10px;
-      padding:6px 12px 7px;
-      background:#0f6efc;
-      color:#fff;
-      font-size:.74rem;
-      cursor:pointer;
-      flex:0 0 auto;
-      min-width:170px;
-      text-align:center;
-    }
-    /* 已按過：灰要深一點 */
-    .step-btn.done{
-      background:#cbd5e1;
-      color:#0f172a;
-      cursor:pointer;
-    }
-    /* 鎖住的 */
-    .step-btn.locked{
-      background:#94a3b8;
-      color:#0f172a;
-      opacity:.65;
-      cursor:not-allowed;
-    }
-    .step-time{
-      font-size:.7rem;
-      color:rgba(15,23,42,.55);
-      min-width:70px;
-      text-align:right;
-    }
+    .step-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:3px; /* 上下 3px */
+    }
+    /* 未按過：藍底白字 */
+    .step-btn{
+      border:0;
+      border-radius:10px;
+      padding:6px 12px 7px;
+      background:#0f6efc;
+      color:#fff;
+      font-size:.74rem;
+      cursor:pointer;
+      flex:0 0 auto;
+      min-width:170px;
+      text-align:center;
+    }
+    /* 已按過：灰要深一點 */
+    .step-btn.done{
+      background:#cbd5e1;
+      color:#0f172a;
+      cursor:pointer;
+    }
+    /* 鎖住的 (btn:disabled 會自動套用) */
+    .step-btn:disabled,
+    .step-btn.locked{
+      background:#94a3b8;
+      color:#0f172a;
+      opacity:.65;
+      cursor:not-allowed;
+    }
+    .step-time{
+      font-size:.7rem;
+      color:rgba(15,23,42,.55);
+      min-width:70px;
+      text-align:right;
+    }
 
-    /* 下拉 */
-    .step-select{
-      min-width:170px;
-      border-radius:8px;
-      padding:5px 8px;
-      border:1px solid #cbd5e1;
-      background:#fff;
-      font-size:.72rem;
-    }
+    /* 下拉 */
+    .step-select{
+      min-width:170px;
+      border-radius:8px;
+      padding:5px 8px;
+      border:1px solid #cbd5e1;
+      background:#fff;
+      font-size:.72rem;
+    }
 
-    .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;}
-    .notif.show{opacity:1;transform:translateY(0);}
+    .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;}
+    .notif.show{opacity:1;transform:translateY(0);}
 
-    @media(max-width:768px){
-      .veh-list{grid-template-columns:1fr;}
-      .sheet-tabs{gap:10px;}
-    }
-  </style>
+    @media(max-width:768px){
+      .veh-list{grid-template-columns:1fr;}
+      .sheet-tabs{gap:10px;}
+    }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-      <div>
-        <h1>活動車流人流退場管理系統</h1>
-      </div>
-      <div id="signin"></div>
-      <div id="userInfo" class="hide" style="font-size:.75rem;"></div>
-    </div>
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+      <div>
+        <h1>活動車流人流退場管理系統</h1>
+      </div>
+      <div id="signin"></div>
+      <div id="userInfo" class="hide" style="font-size:.75rem;"></div>
+    </div>
 
-    <!-- tabs + 重新載入 -->
-    <div id="tabs" class="card hide" style="padding-bottom:6px;">
-      <div class="sheet-tabs" id="sheetTabs"></div>
-    </div>
+        <div id="tabs" class="card hide" style="padding-bottom:6px;">
+      <div class="sheet-tabs" id="sheetTabs"></div>
+    </div>
 
-    <div id="content" class="hide">
-      <div id="vehList" class="veh-list"></div>
-    </div>
-  </div>
+    <div id="content" class="hide">
+      <div id="vehList" class="veh-list"></div>
+    </div>
+  </div>
 
-  <div id="notif" class="notif"></div>
+  <div id="notif" class="notif"></div>
 
 <script>
+// --- 修正：所有 JS 程式碼合併到此區塊 ---
+
 const GOOGLE_CLIENT_ID = '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com';
 const API_BASE = 'https://script.google.com/macros/s/AKfycbxbeknXeJ2s2NnIqTwIwNdZnsbiI9UlGkQpSGfHq2TlmnITZ75Ub4ySwn6UGmJk3AXjNg/exec';
 
 const SHEET_CONFIGS = [
-  {
-    key: '地區專車退場（遊覽車平台）',
-    sheet: '地區專車退場（遊覽車平台）',
-    steps: [
-      '車長通知行李到齊',
-      'Call 車上行李',
-      '車已上遊覽車平台',
-      '車前往排車隊',
-      '車暫停位置',          // ← 這個要變下拉
-      '退場人員已到齊',
-      '已 Call 車上遊覽車平台',
-      '人已前往平台',
-      '車第二次上遊覽車平台',
-      '車已離開遊覽車平台'
-    ]
-  },
-  {
-    key: '地區專車退場（禪堂平台）',
-    sheet: '地區專車退場（禪堂平台）',
-    steps: [
-      '車長通知行李到齊',
-      'Call 車上行李',
-      '車已上遊覽車平台',
-      '車前往排車隊',
-      '車暫停位置',          // ← 這個要變下拉
-      '車已離開禪堂平台'
-    ]
-  },
-  {
-    key: '水陸專車退場',
-    sheet: '水陸專車退場',
-    steps: [
-      '已 Call 車排車隊',
-      '已排好車隊',
-      '退場人員已到齊',
-      '已 Call 車上遊覽車平台',
-      '車已上遊覽車平台',
-      '車暫停位置',          // ← 這個要變下拉
-      '車已離開遊覽車平台'
-    ]
-  },
-  {
-    key: '國光號退場',
-    sheet: '國光號退場',
-    steps: [
-      '是否經過長庚',
-      '退場人員已到齊',
-      '車已經上遊覽車平台',
-      '車已經離開遊覽車平台',
-      '上車人數'
-    ]
-  },
-  {
-    key: '288法青退場',
-    sheet: '288法青退場',
-    steps: [
-      '退場人員已到齊',
-      '車已經上遊覽車平台',
-      '車已經離開遊覽車平台'
-    ]
-  }
+  {
+    key: '地區專車退場（遊覽車平台）',
+    sheet: '地區專車退場（遊覽車平台）',
+    steps: [
+      '車長通知行李到齊',
+      'Call 車上行李',
+      '車已上遊覽車平台',
+      '車前往排車隊',
+      '車暫停位置',          // ← 這個要變下拉
+      '退場人員已到齊',
+      '已 Call 車上遊覽車平台',
+      '人已前往平台',
+      '車第二次上遊覽車平台',
+      '車已離開遊覽車平台'
+    ]
+  },
+  {
+    key: '地區專車退場（禪堂平台）',
+    sheet: '地區專車退場（禪堂平台）',
+    steps: [
+      '車長通知行李到齊',
+      'Call 車上行李',
+      '車已上遊覽車平台',
+      '車前往排車隊',
+      '車暫停位置',          // ← 這個要變下拉
+      '車已離開禪堂平台'
+    ]
+  },
+  {
+    key: '水陸專車退場',
+    sheet: '水陸專車退場',
+    // --- 修正：「水陸專車退場」的步驟順序 ---
+    steps: [
+      '已 Call 車排車隊',
+      '已排好車隊',
+      '車暫停位置',          // ← 移到「退場人員已到齊」之前
+      '退場人員已到齊',
+      '已 Call 車上遊覽車平台',
+      '車已上遊覽車平台',
+      '車已離開遊覽車平台'
+    ]
+  },
+  {
+    key: '國光號退場',
+    sheet: '國光號退場',
+    steps: [
+      '是否經過長庚',
+      '退場人員已到齊',
+      '車已經上遊覽車平台',
+      '車已經離開遊覽車平台',
+      '上車人數'
+    ]
+  },
+  {
+    key: '288法青退場',
+    sheet: '288法青退場',
+    steps: [
+      '退場人員已到齊',
+      '車已經上遊覽車平台',
+      '車已經離開遊覽車平台'
+    ]
+  }
 ];
 
 // 三張表用同一組停車地點
 const PARKING_OPTIONS = [
-  '',
-  '禪堂平台',
-  '法大路（法大一橋到法心南路間）',
-  '法心南路',
-  '法鼓路靈山勝境石往外',
-  '法新北路'
+  '—請選擇—', // 預設值
+  '禪堂平台',
+  '法大路（法大一橋到法心南路間）',
+  '法心南路',
+  '法鼓路靈山勝境石往外',
+  '法新北路'
 ];
 
 let currentUser = null;
@@ -239,375 +242,391 @@ let currentSheetKey = SHEET_CONFIGS[0].key;
 let sheetData = [];
 
 window.onload = function(){
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleCredential
-  });
-  google.accounts.id.renderButton(
-    document.getElementById('signin'),
-    { theme:'outline', size:'large' }
-  );
-  buildTabs();
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredential
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('signin'),
+    { theme:'outline', size:'large' }
+  );
+  buildTabs();
 };
 
 function buildTabs(){
-  const box = document.getElementById('sheetTabs');
-  box.innerHTML = '';
-  SHEET_CONFIGS.forEach(cfg=>{
-    const b = document.createElement('button');
-    b.className = 'btn-tab' + (cfg.key===currentSheetKey?' active':'');
-    b.textContent = cfg.key;
-    b.onclick = () => {
-      currentSheetKey = cfg.key;
-      document.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');
-      loadSheetData(currentSheetKey);
-    };
-    box.appendChild(b);
-  });
-  const reloadBtn = document.createElement('button');
-  reloadBtn.id = 'reloadBtn';
-  reloadBtn.textContent = '重新載入';
-  reloadBtn.onclick = reloadSheet;
-  box.appendChild(reloadBtn);
+  const box = document.getElementById('sheetTabs');
+  box.innerHTML = '';
+  SHEET_CONFIGS.forEach(cfg=>{
+    const b = document.createElement('button');
+    b.className = 'btn-tab' + (cfg.key===currentSheetKey?' active':'');
+    b.textContent = cfg.key;
+    b.onclick = () => {
+      currentSheetKey = cfg.key;
+      document.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      loadSheetData(currentSheetKey);
+    };
+    box.appendChild(b);
+  });
+  const reloadBtn = document.createElement('button');
+  reloadBtn.id = 'reloadBtn';
+  reloadBtn.textContent = '重新載入';
+  reloadBtn.onclick = reloadSheet;
+  box.appendChild(reloadBtn);
 }
 
 async function handleCredential(resp){
-  try {
-    const r = await fetch(API_BASE + '?action=verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ idToken: resp.credential })
-    });
-    const j = await r.json();
-    if (j.error) { showNotif('登入失敗：' + j.error, true); return; }
-    currentUser = j;
-    document.getElementById('signin').classList.add('hide');
-    const ui = document.getElementById('userInfo');
-    ui.classList.remove('hide');
-    ui.innerHTML = `${j.name||''} &lt;${j.email}&gt; ｜ 權限：<b>${j.permission}</b>`;
-    document.getElementById('tabs').classList.remove('hide');
-    document.getElementById('content').classList.remove('hide');
-    loadSheetData(currentSheetKey);
-  } catch (err) {
-    showNotif('登入錯誤：' + err.message, true);
-  }
+  try {
+    const r = await fetch(API_BASE + '?action=verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ idToken: resp.credential })
+    });
+    const j = await r.json();
+    if (j.error) { showNotif('登入失敗：' + j.error, true); return; }
+    currentUser = j;
+    document.getElementById('signin').classList.add('hide');
+    const ui = document.getElementById('userInfo');
+    ui.classList.remove('hide');
+    ui.innerHTML = `${j.name||''} &lt;${j.email}&gt; ｜ 權限：<b>${j.permission}</b>`;
+    document.getElementById('tabs').classList.remove('hide');
+    document.getElementById('content').classList.remove('hide');
+    loadSheetData(currentSheetKey);
+  } catch (err) {
+    showNotif('登入錯誤：' + err.message, true);
+  }
 }
 
 async function loadSheetData(key){
-  const cfg = SHEET_CONFIGS.find(s=>s.key===key);
-  document.getElementById('vehList').textContent = '讀取中...';
-  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
-  const j = await r.json();
-  if (j.error){ document.getElementById('vehList').textContent = '❌ '+j.error; return; }
-  sheetData = j.values || [];
-  renderVehicles(cfg, sheetData);
+  const cfg = SHEET_CONFIGS.find(s=>s.key===key);
+  document.getElementById('vehList').textContent = '讀取中...';
+  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+  const j = await r.json();
+  if (j.error){ document.getElementById('vehList').textContent = '❌ '+j.error; return; }
+  sheetData = j.values || [];
+  renderVehicles(cfg, sheetData);
 }
 
 // 找出表頭 + 資料列
 function parseSheetData(raw) {
-  const headerRowIdx = raw.findIndex(row =>
-    Array.isArray(row) &&
-    String(row[0] || '').trim() === '編號' &&
-    String(row[1] || '').trim().startsWith('區域') &&
-    String(row[2] || '').trim() === '車號'
-  );
-  if (headerRowIdx === -1) return { header: [], rows: [], headerRowIdx: -1 };
+  const headerRowIdx = raw.findIndex(row =>
+    Array.isArray(row) &&
+    String(row[0] || '').trim() === '編號' &&
+    String(row[1] || '').trim().startsWith('區域') &&
+    String(row[2] || '').trim() === '車號'
+  );
+  if (headerRowIdx === -1) return { header: [], rows: [], headerRowIdx: -1 };
 
-  const header = raw[headerRowIdx].map(c => String(c || '').trim());
-  const rows = raw
-    .slice(headerRowIdx + 1)
-    .filter(r => {
-      if (!Array.isArray(r)) return false;
-      const no   = String(r[0] || '').trim();
-      const area = String(r[1] || '').trim();
-      const car  = String(r[2] || '').trim();
-      return no && area && car;
-    });
+  const header = raw[headerRowIdx].map(c => String(c || '').trim());
+  const rows = raw
+    .slice(headerRowIdx + 1)
+    .filter(r => {
+      if (!Array.isArray(r)) return false;
+      const no   = String(r[0] || '').trim();
+      const area = String(r[1] || '').trim();
+      const car  = String(r[2] || '').trim();
+      return no && area && car;
+    });
 
-  return { header, rows, headerRowIdx };
+  return { header, rows, headerRowIdx };
 }
 
 /* 把 GAS 寫的 ISO / 日期時間 → hh:mm:ss (+8) */
 function formatSheetTime(val){
-  if (!val) return '';
+  if (!val) return '';
 
-  // 已經是 hh:mm:ss
-  if (/^\d{1,2}:\d{2}:\d{2}$/.test(val)) {
-    const parts = val.split(':');
-    return parts.map(p=>p.padStart(2,'0')).join(':');
-  }
+  // 已經是 hh:mm:ss
+  if (/^\d{1,2}:\d{2}:\d{2}$/.test(val)) {
+    const parts = val.split(':');
+    return parts.map(p=>p.padStart(2,'0')).join(':');
+  }
 
-  // 2025/11/2 18:38:24
-  if (/^\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}$/.test(val)) {
-    return val.split(' ')[1].split(':').map(p=>p.padStart(2,'0')).join(':');
-  }
+  // 2025/11/2 18:38:24
+  if (/^\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}$/.test(val)) {
+    return val.split(' ')[1].split(':').map(p=>p.padStart(2,'0')).join(':');
+  }
 
-  // ISO
-  const d = new Date(val);
-  if (isNaN(d.getTime())) {
-    return val; // 給你原字串
-  }
-  const tw = new Date(d.getTime() + 8*60*60*1000);
-  const hh = String(tw.getUTCHours()).padStart(2,'0');
-  const mm = String(tw.getUTCMinutes()).padStart(2,'0');
-  const ss = String(tw.getUTCSeconds()).padStart(2,'0');
-  return `${hh}:${mm}:${ss}`;
+  // ISO
+  const d = new Date(val);
+  if (isNaN(d.getTime())) {
+    return val; // 給你原字串
+  }
+  const tw = new Date(d.getTime() + 8*60*60*1000);
+  const hh = String(tw.getUTCHours()).padStart(2,'0');
+  const mm = String(tw.getUTCMinutes()).padStart(2,'0');
+  const ss = String(tw.getUTCSeconds()).padStart(2,'0');
+  return `${hh}:${mm}:${ss}`;
 }
-
-<script>
-// ...前面的程式都保留...
 
 function renderVehicles(cfg, data){
-  const box = document.getElementById('vehList');
-  box.innerHTML = '';
+  const box = document.getElementById('vehList');
+  box.innerHTML = '';
 
-  const headerRowIdx = data.findIndex(row =>
-    Array.isArray(row) &&
-    String(row[0] || '').trim() === '編號' &&
-    String(row[1] || '').trim().startsWith('區域') &&
-    String(row[2] || '').trim() === '車號'
-  );
+  const headerRowIdx = data.findIndex(row =>
+    Array.isArray(row) &&
+    String(row[0] || '').trim() === '編號' &&
+    String(row[1] || '').trim().startsWith('區域') &&
+    String(row[2] || '').trim() === '車號'
+  );
 
-  if (headerRowIdx === -1) {
-    box.textContent = '❌ 找不到表頭（要有「編號 / 區域車次編號 / 車號」那一列）';
-    return;
-  }
+  if (headerRowIdx === -1) {
+    box.textContent = '❌ 找不到表頭（要有「編號 / 區域車次編號 / 車號」那一列）';
+    return;
+  }
 
-  const header = data[headerRowIdx].map(c => String(c || '').trim());
+  const header = data[headerRowIdx].map(c => String(c || '').trim());
 
-  const rows = data
-    .slice(headerRowIdx + 1)
-    .filter(r => {
-      if (!Array.isArray(r)) return false;
-      const no   = String(r[0] || '').trim();
-      const area = String(r[1] || '').trim();
-      const car  = String(r[2] || '').trim();
-      return no && area && car;
-    });
+  const rows = data
+    .slice(headerRowIdx + 1)
+    .filter(r => {
+      if (!Array.isArray(r)) return false;
+      const no   = String(r[0] || '').trim();
+      const area = String(r[1] || '').trim();
+      const car  = String(r[2] || '').trim();
+      return no && area && car;
+    });
 
-  if (!rows.length){
-    box.textContent = '(這張表目前沒有車輛資料)';
-    return;
-  }
+  if (!rows.length){
+    box.textContent = '(這張表目前沒有車輛資料)';
+    return;
+  }
 
-  rows.forEach((row, idx) => {
-    const area = String(row[1] || '').trim();
-    const car  = String(row[2] || '').trim();
+  rows.forEach((row, idx) => {
+    const area = String(row[1] || '').trim();
+    const car  = String(row[2] || '').trim();
 
-    const card = document.createElement('div');
-    card.className = 'veh-card';
+    const card = document.createElement('div');
+    card.className = 'veh-card';
 
-    const title = document.createElement('div');
-    title.innerHTML = `
-      <div class="veh-title-main">${area}</div>
-      <div class="veh-title-sub">${car}</div>
-    `;
-    card.appendChild(title);
+    const title = document.createElement('div');
+    title.innerHTML = `
+      <div class="veh-title-main">${area}</div>
+      <div class="veh-title-sub">${car}</div>
+    `;
+    card.appendChild(title);
 
-    const stepsBox = document.createElement('div');
+    const stepsBox = document.createElement('div');
 
-    cfg.steps.forEach(st => {
-      const colIdx = header.indexOf(st);
-      const rowEl = document.createElement('div');
-      rowEl.className = 'step-row';
+    cfg.steps.forEach(st => {
+      const colIdx = header.indexOf(st);
+      const rowEl = document.createElement('div');
+      rowEl.className = 'step-row';
 
-      // 🔹 若是「車暫停位置」→ 用下拉
-      if (st === '車暫停位置') {
-        const sel = document.createElement('select');
-        sel.style.minWidth = '170px';
+      // 🔹 若是「車暫停位置」→ 用下拉
+      if (st === '車暫停位置') {
+        const sel = document.createElement('select');
+        sel.className = 'step-select'; // 使用 CSS class
 
-        const opts = [
-          '—請選擇—',
-          '禪堂平台',
-          '法大路（法大一橋到法心南路間）',
-          '法心南路',
-          '法鼓路靈山勝境石往外',
-          '法新北路'
-        ];
-        opts.forEach(o => {
-          const op = document.createElement('option');
-          op.value = o === '—請選擇—' ? '' : o;
-          op.textContent = o;
-          sel.appendChild(op);
-        });
+        PARKING_OPTIONS.forEach(o => {
+          const op = document.createElement('option');
+          op.value = o === '—請選擇—' ? '' : o;
+          op.textContent = o;
+          sel.appendChild(op);
+Â       });
 
-        const curVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
-        if (curVal) sel.value = curVal;
+        const curVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
+        if (curVal) sel.value = curVal;
 
-        const info = document.createElement('span');
-        info.className = 'step-time';
-        info.textContent = curVal || '';
+        const info = document.createElement('span');
+        info.className = 'step-time';
+        info.textContent = curVal || '';
 
-        sel.onchange = async () => {
-          const v = sel.value.trim();
-          if (colIdx === -1) {
-            alert('此工作表還沒有「車暫停位置」這一欄，請先在 Google Sheet 建欄位');
-            sel.value = '';
-            return;
-          }
-          const sheetRow = headerRowIdx + 1 + 1 + idx;
-          const body = {
-            sheet: cfg.sheet,
-            email: currentUser.email,
-            writes: [{ row: sheetRow, col: colIdx+1, value: v }]
-          };
-          const r = await fetch(API_BASE + '?action=update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(body)
-          });
-          const j = await r.json();
-          if (!j.ok){
-            showNotif('寫入失敗：'+(j.error||'unknown'), true);
-            return;
-          }
-          info.textContent = v;
-          showNotif('已寫入「車暫停位置」', false);
-        };
+        sel.onchange = async () => {
+          const v = sel.value.trim();
+          if (colIdx === -1) {
+            alert('此工作表還沒有「車暫停位置」這一欄，請先在 Google Sheet 建欄位');
+            sel.value = '';
+            return;
+          }
 
-        rowEl.appendChild(sel);
-        rowEl.appendChild(info);
-        stepsBox.appendChild(rowEl);
-        card.appendChild(stepsBox);
-        return; // ← 這個步驟結束，換下一個
-      }
+          // --- 修正：動態鎖定/解鎖下一個按鈕 ---
+          const card = sel.closest('.veh-card');
+          if (card) {
+            const thisStepIndex = cfg.steps.indexOf('車暫停位置');
+            if (thisStepIndex > -1 && thisStepIndex + 1 < cfg.steps.length) {
+              const nextStepName = cfg.steps[thisStepIndex + 1];
+              // 尋找兄弟元素中的按鈕 (更穩健的作法)
+              let nextBtn = null;
+              const allBtns = card.querySelectorAll('.step-btn');
+              allBtns.forEach(b => {
+                if (b.textContent === nextStepName) nextBtn = b;
+              });
 
-      // 🔹 其他步驟：一般按鈕
-      const btn = document.createElement('button');
-      btn.className = 'step-btn';
-      btn.textContent = st;
+              if (nextBtn) {
+                if (v) { // 已選擇
+                  nextBtn.classList.remove('done'); // 變藍色
+                  nextBtn.disabled = false;
+                } else { // 未選擇
+                  nextBtn.classList.add('done'); // 變灰色
+                  nextBtn.disabled = true;
+                }
+              }
+            }
+          }
+          // --- 修正 結束 ---
 
-      const timeSpan = document.createElement('span');
-      timeSpan.className = 'step-time';
+          const sheetRow = headerRowIdx + 1 + 1 + idx;
+          const body = {
+            sheet: cfg.sheet,
+            email: currentUser.email,
+            writes: [{ row: sheetRow, col: colIdx+1, value: v }]
+          };
+          const r = await fetch(API_BASE + '?action=update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(body)
+          });
+          const j = await r.json();
+          if (!j.ok){
+            showNotif('寫入失敗：'+(j.error||'unknown'), true);
+            return;
+          }
+          info.textContent = v;
+          showNotif('已寫入「車暫停位置」', false);
+        };
 
-      const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
-      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
+        rowEl.appendChild(sel);
+        rowEl.appendChild(info);
+        stepsBox.appendChild(rowEl);
+        card.appendChild(stepsBox);
+        return; // ← 這個步驟結束，換下一個
+      }
 
-      if (rawVal) {
-        btn.classList.add('done');
-        timeSpan.textContent = displayVal;
-      }
+      // 🔹 其他步驟：一般按鈕
+      const btn = document.createElement('button');
+      btn.className = 'step-btn';
+      btn.textContent = st;
 
-      // 🔒 應用修正過的 prevDone
-      const prevOk = prevDone(cfg, header, row, st);
-      if (!prevOk && !rawVal) {
-        btn.classList.add('done');
-        btn.disabled = true;
-      }
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'step-time';
 
-      const sheetRow = headerRowIdx + 1 + 1 + idx;
-      btn.onclick = () =>
-        onStepClick(cfg, sheetRow, header, st, rawVal, btn, timeSpan);
+      const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
+      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
 
-      rowEl.appendChild(btn);
-      rowEl.appendChild(timeSpan);
-      stepsBox.appendChild(rowEl);
-    });
+      if (rawVal) {
+        btn.classList.add('done');
+        timeSpan.textContent = displayVal;
+      }
 
-    card.appendChild(stepsBox);
-    box.appendChild(card);
-  });
+      // 🔒 應用 prevDone 進行「初始鎖定」
+      const prevOk = prevDone(cfg, header, row, st);
+      if (!prevOk && !rawVal) {
+        btn.classList.add('done'); // 變灰色
+        btn.disabled = true;
+      }
+
+      const sheetRow = headerRowIdx + 1 + 1 + idx;
+      btn.onclick = () =>
+        onStepClick(cfg, sheetRow, header, st, rawVal, btn, timeSpan);
+
+      rowEl.appendChild(btn);
+      rowEl.appendChild(timeSpan);
+      stepsBox.appendChild(rowEl);
+    });
+
+    card.appendChild(stepsBox);
+    box.appendChild(card);
+  });
 }
 
-/* ✅ 這裡是重點：上一個欄位找不到，就一律「還沒完成」 */
+/* 檢查上一步是否完成 */
 function prevDone(cfg, header, row, st){
-  const idx = cfg.steps.indexOf(st);
-  if (idx === 0) return true;
+  const idx = cfg.steps.indexOf(st);
+  if (idx === 0) return true;
 
-  const prevName = cfg.steps[idx-1];
-  const colIdx = header.indexOf(prevName);
+  const prevName = cfg.steps[idx-1];
+  const colIdx = header.indexOf(prevName);
 
-  // 👉 原本是 return true，現在我們反過來
-  if (colIdx === -1) {
-    // 特別是我們自己加的「車暫停位置」，沒這欄就一定不能走下一步
-    return false;
-  }
-
-  return !!String(row[colIdx] || '').trim();
+  // 上一個步驟的欄位在 Sheet 中不存在
+  if (colIdx === -1) {
+    return false;
+  }
+  
+  // 檢查 Sheet 資料中，上一個步驟的欄位是否有值
+  return !!String(row[colIdx] || '').trim();
 }
-</script>
 
 
 /* 按鈕寫入時間 */
 async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
-  if (!currentUser) return alert('請先登入');
-  if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
+  if (!currentUser) return alert('請先登入');
+  if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
 
-  const colIdx = header.indexOf(st);
-  if (colIdx === -1) return alert('此欄位不存在：'+st);
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  // 現在台灣時間 hh:mm:ss
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2,'0');
-  const mm = String(now.getMinutes()).padStart(2,'0');
-  const ss = String(now.getSeconds()).padStart(2,'0');
-  const nowHHMMSS = `${hh}:${mm}:${ss}`;
+  // 現在台灣時間 hh:mm:ss
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const ss = String(now.getSeconds()).padStart(2,'0');
+  const nowHHMMSS = `${hh}:${mm}:${ss}`;
 
-  let userInput;
-  if (oldRawVal) {
-    userInput = prompt('此狀態已有時間，要修改嗎？（留空→清除）', nowHHMMSS);
-    if (userInput === null) return;
-    userInput = userInput.trim();
-  } else {
-    userInput = nowHHMMSS;
-  }
+  let userInput;
+  if (oldRawVal) {
+    userInput = prompt('此狀態已有時間，要修改嗎？（留空→清除）', nowHHMMSS);
+    if (userInput === null) return;
+    userInput = userInput.trim();
+  } else {
+    userInput = nowHHMMSS;
+  }
 
-  let valueToWrite = '';
-  if (userInput === '') {
-    valueToWrite = '';
-  } else if (/^\d{2}:\d{2}:\d{2}$/.test(userInput)) {
-    // 做成「今天台灣的這個時間」→ 寫成 UTC ISO
-    const localDate = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      Number(userInput.slice(0,2)),
-      Number(userInput.slice(3,5)),
-      Number(userInput.slice(6,8))
-    );
-    const utcMs = localDate.getTime() - 8 * 60 * 60 * 1000;
-    valueToWrite = new Date(utcMs).toISOString();
-  } else {
-    valueToWrite = userInput;
-  }
+  let valueToWrite = '';
+  if (userInput === '') {
+    valueToWrite = '';
+  } else if (/^\d{2}:\d{2}:\d{2}$/.test(userInput)) {
+    // 做成「今天台灣的這個時間」→ 寫成 UTC ISO
+    const localDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      Number(userInput.slice(0,2)),
+    M   Number(userInput.slice(3,5)),
+      Number(userInput.slice(6,8))
+    );
+    const utcMs = localDate.getTime() - 8 * 60 * 60 * 1000;
+    valueToWrite = new Date(utcMs).toISOString();
+  } else {
+    valueToWrite = userInput;
+  }
 
-  const body = {
-    sheet: cfg.sheet,
-    email: currentUser.email,
-    writes: [{ row: rowNumber, col: colIdx+1, value: valueToWrite }]
-  };
+  const body = {
+    sheet: cfg.sheet,
+    email: currentUser.email,
+    writes: [{ row: rowNumber, col: colIdx+1, value: valueToWrite }]
+  };
 
-  const r = await fetch(API_BASE + '?action=update', {
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify(body)
-  });
-  const j = await r.json();
-  if (!j.ok){
-    showNotif('寫入失敗：'+(j.error||'unknown'), true);
-    return;
-  }
+  const r = await fetch(API_BASE + '?action=update', {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(body)
+  });
+  const j = await r.json();
+  if (!j.ok){
+    showNotif('寫入失敗：'+(j.error||'unknown'), true);
+    return;
+  }
 
-  // 前端同步
-  if (userInput === '') {
-    span.textContent = '';
-    btn.classList.remove('done');
-  } else {
-    span.textContent = formatSheetTime(valueToWrite);
-    btn.classList.add('done');
-  }
-  showNotif('已寫入「'+st+'」', false);
+  // 前端同步
+  if (userInput === '') {
+    span.textContent = '';
+    btn.classList.remove('done');
+  } else {
+    span.textContent = formatSheetTime(valueToWrite);
+    btn.classList.add('done');
+  }
+  showNotif('已寫入「'+st+'」', false);
+// --- ✅ 修正：移除錯誤的 'Route 6' 文字 ---
 }
 
 function reloadSheet(){ loadSheetData(currentSheetKey); }
 
 function showNotif(msg, isErr){
-  const box = document.getElementById('notif');
-  box.textContent = msg;
-  box.style.background = isErr ? 'rgba(248,113,113,.9)' : 'rgba(15,23,42,.85)';
-  box.classList.add('show');
-  setTimeout(()=>box.classList.remove('show'), 2500);
+  const box = document.getElementById('notif');
+  box.textContent = msg;
+  box.style.background = isErr ? 'rgba(248,113,113,.9)' : 'rgba(15,23,42,.85)';
+  box.classList.add('show');
+  setTimeout(()=>box.classList.remove('show'), 2500);
 }
 </script>
 </body>

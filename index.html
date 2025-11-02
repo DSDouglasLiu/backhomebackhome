@@ -97,9 +97,9 @@
     }
     /* 已按過：灰要深一點 */
     .step-btn.done{
-      background:#cbd5e1;   /* 深一點的灰 */
+      background:#cbd5e1;
       color:#0f172a;
-      cursor:pointer;       /* 還是能點 */
+      cursor:pointer;
     }
     /* 鎖住的再深一點 */
     .step-btn.locked{
@@ -113,6 +113,20 @@
       color:rgba(15,23,42,.55);
       min-width:70px;
       text-align:right;
+    }
+
+    /* 下拉式的樣式 */
+    .step-select{
+      min-width:170px;
+      padding:5px 6px;
+      border-radius:8px;
+      border:1px solid #cbd5e1;
+      background:#fff;
+      font-size:.74rem;
+    }
+    .step-select:disabled{
+      background:#e2e8f0;
+      cursor:not-allowed;
     }
 
     .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;}
@@ -150,6 +164,15 @@
 const GOOGLE_CLIENT_ID = '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com';
 const API_BASE = 'https://script.google.com/macros/s/AKfycbxbeknXeJ2s2NnIqTwIwNdZnsbiI9UlGkQpSGfHq2TlmnITZ75Ub4ySwn6UGmJk3AXjNg/exec';
 
+/* ✅ 三張你說要「車暫停位置」的表，共用同一組地點 */
+const STOP_OPTIONS = [
+  '禪堂平台',
+  '法大路（法大一橋到法心南路間）',
+  '法心南路',
+  '法鼓路靈山勝境石往外',
+  '法新北路'
+];
+
 const SHEET_CONFIGS = [
   {
     key: '地區專車退場（遊覽車平台）',
@@ -159,7 +182,7 @@ const SHEET_CONFIGS = [
       'Call 車上行李',
       '車已上遊覽車平台',
       '車前往排車隊',
-      '車暫停位置',
+      '車暫停位置',             // ✅ 這一個變下拉
       '退場人員已到齊',
       '已 Call 車上遊覽車平台',
       '人已前往平台',
@@ -175,7 +198,7 @@ const SHEET_CONFIGS = [
       'Call 車上行李',
       '車已上遊覽車平台',
       '車前往排車隊',
-      '車暫停位置',
+      '車暫停位置',             // ✅ 加進來
       '車已離開禪堂平台'
     ]
   },
@@ -185,10 +208,10 @@ const SHEET_CONFIGS = [
     steps: [
       '已 Call 車排車隊',
       '已排好車隊',
-      '車暫停位置',
       '退場人員已到齊',
       '已 Call 車上遊覽車平台',
       '車已上遊覽車平台',
+      '車暫停位置',             // ✅ 加進來
       '車已離開遊覽車平台'
     ]
   },
@@ -284,58 +307,57 @@ async function loadSheetData(key){
   renderVehicles(cfg, sheetData);
 }
 
-function parseSheetData(raw) {
-  const headerIndex = raw.findIndex(row =>
-    Array.isArray(row) && row.some(cell => String(cell || '').trim() !== '')
-  );
-  if (headerIndex === -1) return { header: [], rows: [], headerIndex:-1 };
-  const header = raw[headerIndex].map(c => String(c || '').trim());
-  const rows = raw
-    .slice(headerIndex + 1)
-    .filter(row => {
-      if (!Array.isArray(row)) return false;
-      return String(row[0]||'').trim() && String(row[1]||'').trim() && String(row[2]||'').trim();
-    });
-  return { header, rows, headerIndex };
-}
-
-/* 把各種形式的時間 → HH:mm:ss */
+/* 把各種時間 → HH:mm:ss（留著，給其他按鈕用） */
 function formatSheetTime(val){
   if (!val) return '';
   const s = String(val).trim();
 
-  // 已經是 HH:mm:ss
   if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) {
-    // 補成兩位數開頭
     const parts = s.split(':');
     return parts.map(p=>p.padStart(2,'0')).join(':');
   }
 
-  // 2025/11/2 18:38:24 -> 18:38:24
   if (/^\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}$/.test(s)) {
     return s.split(' ')[1].split(':').map(p=>p.padStart(2,'0')).join(':');
   }
 
-  // 2025-11-02T10:11:08.000Z 這類
+  const m = s.match(/^(上午|下午)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m){
+    let h = parseInt(m[2],10);
+    const mm = m[3];
+    const ss = m[4] || '00';
+    if (m[1] === '下午' && h < 12) h += 12;
+    if (m[1] === '上午' && h === 12) h = 0;
+    return `${String(h).padStart(2,'0')}:${mm}:${ss}`;
+  }
+
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(s)) {
     const d = new Date(s);
-    // 固定轉 +8
-    const taipei = new Date(d.getTime() + 8*60*60*1000);
-    const hh = String(taipei.getHours()).padStart(2,'0');
-    const mm = String(taipei.getMinutes()).padStart(2,'0');
-    const ss = String(taipei.getSeconds()).padStart(2,'0');
+    const tw = new Date(d.getTime() + 8*60*60*1000);
+    const hh = String(tw.getUTCHours()).padStart(2,'0');
+    const mm = String(tw.getUTCMinutes()).padStart(2,'0');
+    const ss = String(tw.getUTCSeconds()).padStart(2,'0');
     return `${hh}:${mm}:${ss}`;
   }
 
-  // 其他就原樣
   return s;
+}
+
+/* 取台北現在時間 HH:mm:ss （給有時間的按鈕用） */
+function getTaipeiHHMMSS() {
+  const now = new Date();
+  const tzOffsetMin = now.getTimezoneOffset();
+  const taipei = new Date(now.getTime() + (480 + tzOffsetMin) * 60 * 1000);
+  const h = String(taipei.getHours()).padStart(2,'0');
+  const m = String(taipei.getMinutes()).padStart(2,'0');
+  const s = String(taipei.getSeconds()).padStart(2,'0');
+  return `${h}:${m}:${s}`;
 }
 
 function renderVehicles(cfg, data){
   const box = document.getElementById('vehList');
   box.innerHTML = '';
 
-  // 找真正的表頭：你的試算表是第 1、2 列空白，第 3 列才是標題
   const headerRowIdx = data.findIndex(row =>
     Array.isArray(row) &&
     String(row[0] || '').trim() === '編號' &&
@@ -344,13 +366,11 @@ function renderVehicles(cfg, data){
   );
 
   if (headerRowIdx === -1) {
-    box.textContent = '❌ 找不到表頭（要有「編號 / 區域車次編號 / 車號」那一列）';
+    box.textContent = '❌ 找不到表頭';
     return;
   }
 
   const header = data[headerRowIdx].map(c => String(c || '').trim());
-
-  // 表頭下面才是真正資料，且一定要 A,B,C 三欄都有才畫卡片
   const rows = data
     .slice(headerRowIdx + 1)
     .filter(r => {
@@ -367,13 +387,12 @@ function renderVehicles(cfg, data){
   }
 
   rows.forEach((row, idx) => {
-    const area = String(row[1] || '').trim(); // 區域車次編號
-    const car  = String(row[2] || '').trim(); // 車號
+    const area = String(row[1] || '').trim();
+    const car  = String(row[2] || '').trim();
 
     const card = document.createElement('div');
     card.className = 'veh-card';
 
-    // 第一行放「區域車次編號」，第二行放車號
     const title = document.createElement('div');
     title.innerHTML = `
       <div class="veh-title-main">${area}</div>
@@ -383,12 +402,63 @@ function renderVehicles(cfg, data){
 
     const stepsBox = document.createElement('div');
 
-    // 一個狀態一列：左邊按鈕，右邊時間
     cfg.steps.forEach(st => {
       const colIdx = header.indexOf(st);
       const rowEl = document.createElement('div');
       rowEl.className = 'step-row';
 
+      const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
+
+      /* ✅ 這一段：如果是「車暫停位置」就改成下拉式 */
+      if (st === '車暫停位置') {
+        const sel = document.createElement('select');
+        sel.className = 'step-select';
+
+        // 預設一個空的，可做清空
+        const optEmpty = document.createElement('option');
+        optEmpty.value = '';
+        optEmpty.textContent = '— 請選擇 —';
+        sel.appendChild(optEmpty);
+
+        STOP_OPTIONS.forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt;
+          o.textContent = opt;
+          sel.appendChild(o);
+        });
+
+        // 有原本的值，就選起來
+        if (rawVal) sel.value = rawVal;
+
+        // 右邊顯示選到的文字
+        const placeSpan = document.createElement('span');
+        placeSpan.className = 'step-time';
+        placeSpan.textContent = rawVal ? rawVal : '';
+
+        // 跟其他一樣，前一步沒做就鎖住
+        const prevOk = prevDone(cfg, header, row, st);
+        if (!prevOk && !rawVal) {
+          sel.disabled = true;
+        }
+
+        const sheetRow = headerRowIdx + 1 + 1 + idx;
+
+        sel.onchange = () => onStopSelect(
+          cfg,
+          sheetRow,
+          header,
+          st,
+          sel.value,
+          placeSpan
+        );
+
+        rowEl.appendChild(sel);
+        rowEl.appendChild(placeSpan);
+        stepsBox.appendChild(rowEl);
+        return; // 這一列結束
+      }
+
+      /* 一般按鈕的流程 */
       const btn = document.createElement('button');
       btn.className = 'step-btn';
       btn.textContent = st;
@@ -396,28 +466,21 @@ function renderVehicles(cfg, data){
       const timeSpan = document.createElement('span');
       timeSpan.className = 'step-time';
 
-      // 原始時間（可能是 ISO、也可能是你手動輸入的「下午 8:32:38」）
-      const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
       const displayVal = rawVal ? formatSheetTime(rawVal) : '';
 
       if (rawVal) {
-        btn.classList.add('done');      // 變灰
+        btn.classList.add('done');
         timeSpan.textContent = displayVal;
       }
 
-      // 一樣吃「前一步沒做就不能做下一步」的規則
       const prevOk = prevDone(cfg, header, row, st);
       if (!prevOk && !rawVal) {
-        btn.classList.add('done');  // 一樣灰，但沒有時間
+        btn.classList.add('done');
         btn.disabled = true;
       }
 
-      // 算真正要寫回去的試算表列號
-      // headerRowIdx 是 0-based，要 +1 → 變 1-based，再 +1 → 到資料第一列，再 + idx → 真正列
       const sheetRow = headerRowIdx + 1 + 1 + idx;
-
-      btn.onclick = () =>
-        onStepClick(cfg, sheetRow, header, st, rawVal, btn, timeSpan);
+      btn.onclick = () => onStepClick(cfg, sheetRow, header, st, rawVal, btn, timeSpan);
 
       rowEl.appendChild(btn);
       rowEl.appendChild(timeSpan);
@@ -429,36 +492,6 @@ function renderVehicles(cfg, data){
   });
 }
 
-  
-
-// 把 GAS 回來的時間字串轉成台灣時間 hh:mm:ss
-function formatSheetTime(val) {
-  if (!val) return '';
-
-  // 如果本來就是 "20:32:38" 這種，就直接用
-  if (/^\d{2}:\d{2}:\d{2}$/.test(val)) {
-    return val;
-  }
-
-  // GAS 回來通常是 ISO：1899-12-30T12:32:38.000Z
-  const d = new Date(val);
-  if (isNaN(d.getTime())) {
-    // 不是標準時間，就原樣丟回去，避免整個空白
-    return val;
-  }
-
-  // 轉成 +8，這裡用 UTC 來取，避免再被瀏覽器加一次時區
-  const twMs = d.getTime() + 8 * 60 * 60 * 1000;
-  const tw = new Date(twMs);
-
-  const hh = String(tw.getUTCHours()).padStart(2, '0');
-  const mm = String(tw.getUTCMinutes()).padStart(2, '0');
-  const ss = String(tw.getUTCSeconds()).padStart(2, '0');
-
-  return `${hh}:${mm}:${ss}`;
-}
-
-  
 function prevDone(cfg, header, row, st){
   const idx = cfg.steps.indexOf(st);
   if (idx === 0) return true;
@@ -468,17 +501,38 @@ function prevDone(cfg, header, row, st){
   return !!row[colIdx];
 }
 
-/* 取台北現在時間的 HH:mm:ss */
-function getTaipeiHHMMSS() {
-  const now = new Date();
-  const tzOffsetMin = now.getTimezoneOffset(); // 本地對 UTC 的分鐘
-  const taipei = new Date(now.getTime() + (480 + tzOffsetMin) * 60 * 1000);
-  const h = String(taipei.getHours()).padStart(2,'0');
-  const m = String(taipei.getMinutes()).padStart(2,'0');
-  const s = String(taipei.getSeconds()).padStart(2,'0');
-  return `${h}:${m}:${s}`;
+/* ✅ 下拉式「車暫停位置」專用的寫入 */
+async function onStopSelect(cfg, rowNumber, header, st, value, span){
+  if (!currentUser) return alert('請先登入');
+  if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
+
+  // 直接把選到的文字寫進去（沒有要轉時間格式）
+  const body = {
+    sheet: cfg.sheet,
+    email: currentUser.email,
+    writes: [{ row: rowNumber, col: colIdx+1, value: value }]
+  };
+
+  const r = await fetch(API_BASE + '?action=update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  });
+  const j = await r.json();
+  if (!j.ok){
+    showNotif('寫入失敗：'+(j.error||'unknown'), true);
+    return;
+  }
+
+  // 前端更新
+  span.textContent = value || '';
+  showNotif('已更新車暫停位置', false);
 }
 
+/* 原本按鈕的寫入（時間） */
 async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
   if (!currentUser) return alert('請先登入');
   if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
@@ -486,34 +540,24 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  // 先做「現在台灣時間的 hh:mm:ss」
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2,'0');
-  const mm = String(now.getMinutes()).padStart(2,'0');
-  const ss = String(now.getSeconds()).padStart(2,'0');
-  const nowHHMMSS = `${hh}:${mm}:${ss}`;
-
+  const nowHHMMSS = getTaipeiHHMMSS();
   let userInput;
 
   if (oldRawVal) {
-    // 有舊值 → 給現在時間當預設
     userInput = prompt('此狀態已有時間，要修改嗎？（留空→清除）', nowHHMMSS);
-    if (userInput === null) return; // 取消
+    if (userInput === null) return;
     userInput = userInput.trim();
   } else {
-    // 沒舊值 → 直接用現在時間
     userInput = nowHHMMSS;
   }
 
-  // 要寫回試算表的值
   let valueToWrite = '';
 
   if (userInput === '') {
-    // 清空
     valueToWrite = '';
   } else if (/^\d{2}:\d{2}:\d{2}$/.test(userInput)) {
-    // 使用者只給 hh:mm:ss → 我們做成「今天(台灣)的這個時間」然後轉成 UTC ISO 丟給 GAS
-    const localDate = new Date(
+    const now = new Date();
+    const localTw = new Date(
       now.getFullYear(),
       now.getMonth(),
       now.getDate(),
@@ -521,11 +565,9 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
       Number(userInput.slice(3,5)),
       Number(userInput.slice(6,8))
     );
-    // 這裡把「台灣時間」轉成 UTC → 減 8 小時
-    const utcMs = localDate.getTime() - 8 * 60 * 60 * 1000;
+    const utcMs = localTw.getTime() - 8*60*60*1000;
     valueToWrite = new Date(utcMs).toISOString();
   } else {
-    // 其他格式（你手動貼 ISO）→ 原樣寫回
     valueToWrite = userInput;
   }
 
@@ -540,14 +582,12 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body)
   });
-
   const j = await r.json();
   if (!j.ok){
     showNotif('寫入失敗：'+(j.error||'unknown'), true);
     return;
   }
 
-  // 前端同步更新
   if (userInput === '') {
     span.textContent = '';
     btn.classList.remove('done');
@@ -557,11 +597,7 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
   }
 
   showNotif('已寫入「'+st+'」', false);
-  // 看你要不要重新抓表，現在這樣就能先看到更新了：
-  // reloadSheet();
 }
-
-  
 
 function reloadSheet(){ loadSheetData(currentSheetKey); }
 

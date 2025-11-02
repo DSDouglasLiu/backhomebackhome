@@ -61,7 +61,12 @@
       display:flex;
       align-items:center;
       gap:8px;
+      margin-bottom:3px;   /* 每顆按鈕下面 3px */
     }
+    .step-row:last-child{
+      margin-bottom:0;
+    }
+
     .step-btn{
       border:0;
       border-radius:10px;
@@ -281,6 +286,37 @@ async function loadSheetData(key){
   renderVehicles(cfg, sheetData);
 }
 
+// 把任何時間字串（尤其是 2025-11-02T10:11:34.000Z）轉成台北時間 hh:mm:ss
+function formatToTWTime(val) {
+  if (!val) return '';
+  // 有可能本來就是 hh:mm:ss，就直接回傳
+  if (/^\d{2}:\d{2}:\d{2}$/.test(val)) return val;
+
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return val; // 真的不是日期就原樣丟回去
+
+  // 轉成台北
+  const utcMs = d.getTime() + d.getTimezoneOffset() * 60000;
+  const tw = new Date(utcMs + 8 * 60 * 60 * 1000);
+
+  const hh = String(tw.getHours()).padStart(2, '0');
+  const mm = String(tw.getMinutes()).padStart(2, '0');
+  const ss = String(tw.getSeconds()).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
+}
+
+// 你前面寫入用的：產生現在的台北時間 hh:mm:ss
+function getTWTime() {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const tw = new Date(utcMs + 8 * 60 * 60 * 1000);
+  const hh = String(tw.getHours()).padStart(2, '0');
+  const mm = String(tw.getMinutes()).padStart(2, '0');
+  const ss = String(tw.getSeconds()).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
+}
+
+  
 /* 產生車卡 */
 function renderVehicles(cfg, data){
   const box = document.getElementById('vehList');
@@ -349,7 +385,8 @@ function renderVehicles(cfg, data){
 
       if (curVal) {
         btn.classList.add('done');
-        timeSpan.textContent = curVal;
+        timeSpan.textContent = formatToTWTime(curVal);
+
       }
 
       const prevOk = prevDone(cfg, header, row, st);

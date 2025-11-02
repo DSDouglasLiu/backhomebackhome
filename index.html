@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>活動車流人流退場管理系統</title>
-  <!-- 一定要有這行，先讓 GSI 載進來 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root{
@@ -27,12 +26,46 @@
     }
     .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
     h1{margin:0 0 16px;}
-    .card{background:var(--card-bg);border:1px solid rgba(255,255,255,0.3);border-radius:16px;padding:16px;margin:12px 0;}
-    .hide{display:none;}
-    .sheet-tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;}
-    .btn-tab{background:transparent;border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:6px 10px;font-size:.78rem;cursor:pointer;color:inherit;}
-    .btn-tab.active{background:rgba(255,255,255,.25);}
-    /* 一列兩台車 */
+
+    /* ====== tabs ====== */
+    .tab-bar{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      margin:12px 0 8px;
+    }
+    .tab-left{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+    }
+    .btn-tab{
+      border:1px solid #d1d5db;
+      border-radius:4px;
+      background:#e5e7eb;
+      color:#000;
+      padding:7px 18px 8px;
+      font-size:.78rem;
+      cursor:pointer;
+      transition:.15s;
+    }
+    .btn-tab.active{
+      background:#0f6efc;
+      color:#fff;
+      border-color:#0f6efc;
+    }
+
+    #reloadBtn{
+      border:1px solid #d1d5db;
+      background:#fff;
+      border-radius:4px;
+      padding:6px 16px;
+      cursor:pointer;
+      font-size:.73rem;
+      color:#000;
+    }
+
     .veh-list{
       display:grid;
       grid-template-columns:repeat(auto-fit, minmax(480px, 1fr));
@@ -57,16 +90,13 @@
       font-size:.85rem;
       opacity:.7;
     }
+
     .step-row{
       display:flex;
       align-items:center;
       gap:8px;
-      margin-bottom:3px;   /* 每顆按鈕下面 3px */
+      margin-bottom:3px; /* 你要的上下 3px 間隔 */
     }
-    .step-row:last-child{
-      margin-bottom:0;
-    }
-
     .step-btn{
       border:0;
       border-radius:10px;
@@ -81,7 +111,6 @@
     .step-btn.done{
       background:#d1d5db;
       color:#0f172a;
-      cursor:pointer;
     }
     .step-time{
       font-size:.7rem;
@@ -89,10 +118,27 @@
       min-width:90px;
       text-align:right;
     }
-    .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;}
+
+    .hide{display:none;}
+
+    .notif{
+      position:fixed;
+      right:16px;
+      bottom:16px;
+      background:rgba(15,23,42,.85);
+      color:#fff;
+      padding:10px 14px;
+      border-radius:14px;
+      opacity:0;
+      transform:translateY(20px);
+      transition:.2s;
+    }
     .notif.show{opacity:1;transform:translateY(0);}
+
     @media(max-width:768px){
       .veh-list{grid-template-columns:1fr;}
+      .tab-bar{flex-direction:column;align-items:flex-start;}
+      #reloadBtn{align-self:flex-end;}
     }
   </style>
 </head>
@@ -102,22 +148,18 @@
       <div>
         <h1>活動車流人流退場管理系統</h1>
       </div>
-      <!-- 這裡先放個文字，等 GSI 載好再畫按鈕 -->
-      <div id="signin">載入登入中…</div>
+      <div id="signin"></div>
       <div id="userInfo" class="hide" style="font-size:.75rem;"></div>
     </div>
 
-    <div id="tabs" class="card hide">
-      <div class="sheet-tabs" id="sheetTabs"></div>
+    <!-- 上方按鈕列 -->
+    <div id="tabBar" class="tab-bar hide">
+      <div id="sheetTabs" class="tab-left"></div>
+      <button id="reloadBtn" onclick="reloadSheet()">重新載入</button>
     </div>
 
+    <!-- 車輛卡片區 -->
     <div id="content" class="hide">
-      <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div style="font-size:.85rem;">目前工作表：<b id="currentSheet"></b></div>
-        </div>
-        <button onclick="reloadSheet()">重新載入</button>
-      </div>
       <div id="vehList" class="veh-list"></div>
     </div>
   </div>
@@ -125,12 +167,9 @@
   <div id="notif" class="notif"></div>
 
 <script>
-/* ① 這裡換成你的 client ID */
 const GOOGLE_CLIENT_ID = '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com';
-/* ② 這裡換成你部署出來的 Apps Script Web App URL */
 const API_BASE = 'https://script.google.com/macros/s/AKfycbxbeknXeJ2s2NnIqTwIwNdZnsbiI9UlGkQpSGfHq2TlmnITZ75Ub4ySwn6UGmJk3AXjNg/exec';
 
-/* 你的 5 張 sheet */
 const SHEET_CONFIGS = [
   {
     key: '地區專車退場（遊覽車平台）',
@@ -197,38 +236,18 @@ let currentUser = null;
 let currentSheetKey = SHEET_CONFIGS[0].key;
 let sheetData = [];
 
-/* 🚀 一進來就先跑，不用等 onload */
-initApp();
-
-function initApp(){
+window.onload = function(){
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredential
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('signin'),
+    { theme:'outline', size:'large' }
+  );
   buildTabs();
-  // 這裡開始反覆檢查 GSI 是否載好
-  waitForGSI(0);
-}
+};
 
-/* 重點：這一段會 300ms 檢查一次，最多 20 次 */
-function waitForGSI(count){
-  if (window.google && google.accounts && google.accounts.id) {
-    console.log('[GSI] loaded');
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleCredential
-    });
-    google.accounts.id.renderButton(
-      document.getElementById('signin'),
-      { theme:'outline', size:'large' }
-    );
-    return;
-  }
-  if (count > 20) {
-    console.warn('[GSI] still not loaded after tries');
-    document.getElementById('signin').textContent = '無法載入 Google 登入（請檢查 iframe 網域是否允許）';
-    return;
-  }
-  setTimeout(()=>waitForGSI(count+1), 300);
-}
-
-/* === 登入成功後 === */
 async function handleCredential(resp){
   try {
     const r = await fetch(API_BASE + '?action=verify', {
@@ -246,7 +265,7 @@ async function handleCredential(resp){
     const ui = document.getElementById('userInfo');
     ui.classList.remove('hide');
     ui.innerHTML = `${j.name||''} &lt;${j.email}&gt; ｜ 權限：<b>${j.permission}</b>`;
-    document.getElementById('tabs').classList.remove('hide');
+    document.getElementById('tabBar').classList.remove('hide');
     document.getElementById('content').classList.remove('hide');
     loadSheetData(currentSheetKey);
   } catch (err) {
@@ -254,7 +273,6 @@ async function handleCredential(resp){
   }
 }
 
-/* 上面的 tabs */
 function buildTabs(){
   const box = document.getElementById('sheetTabs');
   box.innerHTML = '';
@@ -266,130 +284,59 @@ function buildTabs(){
       currentSheetKey = cfg.key;
       document.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
-      if (currentUser) loadSheetData(currentSheetKey);
+      loadSheetData(currentSheetKey);
     };
     box.appendChild(b);
   });
 }
 
-/* 讀某張表 */
 async function loadSheetData(key){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);
-  document.getElementById('currentSheet').textContent = cfg.key;
-  document.getElementById('vehList').textContent = '讀取中...';
   const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
   const j = await r.json();
-  if (j.error){ document.getElementById('vehList').textContent = '❌ '+j.error; return; }
+  if (j.error){ 
+    document.getElementById('vehList').textContent = '❌ '+j.error; 
+    return; 
+  }
   sheetData = j.values || [];
   renderVehicles(cfg, sheetData);
 }
 
-// 把任何時間字串（尤其是 2025-11-02T10:11:34.000Z）轉成台北時間 hh:mm:ss
-function formatToTWTime(val) {
-  if (!val) return '';
-  // 有可能本來就是 hh:mm:ss，就直接回傳
-  if (/^\d{2}:\d{2}:\d{2}$/.test(val)) return val;
-
-  const d = new Date(val);
-  if (isNaN(d.getTime())) return val; // 真的不是日期就原樣丟回去
-
-  // 轉成台北
-  const utcMs = d.getTime() + d.getTimezoneOffset() * 60000;
-  const tw = new Date(utcMs + 8 * 60 * 60 * 1000);
-
-  const hh = String(tw.getHours()).padStart(2, '0');
-  const mm = String(tw.getMinutes()).padStart(2, '0');
-  const ss = String(tw.getSeconds()).padStart(2, '0');
-  return `${hh}:${mm}:${ss}`;
+function parseSheetData(raw) {
+  const headerIndex = raw.findIndex(row =>
+    Array.isArray(row) && row.some(cell => String(cell || '').trim() !== '')
+  );
+  if (headerIndex === -1) return { header: [], rows: [] };
+  const header = raw[headerIndex].map(c => String(c || '').trim());
+  const rows = raw
+    .slice(headerIndex + 1)
+    .filter(row => Array.isArray(row) && row.some(cell => String(cell || '').trim() !== ''));
+  return { header, rows };
 }
 
-// 你前面寫入用的：產生現在的台北時間 hh:mm:ss
-//function getTWTime() {
-  //const now = new Date();
-  //const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  //const tw = new Date(utcMs + 8 * 60 * 60 * 1000);
-  //const hh = String(tw.getHours()).padStart(2, '0');
-  //const mm = String(tw.getMinutes()).padStart(2, '0');
-  //const ss = String(tw.getSeconds()).padStart(2, '0');
-  //return `${hh}:${mm}:${ss}`;
-//}
-
-// 取得「台北現在時間」的 hh:mm:ss
-function getTWTime() {
-  const now = new Date();
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  const tw = new Date(utcMs + 8 * 60 * 60 * 1000);
-  const hh = String(tw.getHours()).padStart(2, '0');
-  const mm = String(tw.getMinutes()).padStart(2, '0');
-  const ss = String(tw.getSeconds()).padStart(2, '0');
-  return `${hh}:${mm}:${ss}`;
+function headerIndexToRowNumber(rawData, header, rows, idx){
+  const headerIdx = rawData.findIndex(row =>
+    Array.isArray(row) &&
+    row.length === header.length &&
+    row.every((cell, i) => String(cell || '').trim() === header[i])
+  );
+  return headerIdx + 1 + idx + 1;
 }
 
-// 取得「台北今天」的年月日
-function getTWDateParts() {
-  const now = new Date();
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  const tw = new Date(utcMs + 8 * 60 * 60 * 1000);
-  return {
-    year: tw.getFullYear(),
-    month: tw.getMonth() + 1,
-    day: tw.getDate()
-  };
-}
-
-// 把「今天台北 + hh:mm:ss」轉成 ISO（…Z）存進 sheet
-function buildISOFromTodayTW(hms) {
-  const m = hms.match(/^(\d{2}):(\d{2}):(\d{2})$/);
-  if (!m) return hms;   // 不符合 hh:mm:ss，就原樣回去
-  const { year, month, day } = getTWDateParts();
-  const hh = Number(m[1]);
-  const mm = Number(m[2]);
-  const ss = Number(m[3]);
-  // 台北時間 -> UTC 要扣 8 小時
-  const utcMs = Date.UTC(year, month - 1, day, hh - 8, mm, ss);
-  return new Date(utcMs).toISOString();
-}
-
-  
-/* 產生車卡 */
 function renderVehicles(cfg, data){
+  const { header, rows } = parseSheetData(data);
   const box = document.getElementById('vehList');
   box.innerHTML = '';
-
-  // 找出「編號 | 區域車次編號 | 車號」那一列
-  const headerRowIdx = data.findIndex(row =>
-    Array.isArray(row) &&
-    String(row[0] || '').trim() === '編號' &&
-    String(row[1] || '').trim().startsWith('區域') &&
-    String(row[2] || '').trim() === '車號'
-  );
-
-  if (headerRowIdx === -1) {
-    box.textContent = '❌ 找不到表頭（要有「編號 / 區域車次編號 / 車號」那一列）';
-    return;
-  }
-
-  const header = data[headerRowIdx].map(c => String(c || '').trim());
-
-  // 只留 A/B/C 都有資料的
-  const rows = data
-    .slice(headerRowIdx + 1)
-    .filter(r => {
-      if (!Array.isArray(r)) return false;
-      const no   = String(r[0] || '').trim();
-      const area = String(r[1] || '').trim();
-      const car  = String(r[2] || '').trim();
-      return no && area && car;
-    });
-
   if (!rows.length){
     box.textContent = '(這張表目前沒有車輛資料)';
     return;
   }
 
   rows.forEach((row, idx) => {
-    const area = String(row[1] || '').trim();  // 區域車次編號
-    const car  = String(row[2] || '').trim();  // 車號
+    const no   = String(row[0] || '').trim();
+    const area = String(row[1] || '').trim();
+    const car  = String(row[2] || '').trim();
+    if (!no || !area || !car) return;
 
     const card = document.createElement('div');
     card.className = 'veh-card';
@@ -419,8 +366,7 @@ function renderVehicles(cfg, data){
 
       if (curVal) {
         btn.classList.add('done');
-        timeSpan.textContent = formatToTWTime(curVal);
-
+        timeSpan.textContent = toLocalHHMMSS(curVal);
       }
 
       const prevOk = prevDone(cfg, header, row, st);
@@ -429,9 +375,15 @@ function renderVehicles(cfg, data){
         btn.disabled = true;
       }
 
-      const sheetRow = headerRowIdx + 1 + 1 + idx;
-
-      btn.onclick = () => onStepClick(cfg, sheetRow, header, st, curVal, btn, timeSpan);
+      btn.onclick = () => onStepClick(
+        cfg,
+        headerIndexToRowNumber(data, header, rows, idx),
+        header,
+        st,
+        curVal,
+        btn,
+        timeSpan
+      );
 
       rowEl.appendChild(btn);
       rowEl.appendChild(timeSpan);
@@ -441,6 +393,18 @@ function renderVehicles(cfg, data){
     card.appendChild(stepsBox);
     box.appendChild(card);
   });
+}
+
+function toLocalHHMMSS(val){
+  // val 可能是 ISO，也可能是直接寫進去的字串
+  const iso = new Date(val);
+  if (!isNaN(iso.getTime())) {
+    // 轉成台灣時間
+    const tw = new Date(iso.getTime() + 8*60*60*1000);
+    return tw.toISOString().substring(11,19);
+  }
+  // 不是 ISO，就原樣回傳
+  return val;
 }
 
 function prevDone(cfg, header, row, st){
@@ -459,28 +423,27 @@ async function onStepClick(cfg, rowNumber, header, st, oldVal, btn, span){
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  let valueToWrite;
+  // 給使用者看的「預設時間」= 現在台灣時間的 hh:mm:ss
+  const now = new Date();
+  const tw = new Date(now.getTime() + 8*60*60*1000);
+  const hhmmss = tw.toISOString().substring(11,19);
 
-  if (oldVal) {
-    // ✅ 已經有時間 → 給他一個「現在台北時間」當預設
-    const def = getTWTime();
-    const m = prompt('此狀態已有時間，要修改嗎？(清空就留白)', def);
-    if (m === null) return;                 // 按「取消」→ 不動
-    const v = m.trim();
-    if (v === '') {
-      // ✅ 清空
-      valueToWrite = '';
-    } else if (/^\d{2}:\d{2}:\d{2}$/.test(v)) {
-      // ✅ 只填 hh:mm:ss → 轉成「今天台北 + 這個時間」的 ISO
-      valueToWrite = buildISOFromTodayTW(v);
-    } else {
-      // ✅ 使用者自己亂填別的格式，就照他填的存
-      valueToWrite = v;
-    }
+  let userInput;
+  if (oldVal){
+    userInput = prompt('此狀態已有時間，要修改嗎？（hh:mm:ss，清空就留白）', hhmmss);
+    if (userInput === null) return; // 取消
   } else {
-    // ✅ 原本沒時間 → 直接寫現在台北時間 (轉 ISO)
-    const nowHHMMSS = getTWTime();
-    valueToWrite = buildISOFromTodayTW(nowHHMMSS);
+    userInput = hhmmss;
+  }
+
+  let valueToWrite = '';
+  if (userInput.trim() !== '') {
+    // 把「今天的日期 + 使用者填的時間」組成一個 ISO 字串寫進去
+    const today = tw.toISOString().substring(0,10); // yyyy-mm-dd
+    valueToWrite = `${today}T${userInput.trim()}.000Z`;
+  } else {
+    // 清空
+    valueToWrite = '';
   }
 
   const body = {
@@ -488,33 +451,21 @@ async function onStepClick(cfg, rowNumber, header, st, oldVal, btn, span){
     email: currentUser.email,
     writes: [{ row: rowNumber, col: colIdx+1, value: valueToWrite }]
   };
-
   const r = await fetch(API_BASE + '?action=update', {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body)
   });
-
   const j = await r.json();
-  if (!j.ok){
-    showNotif('寫入失敗：'+(j.error||'unknown'), true);
-    return;
-  }
+  if (!j.ok){ showNotif('寫入失敗：'+(j.error||'unknown'), true); return; }
 
-  // ✅ 前端顯示一律轉成台北 hh:mm:ss
-  span.textContent = valueToWrite ? formatToTWTime(valueToWrite) : '';
-  // 灰色樣式保持
-  btn.classList.add('done');
-
+  span.textContent = userInput.trim() !== '' ? userInput.trim() : '';
+  if (userInput.trim() !== '') btn.classList.add('done');
+  loadSheetData(currentSheetKey);
   showNotif('已寫入「'+st+'」', false);
-  // 如果你要即時重抓也可以留下面這行，不要就拿掉
-  // loadSheetData(currentSheetKey);
 }
 
-
-function reloadSheet(){
-  if (currentUser) loadSheetData(currentSheetKey);
-}
+function reloadSheet(){ loadSheetData(currentSheetKey); }
 
 function showNotif(msg, isErr){
   const box = document.getElementById('notif');
@@ -523,21 +474,6 @@ function showNotif(msg, isErr){
   box.classList.add('show');
   setTimeout(()=>box.classList.remove('show'), 2500);
 }
-
-function getTWTime() {
-  // 1. 先拿現在的 UTC 時間
-  const now = new Date();
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  // 2. 加上台北 +8 小時
-  const tw = new Date(utcMs + 8 * 60 * 60 * 1000);
-  // 3. 組成 hh:mm:ss
-  const hh = String(tw.getHours()).padStart(2, '0');
-  const mm = String(tw.getMinutes()).padStart(2, '0');
-  const ss = String(tw.getSeconds()).padStart(2, '0');
-  return `${hh}:${mm}:${ss}`;
-}
-
-  
 </script>
 </body>
 </html>

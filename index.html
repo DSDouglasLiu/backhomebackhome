@@ -332,19 +332,46 @@ function formatSheetTime(val){
 function renderVehicles(cfg, data){
   const box = document.getElementById('vehList');
   box.innerHTML = '';
-  const { header, rows, headerIndex } = parseSheetData(data);
+
+  // 找真正的表頭：你的試算表是第 1、2 列空白，第 3 列才是標題
+  const headerRowIdx = data.findIndex(row =>
+    Array.isArray(row) &&
+    String(row[0] || '').trim() === '編號' &&
+    String(row[1] || '').trim().startsWith('區域') &&
+    String(row[2] || '').trim() === '車號'
+  );
+
+  if (headerRowIdx === -1) {
+    box.textContent = '❌ 找不到表頭（要有「編號 / 區域車次編號 / 車號」那一列）';
+    return;
+  }
+
+  const header = data[headerRowIdx].map(c => String(c || '').trim());
+
+  // 表頭下面才是真正資料，且一定要 A,B,C 三欄都有才畫卡片
+  const rows = data
+    .slice(headerRowIdx + 1)
+    .filter(r => {
+      if (!Array.isArray(r)) return false;
+      const no   = String(r[0] || '').trim();
+      const area = String(r[1] || '').trim();
+      const car  = String(r[2] || '').trim();
+      return no && area && car;
+    });
+
   if (!rows.length){
     box.textContent = '(這張表目前沒有車輛資料)';
     return;
   }
 
   rows.forEach((row, idx) => {
-    const area = String(row[1] || '').trim();
-    const car  = String(row[2] || '').trim();
+    const area = String(row[1] || '').trim(); // 區域車次編號
+    const car  = String(row[2] || '').trim(); // 車號
 
     const card = document.createElement('div');
     card.className = 'veh-card';
 
+    // 第一行放「區域車次編號」，第二行放車號
     const title = document.createElement('div');
     title.innerHTML = `
       <div class="veh-title-main">${area}</div>
@@ -354,6 +381,7 @@ function renderVehicles(cfg, data){
 
     const stepsBox = document.createElement('div');
 
+    // 一個狀態一列：左邊按鈕，右邊時間
     cfg.steps.forEach(st => {
       const colIdx = header.indexOf(st);
       const rowEl = document.createElement('div');
@@ -366,24 +394,28 @@ function renderVehicles(cfg, data){
       const timeSpan = document.createElement('span');
       timeSpan.className = 'step-time';
 
+      // 原始時間（可能是 ISO、也可能是你手動輸入的「下午 8:32:38」）
       const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
-      const displayVal = formatSheetTime(rawVal);
+      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
 
       if (rawVal) {
-        btn.classList.add('done');
+        btn.classList.add('done');      // 變灰
         timeSpan.textContent = displayVal;
       }
 
+      // 一樣吃「前一步沒做就不能做下一步」的規則
       const prevOk = prevDone(cfg, header, row, st);
       if (!prevOk && !rawVal) {
-        btn.classList.add('locked');
+        btn.classList.add('done');  // 一樣灰，但沒有時間
         btn.disabled = true;
       }
 
-      const sheetRow = (headerIndex + 1) + 1 + idx;
+      // 算真正要寫回去的試算表列號
+      // headerRowIdx 是 0-based，要 +1 → 變 1-based，再 +1 → 到資料第一列，再 + idx → 真正列
+      const sheetRow = headerRowIdx + 1 + 1 + idx;
 
       btn.onclick = () =>
-        onStepClick(cfg, sheetRow, header, st, displayVal, btn, timeSpan);
+        onStepClick(cfg, sheetRow, header, st, rawVal, btn, timeSpan);
 
       rowEl.appendChild(btn);
       rowEl.appendChild(timeSpan);
@@ -395,6 +427,36 @@ function renderVehicles(cfg, data){
   });
 }
 
+  
+
+// 把 GAS 回來的時間字串轉成台灣時間 hh:mm:ss
+function formatSheetTime(val) {
+  if (!val) return '';
+
+  // 如果本來就是 "20:32:38" 這種，就直接用
+  if (/^\d{2}:\d{2}:\d{2}$/.test(val)) {
+    return val;
+  }
+
+  // GAS 回來通常是 ISO：1899-12-30T12:32:38.000Z
+  const d = new Date(val);
+  if (isNaN(d.getTime())) {
+    // 不是標準時間，就原樣丟回去，避免整個空白
+    return val;
+  }
+
+  // 轉成 +8，這裡用 UTC 來取，避免再被瀏覽器加一次時區
+  const twMs = d.getTime() + 8 * 60 * 60 * 1000;
+  const tw = new Date(twMs);
+
+  const hh = String(tw.getUTCHours()).padStart(2, '0');
+  const mm = String(tw.getUTCMinutes()).padStart(2, '0');
+  const ss = String(tw.getUTCSeconds()).padStart(2, '0');
+
+  return `${hh}:${mm}:${ss}`;
+}
+
+  
 function prevDone(cfg, header, row, st){
   const idx = cfg.steps.indexOf(st);
   if (idx === 0) return true;
@@ -415,27 +477,54 @@ function getTaipeiHHMMSS() {
   return `${h}:${m}:${s}`;
 }
 
-async function onStepClick(cfg, rowNumber, header, st, oldDisplayVal, btn, span){
+async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
   if (!currentUser) return alert('請先登入');
   if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
 
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  let valueToWrite;
+  // 先做「現在台灣時間的 hh:mm:ss」
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const ss = String(now.getSeconds()).padStart(2,'0');
+  const nowHHMMSS = `${hh}:${mm}:${ss}`;
 
-  if (oldDisplayVal) {
-    const input = prompt('此狀態已有時間，要修改嗎？\n(清空就會刪除)', getTaipeiHHMMSS());
-    if (input === null) return; // 取消
-    const text = input.trim();
-    if (text === '') {
-      valueToWrite = '';
-    } else {
-      // 使用者自己改的 hh:mm:ss
-      valueToWrite = text;
-    }
+  let userInput;
+
+  if (oldRawVal) {
+    // 有舊值 → 給現在時間當預設
+    userInput = prompt('此狀態已有時間，要修改嗎？（留空→清除）', nowHHMMSS);
+    if (userInput === null) return; // 取消
+    userInput = userInput.trim();
   } else {
-    valueToWrite = getTaipeiHHMMSS();
+    // 沒舊值 → 直接用現在時間
+    userInput = nowHHMMSS;
+  }
+
+  // 要寫回試算表的值
+  let valueToWrite = '';
+
+  if (userInput === '') {
+    // 清空
+    valueToWrite = '';
+  } else if (/^\d{2}:\d{2}:\d{2}$/.test(userInput)) {
+    // 使用者只給 hh:mm:ss → 我們做成「今天(台灣)的這個時間」然後轉成 UTC ISO 丟給 GAS
+    const localDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      Number(userInput.slice(0,2)),
+      Number(userInput.slice(3,5)),
+      Number(userInput.slice(6,8))
+    );
+    // 這裡把「台灣時間」轉成 UTC → 減 8 小時
+    const utcMs = localDate.getTime() - 8 * 60 * 60 * 1000;
+    valueToWrite = new Date(utcMs).toISOString();
+  } else {
+    // 其他格式（你手動貼 ISO）→ 原樣寫回
+    valueToWrite = userInput;
   }
 
   const body = {
@@ -456,17 +545,21 @@ async function onStepClick(cfg, rowNumber, header, st, oldDisplayVal, btn, span)
     return;
   }
 
-  span.textContent = valueToWrite;
-  if (valueToWrite) {
-    btn.classList.add('done');
-    btn.disabled = false;
-  } else {
+  // 前端同步更新
+  if (userInput === '') {
+    span.textContent = '';
     btn.classList.remove('done');
+  } else {
+    span.textContent = formatSheetTime(valueToWrite);
+    btn.classList.add('done');
   }
 
-  loadSheetData(currentSheetKey);
   showNotif('已寫入「'+st+'」', false);
+  // 看你要不要重新抓表，現在這樣就能先看到更新了：
+  // reloadSheet();
 }
+
+  
 
 function reloadSheet(){ loadSheetData(currentSheetKey); }
 

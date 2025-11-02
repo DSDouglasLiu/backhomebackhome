@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>活動車流人流退場管理系統</title>
+  <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root{
@@ -199,17 +200,35 @@ let currentUser = null;
 let currentSheetKey = SHEET_CONFIGS[0].key;
 let sheetData = [];
 
-window.onload = function(){
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleCredential
-  });
-  google.accounts.id.renderButton(
-    document.getElementById('signin'),
-    { theme:'outline', size:'large' }
-  );
-  buildTabs();
-};
+/* 🔑 不用 window.onload，自己啟動 */
+initApp();
+
+function initApp(){
+  buildTabs(); // 登入前 tabs 也先畫，按了才去拉資料
+  // 嘗試載入 Google Identity，若還沒好就等一下
+  tryInitGoogleSignIn(0);
+}
+
+/* 反覆嘗試把登入鈕渲染出來，避免 Sites 已經 onload 過了 */
+function tryInitGoogleSignIn(count){
+  if (window.google && google.accounts && google.accounts.id) {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredential
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('signin'),
+      { theme:'outline', size:'large' }
+    );
+    return;
+  }
+  if (count > 20) {
+    // 20 * 300ms = 6 秒還沒好，就放棄
+    console.warn('Google Identity 還沒載入，登入鈕無法顯示');
+    return;
+  }
+  setTimeout(()=>tryInitGoogleSignIn(count+1), 300);
+}
 
 // Google 登入成功
 async function handleCredential(resp){
@@ -251,7 +270,8 @@ function buildTabs(){
       currentSheetKey = cfg.key;
       document.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
-      loadSheetData(currentSheetKey);
+      // 如果已登入才真的去抓資料
+      if (currentUser) loadSheetData(currentSheetKey);
     };
     box.appendChild(b);
   });
@@ -351,7 +371,7 @@ function renderVehicles(cfg, data){
       // 真正的試算表列號：表頭那一列(0-based) +1(1-based) +1(下一列開始) + idx
       const sheetRow = headerRowIdx + 1 + 1 + idx;
 
-      // 還是叫原本的 onStepClick（可以改時間的那版）
+      // 寫回去
       btn.onclick = () => onStepClick(cfg, sheetRow, header, st, curVal, btn, timeSpan);
 
       rowEl.appendChild(btn);
@@ -412,7 +432,9 @@ async function onStepClick(cfg, rowNumber, header, st, oldVal, btn, span){
   showNotif('已寫入「'+st+'」', false);
 }
 
-function reloadSheet(){ loadSheetData(currentSheetKey); }
+function reloadSheet(){ 
+  if (currentUser) loadSheetData(currentSheetKey); 
+}
 
 function showNotif(msg, isErr){
   const box = document.getElementById('notif');

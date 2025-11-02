@@ -355,16 +355,38 @@ function formatSheetTime(val){
   return `${hh}:${mm}:${ss}`;
 }
 
+<script>
+// ...前面的程式都保留...
+
 function renderVehicles(cfg, data){
   const box = document.getElementById('vehList');
   box.innerHTML = '';
 
-  const { header, rows, headerRowIdx } = parseSheetData(data);
+  const headerRowIdx = data.findIndex(row =>
+    Array.isArray(row) &&
+    String(row[0] || '').trim() === '編號' &&
+    String(row[1] || '').trim().startsWith('區域') &&
+    String(row[2] || '').trim() === '車號'
+  );
+
   if (headerRowIdx === -1) {
-    box.textContent = '❌ 找不到表頭';
+    box.textContent = '❌ 找不到表頭（要有「編號 / 區域車次編號 / 車號」那一列）';
     return;
   }
-  if (!rows.length) {
+
+  const header = data[headerRowIdx].map(c => String(c || '').trim());
+
+  const rows = data
+    .slice(headerRowIdx + 1)
+    .filter(r => {
+      if (!Array.isArray(r)) return false;
+      const no   = String(r[0] || '').trim();
+      const area = String(r[1] || '').trim();
+      const car  = String(r[2] || '').trim();
+      return no && area && car;
+    });
+
+  if (!rows.length){
     box.textContent = '(這張表目前沒有車輛資料)';
     return;
   }
@@ -390,42 +412,49 @@ function renderVehicles(cfg, data){
       const rowEl = document.createElement('div');
       rowEl.className = 'step-row';
 
-      // 算真正的試算表列號 (1-based)
-      const sheetRow = headerRowIdx + 1 + 1 + idx;
-
-      // 特例：車暫停位置 → 下拉
+      // 🔹 若是「車暫停位置」→ 用下拉
       if (st === '車暫停位置') {
         const sel = document.createElement('select');
-        sel.className = 'step-select';
+        sel.style.minWidth = '170px';
 
-        PARKING_OPTIONS.forEach(opt => {
+        const opts = [
+          '—請選擇—',
+          '禪堂平台',
+          '法大路（法大一橋到法心南路間）',
+          '法心南路',
+          '法鼓路靈山勝境石往外',
+          '法新北路'
+        ];
+        opts.forEach(o => {
           const op = document.createElement('option');
-          op.value = opt;
-          op.textContent = opt === '' ? '— 請選擇 —' : opt;
+          op.value = o === '—請選擇—' ? '' : o;
+          op.textContent = o;
           sel.appendChild(op);
         });
 
-        // 目前這一列在 sheet 上的值
         const curVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
-        if (curVal) {
-          sel.value = curVal;
-        }
+        if (curVal) sel.value = curVal;
 
-        const showSpan = document.createElement('span');
-        showSpan.className = 'step-time';
-        showSpan.textContent = curVal;
+        const info = document.createElement('span');
+        info.className = 'step-time';
+        info.textContent = curVal || '';
 
         sel.onchange = async () => {
-          if (!currentUser) return alert('請先登入');
-          const val = sel.value;
+          const v = sel.value.trim();
+          if (colIdx === -1) {
+            alert('此工作表還沒有「車暫停位置」這一欄，請先在 Google Sheet 建欄位');
+            sel.value = '';
+            return;
+          }
+          const sheetRow = headerRowIdx + 1 + 1 + idx;
           const body = {
             sheet: cfg.sheet,
             email: currentUser.email,
-            writes: [{ row: sheetRow, col: colIdx+1, value: val }]
+            writes: [{ row: sheetRow, col: colIdx+1, value: v }]
           };
           const r = await fetch(API_BASE + '?action=update', {
-            method:'POST',
-            headers:{'Content-Type':'text/plain;charset=utf-8'},
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(body)
           });
           const j = await r.json();
@@ -433,18 +462,18 @@ function renderVehicles(cfg, data){
             showNotif('寫入失敗：'+(j.error||'unknown'), true);
             return;
           }
-          showSpan.textContent = val;
-          showNotif('已更新「車暫停位置」', false);
+          info.textContent = v;
+          showNotif('已寫入「車暫停位置」', false);
         };
 
         rowEl.appendChild(sel);
-        rowEl.appendChild(showSpan);
+        rowEl.appendChild(info);
         stepsBox.appendChild(rowEl);
         card.appendChild(stepsBox);
-        return; // 注意：這個步驟到這裡就結束，不要走下面的「按鈕」流程
+        return; // ← 這個步驟結束，換下一個
       }
 
-      // 一般按鈕步驟
+      // 🔹 其他步驟：一般按鈕
       const btn = document.createElement('button');
       btn.className = 'step-btn';
       btn.textContent = st;
@@ -460,13 +489,14 @@ function renderVehicles(cfg, data){
         timeSpan.textContent = displayVal;
       }
 
-      // 一般步驟才要檢查「前一步有沒有做」
+      // 🔒 應用修正過的 prevDone
       const prevOk = prevDone(cfg, header, row, st);
       if (!prevOk && !rawVal) {
-        btn.classList.add('locked');
+        btn.classList.add('done');
         btn.disabled = true;
       }
 
+      const sheetRow = headerRowIdx + 1 + 1 + idx;
       btn.onclick = () =>
         onStepClick(cfg, sheetRow, header, st, rawVal, btn, timeSpan);
 
@@ -480,20 +510,24 @@ function renderVehicles(cfg, data){
   });
 }
 
+/* ✅ 這裡是重點：上一個欄位找不到，就一律「還沒完成」 */
 function prevDone(cfg, header, row, st){
   const idx = cfg.steps.indexOf(st);
   if (idx === 0) return true;
-  const prevName = cfg.steps[idx-1];
 
-  // 前一個是「車暫停位置」的話，就不要擋住後面
-  if (prevName === '車暫停位置') {
-    return true;
+  const prevName = cfg.steps[idx-1];
+  const colIdx = header.indexOf(prevName);
+
+  // 👉 原本是 return true，現在我們反過來
+  if (colIdx === -1) {
+    // 特別是我們自己加的「車暫停位置」，沒這欄就一定不能走下一步
+    return false;
   }
 
-  const colIdx = header.indexOf(prevName);
-  if (colIdx === -1) return true;
-  return !!row[colIdx];
+  return !!String(row[colIdx] || '').trim();
 }
+</script>
+
 
 /* 按鈕寫入時間 */
 async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){

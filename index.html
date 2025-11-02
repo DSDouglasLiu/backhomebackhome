@@ -26,50 +26,42 @@
     }
     .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
     h1{margin:0 0 16px;}
+    .card{background:var(--card-bg);border:1px solid rgba(255,255,255,0.3);border-radius:16px;padding:16px;margin:12px 0;}
+    .hide{display:none;}
 
-    /* ====== tabs ====== */
-    .tab-bar{
-      display:flex;
-      align-items:flex-end;
-      justify-content:space-between;
-      gap:12px;
-      margin:12px 0 8px;
-    }
-    .tab-left{
-      display:flex;
-      flex-wrap:wrap;
-      gap:12px;
-    }
+    /* 上面那排 tab */
+    .sheet-tabs{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;}
     .btn-tab{
-      border:1px solid #d1d5db;
-      border-radius:4px;
       background:#e5e7eb;
-      color:#000;
-      padding:7px 18px 8px;
-      font-size:.78rem;
+      border:1px solid #cbd5f5;
+      border-radius:4px;
+      padding:6px 22px;
+      font-size:.8rem;
       cursor:pointer;
-      transition:.15s;
+      color:#000;
+      min-width:170px;
+      text-align:center;
     }
     .btn-tab.active{
-      background:#0f6efc;
+      background:#1f6fe5;
       color:#fff;
-      border-color:#0f6efc;
+      border-color:#1f6fe5;
     }
-
     #reloadBtn{
-      border:1px solid #d1d5db;
+      margin-left:auto;
       background:#fff;
+      border:1px solid #cbd5f5;
       border-radius:4px;
-      padding:6px 16px;
+      padding:6px 22px;
       cursor:pointer;
-      font-size:.73rem;
-      color:#000;
     }
 
+    /* 車卡片：一列兩輛 */
     .veh-list{
       display:grid;
       grid-template-columns:repeat(auto-fit, minmax(480px, 1fr));
       gap:12px;
+      margin-top:16px;
     }
     .veh-card{
       background:rgba(255,255,255,0.85);
@@ -81,15 +73,8 @@
       gap:10px;
     }
     body.dark .veh-card{background:rgba(15,23,42,0.28);}
-    .veh-title-main{
-      font-weight:600;
-      font-size:1rem;
-      margin-bottom:2px;
-    }
-    .veh-title-sub{
-      font-size:.85rem;
-      opacity:.7;
-    }
+    .veh-title-main{font-weight:600;font-size:1rem;margin-bottom:2px;}
+    .veh-title-sub{font-size:.85rem;opacity:.7;}
 
     .step-row{
       display:flex;
@@ -101,44 +86,37 @@
       border:0;
       border-radius:10px;
       padding:6px 12px 7px;
-      background:#0f6efc;
+      background:#0f6efc;   /* 未完成：藍底白字 */
       color:#fff;
       font-size:.74rem;
       cursor:pointer;
       flex:0 0 auto;
-      min-width:150px;
+      min-width:170px;
+      text-align:center;
     }
     .step-btn.done{
-      background:#d1d5db;
+      background:#d1d5db;   /* 已完成：灰底黑字 */
       color:#0f172a;
+      cursor:pointer;       /* 還是可以點，會跳對話框 */
+    }
+    .step-btn.locked{
+      background:#d1d5db;
+      opacity:.4;
+      cursor:not-allowed;
     }
     .step-time{
       font-size:.7rem;
       color:rgba(15,23,42,.55);
-      min-width:90px;
+      min-width:70px;
       text-align:right;
     }
 
-    .hide{display:none;}
-
-    .notif{
-      position:fixed;
-      right:16px;
-      bottom:16px;
-      background:rgba(15,23,42,.85);
-      color:#fff;
-      padding:10px 14px;
-      border-radius:14px;
-      opacity:0;
-      transform:translateY(20px);
-      transition:.2s;
-    }
+    .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;}
     .notif.show{opacity:1;transform:translateY(0);}
 
     @media(max-width:768px){
       .veh-list{grid-template-columns:1fr;}
-      .tab-bar{flex-direction:column;align-items:flex-start;}
-      #reloadBtn{align-self:flex-end;}
+      .sheet-tabs{gap:10px;}
     }
   </style>
 </head>
@@ -152,13 +130,13 @@
       <div id="userInfo" class="hide" style="font-size:.75rem;"></div>
     </div>
 
-    <!-- 上方按鈕列 -->
-    <div id="tabBar" class="tab-bar hide">
-      <div id="sheetTabs" class="tab-left"></div>
-      <button id="reloadBtn" onclick="reloadSheet()">重新載入</button>
+    <!-- tabs ＋ 重新載入 -->
+    <div id="tabs" class="card hide" style="padding-bottom:6px;">
+      <div class="sheet-tabs" id="sheetTabs">
+        <!-- 動態產生 -->
+      </div>
     </div>
 
-    <!-- 車輛卡片區 -->
     <div id="content" class="hide">
       <div id="vehList" class="veh-list"></div>
     </div>
@@ -167,7 +145,9 @@
   <div id="notif" class="notif"></div>
 
 <script>
+/* ① 這裡換成你的 client ID */
 const GOOGLE_CLIENT_ID = '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com';
+/* ② 這裡換成你部署出來的 Apps Script Web App URL */
 const API_BASE = 'https://script.google.com/macros/s/AKfycbxbeknXeJ2s2NnIqTwIwNdZnsbiI9UlGkQpSGfHq2TlmnITZ75Ub4ySwn6UGmJk3AXjNg/exec';
 
 const SHEET_CONFIGS = [
@@ -248,6 +228,31 @@ window.onload = function(){
   buildTabs();
 };
 
+// 產 tab + 右下角重新載入
+function buildTabs(){
+  const box = document.getElementById('sheetTabs');
+  box.innerHTML = '';
+  SHEET_CONFIGS.forEach(cfg=>{
+    const b = document.createElement('button');
+    b.className = 'btn-tab' + (cfg.key===currentSheetKey?' active':'');
+    b.textContent = cfg.key;
+    b.onclick = () => {
+      currentSheetKey = cfg.key;
+      document.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      loadSheetData(currentSheetKey);
+    };
+    box.appendChild(b);
+  });
+
+  // 重新載入按鈕
+  const reloadBtn = document.createElement('button');
+  reloadBtn.id = 'reloadBtn';
+  reloadBtn.textContent = '重新載入';
+  reloadBtn.onclick = reloadSheet;
+  box.appendChild(reloadBtn);
+}
+
 async function handleCredential(resp){
   try {
     const r = await fetch(API_BASE + '?action=verify', {
@@ -265,7 +270,7 @@ async function handleCredential(resp){
     const ui = document.getElementById('userInfo');
     ui.classList.remove('hide');
     ui.innerHTML = `${j.name||''} &lt;${j.email}&gt; ｜ 權限：<b>${j.permission}</b>`;
-    document.getElementById('tabBar').classList.remove('hide');
+    document.getElementById('tabs').classList.remove('hide');
     document.getElementById('content').classList.remove('hide');
     loadSheetData(currentSheetKey);
   } catch (err) {
@@ -273,35 +278,17 @@ async function handleCredential(resp){
   }
 }
 
-function buildTabs(){
-  const box = document.getElementById('sheetTabs');
-  box.innerHTML = '';
-  SHEET_CONFIGS.forEach(cfg=>{
-    const b = document.createElement('button');
-    b.className = 'btn-tab' + (cfg.key===currentSheetKey?' active':'');
-    b.textContent = cfg.key;
-    b.onclick = () => {
-      currentSheetKey = cfg.key;
-      document.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');
-      loadSheetData(currentSheetKey);
-    };
-    box.appendChild(b);
-  });
-}
-
 async function loadSheetData(key){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);
+  document.getElementById('vehList').textContent = '讀取中...';
   const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
   const j = await r.json();
-  if (j.error){ 
-    document.getElementById('vehList').textContent = '❌ '+j.error; 
-    return; 
-  }
+  if (j.error){ document.getElementById('vehList').textContent = '❌ '+j.error; return; }
   sheetData = j.values || [];
   renderVehicles(cfg, sheetData);
 }
 
+// 解析：抓出表頭 + 真正有資料的列
 function parseSheetData(raw) {
   const headerIndex = raw.findIndex(row =>
     Array.isArray(row) && row.some(cell => String(cell || '').trim() !== '')
@@ -310,33 +297,26 @@ function parseSheetData(raw) {
   const header = raw[headerIndex].map(c => String(c || '').trim());
   const rows = raw
     .slice(headerIndex + 1)
-    .filter(row => Array.isArray(row) && row.some(cell => String(cell || '').trim() !== ''));
-  return { header, rows };
-}
-
-function headerIndexToRowNumber(rawData, header, rows, idx){
-  const headerIdx = rawData.findIndex(row =>
-    Array.isArray(row) &&
-    row.length === header.length &&
-    row.every((cell, i) => String(cell || '').trim() === header[i])
-  );
-  return headerIdx + 1 + idx + 1;
+    .filter(row => {
+      if (!Array.isArray(row)) return false;
+      // 你有說：三個欄位都要有才顯示
+      return String(row[0]||'').trim() && String(row[1]||'').trim() && String(row[2]||'').trim();
+    });
+  return { header, rows, headerIndex };
 }
 
 function renderVehicles(cfg, data){
-  const { header, rows } = parseSheetData(data);
   const box = document.getElementById('vehList');
   box.innerHTML = '';
+  const { header, rows, headerIndex } = parseSheetData(data);
   if (!rows.length){
     box.textContent = '(這張表目前沒有車輛資料)';
     return;
   }
 
   rows.forEach((row, idx) => {
-    const no   = String(row[0] || '').trim();
     const area = String(row[1] || '').trim();
     const car  = String(row[2] || '').trim();
-    if (!no || !area || !car) return;
 
     const card = document.createElement('div');
     card.className = 'veh-card';
@@ -366,24 +346,20 @@ function renderVehicles(cfg, data){
 
       if (curVal) {
         btn.classList.add('done');
-        timeSpan.textContent = toLocalHHMMSS(curVal);
+        timeSpan.textContent = curVal;
       }
 
       const prevOk = prevDone(cfg, header, row, st);
       if (!prevOk && !curVal) {
-        btn.classList.add('done');
+        btn.classList.add('locked');
         btn.disabled = true;
       }
 
-      btn.onclick = () => onStepClick(
-        cfg,
-        headerIndexToRowNumber(data, header, rows, idx),
-        header,
-        st,
-        curVal,
-        btn,
-        timeSpan
-      );
+      // 實際的 sheet 列號 = 表頭列(1-based) + 1 + idx
+      const sheetRow = (headerIndex + 1) + 1 + idx;
+
+      btn.onclick = () =>
+        onStepClick(cfg, sheetRow, header, st, curVal, btn, timeSpan);
 
       rowEl.appendChild(btn);
       rowEl.appendChild(timeSpan);
@@ -395,18 +371,6 @@ function renderVehicles(cfg, data){
   });
 }
 
-function toLocalHHMMSS(val){
-  // val 可能是 ISO，也可能是直接寫進去的字串
-  const iso = new Date(val);
-  if (!isNaN(iso.getTime())) {
-    // 轉成台灣時間
-    const tw = new Date(iso.getTime() + 8*60*60*1000);
-    return tw.toISOString().substring(11,19);
-  }
-  // 不是 ISO，就原樣回傳
-  return val;
-}
-
 function prevDone(cfg, header, row, st){
   const idx = cfg.steps.indexOf(st);
   if (idx === 0) return true;
@@ -416,6 +380,17 @@ function prevDone(cfg, header, row, st){
   return !!row[colIdx];
 }
 
+// 取得台北現在時間的 HH:mm:ss
+function getTaipeiHHMMSS() {
+  const now = new Date();
+  const tzOffsetMin = now.getTimezoneOffset(); // 你電腦對 UTC 的差(分鐘)，台灣通常是 -480
+  const taipei = new Date(now.getTime() + (480 + tzOffsetMin) * 60 * 1000);
+  const h = String(taipei.getHours()).padStart(2,'0');
+  const m = String(taipei.getMinutes()).padStart(2,'0');
+  const s = String(taipei.getSeconds()).padStart(2,'0');
+  return `${h}:${m}:${s}`;
+}
+
 async function onStepClick(cfg, rowNumber, header, st, oldVal, btn, span){
   if (!currentUser) return alert('請先登入');
   if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
@@ -423,27 +398,25 @@ async function onStepClick(cfg, rowNumber, header, st, oldVal, btn, span){
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  // 給使用者看的「預設時間」= 現在台灣時間的 hh:mm:ss
-  const now = new Date();
-  const tw = new Date(now.getTime() + 8*60*60*1000);
-  const hhmmss = tw.toISOString().substring(11,19);
+  let valueToWrite;
 
-  let userInput;
-  if (oldVal){
-    userInput = prompt('此狀態已有時間，要修改嗎？（hh:mm:ss，清空就留白）', hhmmss);
-    if (userInput === null) return; // 取消
-  } else {
-    userInput = hhmmss;
-  }
+  if (oldVal) {
+    // 已經有 → 跳對話框，預設是「現在的台北時間」
+    const input = prompt('此狀態已有時間，要修改嗎？\n(清空就會刪除)', getTaipeiHHMMSS());
+    if (input === null) return; // 按取消
+    const text = input.trim();
 
-  let valueToWrite = '';
-  if (userInput.trim() !== '') {
-    // 把「今天的日期 + 使用者填的時間」組成一個 ISO 字串寫進去
-    const today = tw.toISOString().substring(0,10); // yyyy-mm-dd
-    valueToWrite = `${today}T${userInput.trim()}.000Z`;
+    if (text === '') {
+      // 清空
+      valueToWrite = '';
+    } else {
+      // 你說「若自行修改hh:mm:ss內容，年月是當時的年月」→ 但 sheet 只要 hh:mm:ss
+      // 所以這裡就直接寫回 hh:mm:ss，不轉 ISO
+      valueToWrite = text;
+    }
   } else {
-    // 清空
-    valueToWrite = '';
+    // 沒有 → 直接寫現在台北時間
+    valueToWrite = getTaipeiHHMMSS();
   }
 
   const body = {
@@ -451,21 +424,36 @@ async function onStepClick(cfg, rowNumber, header, st, oldVal, btn, span){
     email: currentUser.email,
     writes: [{ row: rowNumber, col: colIdx+1, value: valueToWrite }]
   };
+
   const r = await fetch(API_BASE + '?action=update', {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body)
   });
-  const j = await r.json();
-  if (!j.ok){ showNotif('寫入失敗：'+(j.error||'unknown'), true); return; }
 
-  span.textContent = userInput.trim() !== '' ? userInput.trim() : '';
-  if (userInput.trim() !== '') btn.classList.add('done');
+  const j = await r.json();
+  if (!j.ok){
+    showNotif('寫入失敗：'+(j.error||'unknown'), true);
+    return;
+  }
+
+  // 前端同步
+  span.textContent = valueToWrite;
+  if (valueToWrite) {
+    btn.classList.add('done');
+    btn.disabled = false; // 還是可以改
+  } else {
+    btn.classList.remove('done');
+  }
+
+  // 重新抓一次最新資料
   loadSheetData(currentSheetKey);
   showNotif('已寫入「'+st+'」', false);
 }
 
-function reloadSheet(){ loadSheetData(currentSheetKey); }
+function reloadSheet(){
+  loadSheetData(currentSheetKey);
+}
 
 function showNotif(msg, isErr){
   const box = document.getElementById('notif');

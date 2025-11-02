@@ -81,7 +81,7 @@
     .step-btn.done{
       background:#d1d5db;
       color:#0f172a;
-      cursor:not-allowed;
+      cursor:pointer;
     }
     .step-time{
       font-size:.7rem;
@@ -306,6 +306,17 @@ function formatToTWTime(val) {
 }
 
 // 你前面寫入用的：產生現在的台北時間 hh:mm:ss
+//function getTWTime() {
+  //const now = new Date();
+  //const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  //const tw = new Date(utcMs + 8 * 60 * 60 * 1000);
+  //const hh = String(tw.getHours()).padStart(2, '0');
+  //const mm = String(tw.getMinutes()).padStart(2, '0');
+  //const ss = String(tw.getSeconds()).padStart(2, '0');
+  //return `${hh}:${mm}:${ss}`;
+//}
+
+// 取得「台北現在時間」的 hh:mm:ss
 function getTWTime() {
   const now = new Date();
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
@@ -314,6 +325,31 @@ function getTWTime() {
   const mm = String(tw.getMinutes()).padStart(2, '0');
   const ss = String(tw.getSeconds()).padStart(2, '0');
   return `${hh}:${mm}:${ss}`;
+}
+
+// 取得「台北今天」的年月日
+function getTWDateParts() {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const tw = new Date(utcMs + 8 * 60 * 60 * 1000);
+  return {
+    year: tw.getFullYear(),
+    month: tw.getMonth() + 1,
+    day: tw.getDate()
+  };
+}
+
+// 把「今天台北 + hh:mm:ss」轉成 ISO（…Z）存進 sheet
+function buildISOFromTodayTW(hms) {
+  const m = hms.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+  if (!m) return hms;   // 不符合 hh:mm:ss，就原樣回去
+  const { year, month, day } = getTWDateParts();
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  const ss = Number(m[3]);
+  // 台北時間 -> UTC 要扣 8 小時
+  const utcMs = Date.UTC(year, month - 1, day, hh - 8, mm, ss);
+  return new Date(utcMs).toISOString();
 }
 
   
@@ -426,34 +462,57 @@ async function onStepClick(cfg, rowNumber, header, st, oldVal, btn, span){
   if (colIdx === -1) return alert('此欄位不存在：'+st);
 
   let valueToWrite;
-  if (oldVal){
-    const m = prompt('此狀態已有時間，要修改嗎？', oldVal);
-    if (m===null || m==='') return;
-    valueToWrite = m;
-    }else{
-    valueToWrite = getTWTime();   // 只寫台北時間 hh:mm:ss
+
+  if (oldVal) {
+    // ✅ 已經有時間 → 給他一個「現在台北時間」當預設
+    const def = getTWTime();
+    const m = prompt('此狀態已有時間，要修改嗎？(清空就留白)', def);
+    if (m === null) return;                 // 按「取消」→ 不動
+    const v = m.trim();
+    if (v === '') {
+      // ✅ 清空
+      valueToWrite = '';
+    } else if (/^\d{2}:\d{2}:\d{2}$/.test(v)) {
+      // ✅ 只填 hh:mm:ss → 轉成「今天台北 + 這個時間」的 ISO
+      valueToWrite = buildISOFromTodayTW(v);
+    } else {
+      // ✅ 使用者自己亂填別的格式，就照他填的存
+      valueToWrite = v;
     }
+  } else {
+    // ✅ 原本沒時間 → 直接寫現在台北時間 (轉 ISO)
+    const nowHHMMSS = getTWTime();
+    valueToWrite = buildISOFromTodayTW(nowHHMMSS);
+  }
 
   const body = {
     sheet: cfg.sheet,
     email: currentUser.email,
     writes: [{ row: rowNumber, col: colIdx+1, value: valueToWrite }]
   };
+
   const r = await fetch(API_BASE + '?action=update', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
-    },
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body)
   });
 
   const j = await r.json();
-  if (!j.ok){ showNotif('寫入失敗：'+(j.error||'unknown'), true); return; }
-  span.textContent = valueToWrite;
+  if (!j.ok){
+    showNotif('寫入失敗：'+(j.error||'unknown'), true);
+    return;
+  }
+
+  // ✅ 前端顯示一律轉成台北 hh:mm:ss
+  span.textContent = valueToWrite ? formatToTWTime(valueToWrite) : '';
+  // 灰色樣式保持
   btn.classList.add('done');
-  loadSheetData(currentSheetKey);
+
   showNotif('已寫入「'+st+'」', false);
+  // 如果你要即時重抓也可以留下面這行，不要就拿掉
+  // loadSheetData(currentSheetKey);
 }
+
 
 function reloadSheet(){
   if (currentUser) loadSheetData(currentSheetKey);

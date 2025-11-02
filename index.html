@@ -101,7 +101,7 @@
       color:#0f172a;
       cursor:pointer;
     }
-    /* 鎖住的 */
+    /* 鎖住的再深一點 */
     .step-btn.locked{
       background:#94a3b8;
       color:#0f172a;
@@ -115,14 +115,18 @@
       text-align:right;
     }
 
-    /* 下拉 */
+    /* 下拉式的樣式 */
     .step-select{
       min-width:170px;
+      padding:5px 6px;
       border-radius:8px;
-      padding:5px 8px;
       border:1px solid #cbd5e1;
       background:#fff;
-      font-size:.72rem;
+      font-size:.74rem;
+    }
+    .step-select:disabled{
+      background:#e2e8f0;
+      cursor:not-allowed;
     }
 
     .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;}
@@ -160,6 +164,15 @@
 const GOOGLE_CLIENT_ID = '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com';
 const API_BASE = 'https://script.google.com/macros/s/AKfycbxbeknXeJ2s2NnIqTwIwNdZnsbiI9UlGkQpSGfHq2TlmnITZ75Ub4ySwn6UGmJk3AXjNg/exec';
 
+/* ✅ 三張你說要「車暫停位置」的表，共用同一組地點 */
+const STOP_OPTIONS = [
+  '禪堂平台',
+  '法大路（法大一橋到法心南路間）',
+  '法心南路',
+  '法鼓路靈山勝境石往外',
+  '法新北路'
+];
+
 const SHEET_CONFIGS = [
   {
     key: '地區專車退場（遊覽車平台）',
@@ -169,7 +182,7 @@ const SHEET_CONFIGS = [
       'Call 車上行李',
       '車已上遊覽車平台',
       '車前往排車隊',
-      '車暫停位置',          // ← 這個要變下拉
+      '車暫停位置',             // ✅ 這一個變下拉
       '退場人員已到齊',
       '已 Call 車上遊覽車平台',
       '人已前往平台',
@@ -185,7 +198,7 @@ const SHEET_CONFIGS = [
       'Call 車上行李',
       '車已上遊覽車平台',
       '車前往排車隊',
-      '車暫停位置',          // ← 這個要變下拉
+      '車暫停位置',             // ✅ 加進來
       '車已離開禪堂平台'
     ]
   },
@@ -198,7 +211,7 @@ const SHEET_CONFIGS = [
       '退場人員已到齊',
       '已 Call 車上遊覽車平台',
       '車已上遊覽車平台',
-      '車暫停位置',          // ← 這個要變下拉
+      '車暫停位置',             // ✅ 加進來
       '車已離開遊覽車平台'
     ]
   },
@@ -222,16 +235,6 @@ const SHEET_CONFIGS = [
       '車已經離開遊覽車平台'
     ]
   }
-];
-
-// 三張表用同一組停車地點
-const PARKING_OPTIONS = [
-  '',
-  '禪堂平台',
-  '法大路（法大一橋到法心南路間）',
-  '法心南路',
-  '法鼓路靈山勝境石往外',
-  '法新北路'
 ];
 
 let currentUser = null;
@@ -304,59 +307,52 @@ async function loadSheetData(key){
   renderVehicles(cfg, sheetData);
 }
 
-// 找出表頭 + 資料列
-function parseSheetData(raw) {
-  const headerRowIdx = raw.findIndex(row =>
-    Array.isArray(row) &&
-    String(row[0] || '').trim() === '編號' &&
-    String(row[1] || '').trim().startsWith('區域') &&
-    String(row[2] || '').trim() === '車號'
-  );
-  if (headerRowIdx === -1) return { header: [], rows: [], headerRowIdx: -1 };
-
-  const header = raw[headerRowIdx].map(c => String(c || '').trim());
-  const rows = raw
-    .slice(headerRowIdx + 1)
-    .filter(r => {
-      if (!Array.isArray(r)) return false;
-      const no   = String(r[0] || '').trim();
-      const area = String(r[1] || '').trim();
-      const car  = String(r[2] || '').trim();
-      return no && area && car;
-    });
-
-  return { header, rows, headerRowIdx };
-}
-
-/* 把 GAS 寫的 ISO / 日期時間 → hh:mm:ss (+8) */
+/* 把各種時間 → HH:mm:ss（留著，給其他按鈕用） */
 function formatSheetTime(val){
   if (!val) return '';
+  const s = String(val).trim();
 
-  // 已經是 hh:mm:ss
-  if (/^\d{1,2}:\d{2}:\d{2}$/.test(val)) {
-    const parts = val.split(':');
+  if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) {
+    const parts = s.split(':');
     return parts.map(p=>p.padStart(2,'0')).join(':');
   }
 
-  // 2025/11/2 18:38:24
-  if (/^\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}$/.test(val)) {
-    return val.split(' ')[1].split(':').map(p=>p.padStart(2,'0')).join(':');
+  if (/^\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}$/.test(s)) {
+    return s.split(' ')[1].split(':').map(p=>p.padStart(2,'0')).join(':');
   }
 
-  // ISO
-  const d = new Date(val);
-  if (isNaN(d.getTime())) {
-    return val; // 給你原字串
+  const m = s.match(/^(上午|下午)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m){
+    let h = parseInt(m[2],10);
+    const mm = m[3];
+    const ss = m[4] || '00';
+    if (m[1] === '下午' && h < 12) h += 12;
+    if (m[1] === '上午' && h === 12) h = 0;
+    return `${String(h).padStart(2,'0')}:${mm}:${ss}`;
   }
-  const tw = new Date(d.getTime() + 8*60*60*1000);
-  const hh = String(tw.getUTCHours()).padStart(2,'0');
-  const mm = String(tw.getUTCMinutes()).padStart(2,'0');
-  const ss = String(tw.getUTCSeconds()).padStart(2,'0');
-  return `${hh}:${mm}:${ss}`;
+
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(s)) {
+    const d = new Date(s);
+    const tw = new Date(d.getTime() + 8*60*60*1000);
+    const hh = String(tw.getUTCHours()).padStart(2,'0');
+    const mm = String(tw.getUTCMinutes()).padStart(2,'0');
+    const ss = String(tw.getUTCSeconds()).padStart(2,'0');
+    return `${hh}:${mm}:${ss}`;
+  }
+
+  return s;
 }
 
-<script>
-// ...前面的程式都保留...
+/* 取台北現在時間 HH:mm:ss （給有時間的按鈕用） */
+function getTaipeiHHMMSS() {
+  const now = new Date();
+  const tzOffsetMin = now.getTimezoneOffset();
+  const taipei = new Date(now.getTime() + (480 + tzOffsetMin) * 60 * 1000);
+  const h = String(taipei.getHours()).padStart(2,'0');
+  const m = String(taipei.getMinutes()).padStart(2,'0');
+  const s = String(taipei.getSeconds()).padStart(2,'0');
+  return `${h}:${m}:${s}`;
+}
 
 function renderVehicles(cfg, data){
   const box = document.getElementById('vehList');
@@ -370,12 +366,11 @@ function renderVehicles(cfg, data){
   );
 
   if (headerRowIdx === -1) {
-    box.textContent = '❌ 找不到表頭（要有「編號 / 區域車次編號 / 車號」那一列）';
+    box.textContent = '❌ 找不到表頭';
     return;
   }
 
   const header = data[headerRowIdx].map(c => String(c || '').trim());
-
   const rows = data
     .slice(headerRowIdx + 1)
     .filter(r => {
@@ -412,68 +407,58 @@ function renderVehicles(cfg, data){
       const rowEl = document.createElement('div');
       rowEl.className = 'step-row';
 
-      // 🔹 若是「車暫停位置」→ 用下拉
+      const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
+
+      /* ✅ 這一段：如果是「車暫停位置」就改成下拉式 */
       if (st === '車暫停位置') {
         const sel = document.createElement('select');
-        sel.style.minWidth = '170px';
+        sel.className = 'step-select';
 
-        const opts = [
-          '—請選擇—',
-          '禪堂平台',
-          '法大路（法大一橋到法心南路間）',
-          '法心南路',
-          '法鼓路靈山勝境石往外',
-          '法新北路'
-        ];
-        opts.forEach(o => {
-          const op = document.createElement('option');
-          op.value = o === '—請選擇—' ? '' : o;
-          op.textContent = o;
-          sel.appendChild(op);
+        // 預設一個空的，可做清空
+        const optEmpty = document.createElement('option');
+        optEmpty.value = '';
+        optEmpty.textContent = '— 請選擇 —';
+        sel.appendChild(optEmpty);
+
+        STOP_OPTIONS.forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt;
+          o.textContent = opt;
+          sel.appendChild(o);
         });
 
-        const curVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
-        if (curVal) sel.value = curVal;
+        // 有原本的值，就選起來
+        if (rawVal) sel.value = rawVal;
 
-        const info = document.createElement('span');
-        info.className = 'step-time';
-        info.textContent = curVal || '';
+        // 右邊顯示選到的文字
+        const placeSpan = document.createElement('span');
+        placeSpan.className = 'step-time';
+        placeSpan.textContent = rawVal ? rawVal : '';
 
-        sel.onchange = async () => {
-          const v = sel.value.trim();
-          if (colIdx === -1) {
-            alert('此工作表還沒有「車暫停位置」這一欄，請先在 Google Sheet 建欄位');
-            sel.value = '';
-            return;
-          }
-          const sheetRow = headerRowIdx + 1 + 1 + idx;
-          const body = {
-            sheet: cfg.sheet,
-            email: currentUser.email,
-            writes: [{ row: sheetRow, col: colIdx+1, value: v }]
-          };
-          const r = await fetch(API_BASE + '?action=update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(body)
-          });
-          const j = await r.json();
-          if (!j.ok){
-            showNotif('寫入失敗：'+(j.error||'unknown'), true);
-            return;
-          }
-          info.textContent = v;
-          showNotif('已寫入「車暫停位置」', false);
-        };
+        // 跟其他一樣，前一步沒做就鎖住
+        const prevOk = prevDone(cfg, header, row, st);
+        if (!prevOk && !rawVal) {
+          sel.disabled = true;
+        }
+
+        const sheetRow = headerRowIdx + 1 + 1 + idx;
+
+        sel.onchange = () => onStopSelect(
+          cfg,
+          sheetRow,
+          header,
+          st,
+          sel.value,
+          placeSpan
+        );
 
         rowEl.appendChild(sel);
-        rowEl.appendChild(info);
+        rowEl.appendChild(placeSpan);
         stepsBox.appendChild(rowEl);
-        card.appendChild(stepsBox);
-        return; // ← 這個步驟結束，換下一個
+        return; // 這一列結束
       }
 
-      // 🔹 其他步驟：一般按鈕
+      /* 一般按鈕的流程 */
       const btn = document.createElement('button');
       btn.className = 'step-btn';
       btn.textContent = st;
@@ -481,7 +466,6 @@ function renderVehicles(cfg, data){
       const timeSpan = document.createElement('span');
       timeSpan.className = 'step-time';
 
-      const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
       const displayVal = rawVal ? formatSheetTime(rawVal) : '';
 
       if (rawVal) {
@@ -489,7 +473,6 @@ function renderVehicles(cfg, data){
         timeSpan.textContent = displayVal;
       }
 
-      // 🔒 應用修正過的 prevDone
       const prevOk = prevDone(cfg, header, row, st);
       if (!prevOk && !rawVal) {
         btn.classList.add('done');
@@ -497,8 +480,7 @@ function renderVehicles(cfg, data){
       }
 
       const sheetRow = headerRowIdx + 1 + 1 + idx;
-      btn.onclick = () =>
-        onStepClick(cfg, sheetRow, header, st, rawVal, btn, timeSpan);
+      btn.onclick = () => onStepClick(cfg, sheetRow, header, st, rawVal, btn, timeSpan);
 
       rowEl.appendChild(btn);
       rowEl.appendChild(timeSpan);
@@ -510,25 +492,47 @@ function renderVehicles(cfg, data){
   });
 }
 
-/* ✅ 這裡是重點：上一個欄位找不到，就一律「還沒完成」 */
 function prevDone(cfg, header, row, st){
   const idx = cfg.steps.indexOf(st);
   if (idx === 0) return true;
-
   const prevName = cfg.steps[idx-1];
   const colIdx = header.indexOf(prevName);
-
-  // 👉 原本是 return true，現在我們反過來
-  if (colIdx === -1) {
-    // 特別是我們自己加的「車暫停位置」，沒這欄就一定不能走下一步
-    return false;
-  }
-
-  return !!String(row[colIdx] || '').trim();
+  if (colIdx === -1) return true;
+  return !!row[colIdx];
 }
 
+/* ✅ 下拉式「車暫停位置」專用的寫入 */
+async function onStopSelect(cfg, rowNumber, header, st, value, span){
+  if (!currentUser) return alert('請先登入');
+  if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
 
-/* 按鈕寫入時間 */
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
+
+  // 直接把選到的文字寫進去（沒有要轉時間格式）
+  const body = {
+    sheet: cfg.sheet,
+    email: currentUser.email,
+    writes: [{ row: rowNumber, col: colIdx+1, value: value }]
+  };
+
+  const r = await fetch(API_BASE + '?action=update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  });
+  const j = await r.json();
+  if (!j.ok){
+    showNotif('寫入失敗：'+(j.error||'unknown'), true);
+    return;
+  }
+
+  // 前端更新
+  span.textContent = value || '';
+  showNotif('已更新車暫停位置', false);
+}
+
+/* 原本按鈕的寫入（時間） */
 async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
   if (!currentUser) return alert('請先登入');
   if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
@@ -536,14 +540,9 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  // 現在台灣時間 hh:mm:ss
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2,'0');
-  const mm = String(now.getMinutes()).padStart(2,'0');
-  const ss = String(now.getSeconds()).padStart(2,'0');
-  const nowHHMMSS = `${hh}:${mm}:${ss}`;
-
+  const nowHHMMSS = getTaipeiHHMMSS();
   let userInput;
+
   if (oldRawVal) {
     userInput = prompt('此狀態已有時間，要修改嗎？（留空→清除）', nowHHMMSS);
     if (userInput === null) return;
@@ -553,11 +552,12 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
   }
 
   let valueToWrite = '';
+
   if (userInput === '') {
     valueToWrite = '';
   } else if (/^\d{2}:\d{2}:\d{2}$/.test(userInput)) {
-    // 做成「今天台灣的這個時間」→ 寫成 UTC ISO
-    const localDate = new Date(
+    const now = new Date();
+    const localTw = new Date(
       now.getFullYear(),
       now.getMonth(),
       now.getDate(),
@@ -565,7 +565,7 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
       Number(userInput.slice(3,5)),
       Number(userInput.slice(6,8))
     );
-    const utcMs = localDate.getTime() - 8 * 60 * 60 * 1000;
+    const utcMs = localTw.getTime() - 8*60*60*1000;
     valueToWrite = new Date(utcMs).toISOString();
   } else {
     valueToWrite = userInput;
@@ -578,8 +578,8 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
   };
 
   const r = await fetch(API_BASE + '?action=update', {
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body)
   });
   const j = await r.json();
@@ -588,7 +588,6 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
     return;
   }
 
-  // 前端同步
   if (userInput === '') {
     span.textContent = '';
     btn.classList.remove('done');
@@ -596,6 +595,7 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
     span.textContent = formatSheetTime(valueToWrite);
     btn.classList.add('done');
   }
+
   showNotif('已寫入「'+st+'」', false);
 }
 

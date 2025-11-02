@@ -116,10 +116,13 @@ window.onload = function(){
 
 async function handleCredential(resp){
   const r = await fetch(API_BASE + '?action=verify', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ idToken: resp.credential })
-  });
+  method: 'POST',
+  headers: {
+    'Content-Type': 'text/plain;charset=utf-8'
+  },
+  body: JSON.stringify({ idToken: resp.credential })
+});
+
   const j = await r.json();
   if (j.error){ showNotif('登入失敗：'+j.error,true); return; }
   currentUser = j;
@@ -227,10 +230,13 @@ async function onStepClick(cfg, rowNumber, header, st, oldVal, btn, span){
     writes: [{ row: rowNumber, col: colIdx+1, value: valueToWrite }]
   };
   const r = await fetch(API_BASE + '?action=update', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
+  method: 'POST',
+  headers: {
+    'Content-Type': 'text/plain;charset=utf-8'
+  },
+  body: JSON.stringify(body)
+});
+
   const j = await r.json();
   if (!j.ok){ showNotif('寫入失敗：'+(j.error||'unknown'), true); return; }
   span.textContent = valueToWrite;

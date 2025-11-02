@@ -82,6 +82,16 @@
   flex:0 0 auto;
   min-width:150px;
 }
+    .veh-title-main{
+  font-weight:600;
+  font-size:1rem;
+  margin-bottom:2px;
+}
+.veh-title-sub{
+  font-size:.85rem;
+  opacity:.7;
+}
+
   </style>
 </head>
 <body>
@@ -257,33 +267,78 @@ async function loadSheetData(key){
   renderVehicles(cfg, sheetData);
 }
 
+// 把 Apps Script 回來的整張 data[] 拆成「表頭」+「真的有資料的列」
+function parseSheetData(raw) {
+  // 1. 找出第一個「不是全空白」的 row 當表頭
+  const headerIndex = raw.findIndex(row =>
+    Array.isArray(row) && row.some(cell => String(cell || '').trim() !== '')
+  );
+  if (headerIndex === -1) {
+    return { header: [], rows: [] };
+  }
+
+  const header = raw[headerIndex].map(c => String(c || '').trim());
+
+  // 2. 從表頭下一列開始，拿到真的有內容的列
+  const rows = raw
+    .slice(headerIndex + 1)
+    .filter(row => Array.isArray(row) && row.some(cell => String(cell || '').trim() !== ''));
+
+  return { header, rows };
+}
+
+// 把「第幾筆資料」換成「試算表實際 row 編號」
+// rawData = Apps Script 回來的整張陣列
+// header = 我們抓到的那一列
+// rows = 真正有資料的列
+// idx = rows 陣列裡的第幾筆 (0-based)
+function headerIndexToRowNumber(rawData, header, rows, idx){
+  // 找出表頭在原始 rawData 的哪一列
+  const headerIdx = rawData.findIndex(row =>
+    Array.isArray(row) &&
+    row.length === header.length &&
+    row.every((cell, i) => String(cell || '').trim() === header[i])
+  );
+  // 真正的試算表 row = 表頭的下一列 + idx
+  return headerIdx + 1 + idx + 1; // +1 因為試算表是 1-based，再 +idx
+}
+  
+  
 function renderVehicles(cfg, data){
-  const header = data[0] || [];
+  // 先把 raw data 拆好
+  const { header, rows } = parseSheetData(data);
+
   const box = document.getElementById('vehList');
   box.innerHTML = '';
 
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (!row || !row.length) continue;
+  // 沒資料就直接顯示
+  if (!rows.length) {
+    box.textContent = '(無資料)';
+    return;
+  }
+
+  rows.forEach((row, idx) => {
+    // 你的表結構：A=編號, B=區域車次編號, C=車號, 後面才是狀態
+    const no   = String(row[0] || '').trim(); // 編號
+    const area = String(row[1] || '').trim(); // 區域車次編號
+    const car  = String(row[2] || '').trim(); // 車號
 
     const card = document.createElement('div');
     card.className = 'veh-card';
 
-    const no = row[0] || '';
-    const area = row[1] || '';
-    const car = row[2] || '';
-
-    // 上面標題區
+    // ▶︎ 這裡改成你說的順序：第一列是區域車次編號，第二列是車號
     const title = document.createElement('div');
-    title.className = 'veh-title';
-    title.innerHTML = `<span>#${no || i} ${car ? ('🚍 ' + car) : ''}</span><span style="font-size:.65rem;opacity:.6;">${area || ''}</span>`;
+    title.innerHTML = `
+      <div class="veh-title-main">${area || ('#' + (no || (idx+1)))}</div>
+      <div class="veh-title-sub">${car || ''}</div>
+    `;
     card.appendChild(title);
 
-    // 狀態列容器
     const stepsBox = document.createElement('div');
-    cfg.steps.forEach(st => {
-      const colIdx = header.indexOf(st);
 
+    // 每一個狀態一列：按鈕 + 時間
+    cfg.steps.forEach(st => {
+      const colIdx = header.indexOf(st);   // 找出這個狀態在第幾欄
       const rowEl = document.createElement('div');
       rowEl.className = 'step-row';
 
@@ -294,24 +349,24 @@ function renderVehicles(cfg, data){
       const timeSpan = document.createElement('span');
       timeSpan.className = 'step-time';
 
-      // 該欄位目前的值
-      const val = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]) : '';
-      if (val) {
+      // 這一列這一欄的目前值
+      const curVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
+
+      if (curVal) {
+        // 有值 → 顯示時間、變灰
         btn.classList.add('done');
-        timeSpan.textContent = val;
-      } else {
-        timeSpan.textContent = '';  // 還沒按過就空白
+        timeSpan.textContent = curVal;
       }
 
-      // 如果前一個還沒做，要鎖住這個（沿用你原本的規則）
+      // 沿用你原本的「前一個沒做就鎖住後一個」
       const prevOk = prevDone(cfg, header, row, st);
-      if (!prevOk && !val) {
-        btn.classList.add('done');     // 用 done 當「灰掉」
+      if (!prevOk && !curVal) {
+        btn.classList.add('done');
         btn.disabled = true;
       }
 
-      // 點擊
-      btn.onclick = () => onStepClick(cfg, i + 1, header, st, val, btn, timeSpan);
+      // 點擊時用你原本的 onStepClick（你說這段先不改）
+      btn.onclick = () => onStepClick(cfg, headerIndexToRowNumber(data, header, rows, idx), header, st, curVal, btn, timeSpan);
 
       rowEl.appendChild(btn);
       rowEl.appendChild(timeSpan);
@@ -320,8 +375,9 @@ function renderVehicles(cfg, data){
 
     card.appendChild(stepsBox);
     box.appendChild(card);
-  }
+  });
 }
+
 
 
 function prevDone(cfg, header, row, st){

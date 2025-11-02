@@ -585,4 +585,51 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
       Number(userInput.slice(3,5)),
       Number(userInput.slice(6,8))
     );
-    const utcMs = localDate.getTime() -
+    const utcMs = localDate.getTime() - 8 * 60 * 60 * 1000;
+    valueToWrite = new Date(utcMs).toISOString();
+  } else {
+    valueToWrite = userInput;
+  }
+
+  const body = {
+    sheet: cfg.sheet,
+    email: currentUser.email,
+    writes: [{ row: rowNumber, col: colIdx+1, value: valueToWrite }]
+  };
+
+  const r = await fetch(API_BASE + '?action=update', {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(body)
+  });
+  const j = await r.json();
+  if (!j.ok){
+    showNotif('寫入失敗：'+(j.error||'unknown'), true);
+    return;
+  }
+
+  // 前端同步
+  if (userInput === '') {
+    span.textContent = '';
+    btn.classList.remove('done');
+  } else {
+    span.textContent = formatSheetTime(valueToWrite);
+    btn.classList.add('done');
+  }
+  showNotif('已寫入「'+st+'」', false);
+
+Route 6
+}
+
+function reloadSheet(){ loadSheetData(currentSheetKey); }
+
+function showNotif(msg, isErr){
+  const box = document.getElementById('notif');
+  box.textContent = msg;
+  box.style.background = isErr ? 'rgba(248,113,113,.9)' : 'rgba(15,23,42,.85)';
+  box.classList.add('show');
+  setTimeout(()=>box.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>

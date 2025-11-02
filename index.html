@@ -393,9 +393,9 @@ async function onStepClick(cfg, rowNumber, header, st, oldVal, btn, span){
     const m = prompt('此狀態已有時間，要修改嗎？', oldVal);
     if (m===null || m==='') return;
     valueToWrite = m;
-  }else{
-    valueToWrite = new Date().toLocaleString('zh-TW',{hour12:false});
-  }
+    }else{
+    valueToWrite = getTWTime();   // 只寫台北時間 hh:mm:ss
+    }
 
   const body = {
     sheet: cfg.sheet,
@@ -429,6 +429,21 @@ function showNotif(msg, isErr){
   box.classList.add('show');
   setTimeout(()=>box.classList.remove('show'), 2500);
 }
+
+function getTWTime() {
+  // 1. 先拿現在的 UTC 時間
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  // 2. 加上台北 +8 小時
+  const tw = new Date(utcMs + 8 * 60 * 60 * 1000);
+  // 3. 組成 hh:mm:ss
+  const hh = String(tw.getHours()).padStart(2, '0');
+  const mm = String(tw.getMinutes()).padStart(2, '0');
+  const ss = String(tw.getSeconds()).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
+}
+
+  
 </script>
 </body>
 </html>

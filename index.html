@@ -305,17 +305,107 @@ function headerIndexToRowNumber(rawData, header, rows, idx){
   
   
 function renderVehicles(cfg, data){
-  // 先把 raw data 拆好
-  const { header, rows } = parseSheetData(data);
-
   const box = document.getElementById('vehList');
   box.innerHTML = '';
 
-  // 沒資料就直接顯示
-  if (!rows.length) {
-    box.textContent = '(無資料)';
+  // 1. 找出真正的表頭是哪一列
+  //    你的 sheet 現在是：第1列空、第2列空、第3列才是「編號｜區域車次編號｜車號｜...」
+  const headerRowIdx = data.findIndex(row =>
+    Array.isArray(row) &&
+    String(row[0] || '').trim() === '編號' &&
+    String(row[1] || '').trim().startsWith('區域') &&
+    String(row[2] || '').trim() === '車號'
+  );
+
+  if (headerRowIdx === -1) {
+    box.textContent = '❌ 找不到表頭（要有「編號 / 區域車次編號 / 車號」那一列）';
     return;
   }
+
+  // 2. 取得表頭
+  const header = data[headerRowIdx].map(c => String(c || '').trim());
+
+  // 3. 取得真正有資料的列：表頭下面、而且 A/B/C 都不空
+  const rows = data
+    .slice(headerRowIdx + 1)
+    .filter(r => {
+      if (!Array.isArray(r)) return false;
+      const no   = String(r[0] || '').trim();
+      const area = String(r[1] || '').trim();
+      const car  = String(r[2] || '').trim();
+      // ✅ 必須三個都有，才畫車卡
+      return no && area && car;
+    });
+
+  if (!rows.length){
+    box.textContent = '(這張表目前沒有車輛資料)';
+    return;
+  }
+
+  rows.forEach((row, idx) => {
+    const no   = String(row[0] || '').trim(); // 編號
+    const area = String(row[1] || '').trim(); // 區域車次編號
+    const car  = String(row[2] || '').trim(); // 車號
+
+    const card = document.createElement('div');
+    card.className = 'veh-card';
+
+    // ▶︎ 第一列顯示「區域車次編號」，第二列顯示「車號」
+    const title = document.createElement('div');
+    title.innerHTML = `
+      <div class="veh-title-main">${area}</div>
+      <div class="veh-title-sub">${car}</div>
+    `;
+    card.appendChild(title);
+
+    const stepsBox = document.createElement('div');
+
+    cfg.steps.forEach(st => {
+      const colIdx = header.indexOf(st);
+      const rowEl = document.createElement('div');
+      rowEl.className = 'step-row';
+
+      const btn = document.createElement('button');
+      btn.className = 'step-btn';
+      btn.textContent = st;
+
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'step-time';
+
+      // 這一列這一欄原本的值
+      const curVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
+
+      if (curVal) {
+        btn.classList.add('done');
+        timeSpan.textContent = curVal;
+      }
+
+      // 保留「前一個沒做就鎖住後一個」的規則
+      const prevOk = prevDone(cfg, header, row, st);
+      if (!prevOk && !curVal) {
+        btn.classList.add('done');
+        btn.disabled = true;
+      }
+
+      // ⭐︎ 算回去這一台車在試算表的「真正列號」
+      // headerRowIdx 是 0-based，所以要 +1 變 1-based，
+      // 再 +1 是因為資料從表頭「下一列」開始，
+      // 再 +idx 是第幾筆資料
+      const sheetRow = headerRowIdx + 1 + 1 + idx;
+
+      // 用你原本的 onStepClick（你說這段先不改）
+      btn.onclick = () => onStepClick(cfg, sheetRow, header, st, curVal, btn, timeSpan);
+
+      rowEl.appendChild(btn);
+      rowEl.appendChild(timeSpan);
+      stepsBox.appendChild(rowEl);
+    });
+
+    card.appendChild(stepsBox);
+    box.appendChild(card);
+  });
+}
+
 
   rows.forEach((row, idx) => {
     // 你的表結構：A=編號, B=區域車次編號, C=車號, 後面才是狀態

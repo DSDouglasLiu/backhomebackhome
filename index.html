@@ -115,25 +115,32 @@ window.onload = function(){
 };
 
 async function handleCredential(resp){
-  const r = await fetch(API_BASE + '?action=verify', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'text/plain;charset=utf-8'
-  },
-  body: JSON.stringify({ idToken: resp.credential })
-});
-
-  const j = await r.json();
-  if (j.error){ showNotif('登入失敗：'+j.error,true); return; }
-  currentUser = j;
-  document.getElementById('signin').classList.add('hide');
-  const ui = document.getElementById('userInfo');
-  ui.classList.remove('hide');
-  ui.innerHTML = `${j.name||''} &lt;${j.email}&gt; ｜ 權限：<b>${j.permission}</b>`;
-  document.getElementById('tabs').classList.remove('hide');
-  document.getElementById('content').classList.remove('hide');
-  loadSheetData(currentSheetKey);
+  try {
+    const r = await fetch(API_BASE + '?action=verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify({ idToken: resp.credential })
+    });
+    const j = await r.json();
+    if (j.error) {
+      showNotif('登入失敗：' + j.error, true);
+      return;
+    }
+    currentUser = j;
+    document.getElementById('signin').classList.add('hide');
+    const ui = document.getElementById('userInfo');
+    ui.classList.remove('hide');
+    ui.innerHTML = `${j.name||''} &lt;${j.email}&gt; ｜ 權限：<b>${j.permission}</b>`;
+    document.getElementById('tabs').classList.remove('hide');
+    document.getElementById('content').classList.remove('hide');
+    loadSheetData(currentSheetKey);
+  } catch (err) {
+    showNotif('登入錯誤：' + err.message, true);
+  }
 }
+
 
 function buildTabs(){
   const box = document.getElementById('sheetTabs');
@@ -257,4 +264,3 @@ function showNotif(msg, isErr){
 </script>
 </body>
 </html>
-fb

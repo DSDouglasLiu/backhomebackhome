@@ -1,9 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>活動車流人流退場管理系統</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root{
+      --bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
+      --card-bg: rgba(255,255,255,0.75);
+      --text: #0f172a;
+    }
+    body.dark{
+      --bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
+      --card-bg: rgba(15,23,42,0.55);
+      --text: #e2e8f0;
+    }
+    body{
+      margin:0;
+      min-height:100vh;
+      background:var(--bg);
+      backdrop-filter: blur(14px);
+      font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;
+      color:var(--text);
+    }
+    .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
+    h1{margin:0 0 16px;}
+    .card{background:var(--card-bg);border:1px solid rgba(255,255,255,0.3);border-radius:16px;padding:16px;margin:12px 0;}
+    .hide{display:none;}
+    .sheet-tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;}
+    .btn-tab{background:transparent;border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:6px 10px;font-size:.78rem;cursor:pointer;color:inherit;}
+    .btn-tab.active{background:rgba(255,255,255,.25);}
+
+    /* 一列兩台車 */
+    .veh-list{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(480px, 1fr));
+      gap:12px;
+    }
+    .veh-card{
+      background:rgba(255,255,255,0.85);
+      border-radius:14px;
+      border:1px solid rgba(148,163,184,0.25);
+      padding:14px 14px 10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    body.dark .veh-card{background:rgba(15,23,42,0.28);}
+
+    .veh-title-main{
+      font-weight:600;
+      font-size:1rem;
+      margin-bottom:2px;
+    }
+    .veh-title-sub{
+      font-size:.85rem;
+      opacity:.7;
+    }
+
+    .step-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    /* 還沒做的狀態：藍底白字 */
+    .step-btn{
+      border:0;
+      border-radius:10px;
+      padding:6px 12px 7px;
+      background:#0f6efc;
+      color:#fff;
+      font-size:.74rem;
+      cursor:pointer;
+      flex:0 0 auto;
+      min-width:150px;
+    }
+    /* 做過的/被鎖的狀態 */
+    .step-btn.done{
+      background:#d1d5db;
+      color:#0f172a;
+      cursor:not-allowed;
+    }
+    .step-time{
+      font-size:.7rem;
+      color:rgba(15,23,42,.55);
+      min-width:90px;
+      text-align:right;
+    }
+
+    .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;}
+    .notif.show{opacity:1;transform:translateY(0);}
+
+    @media(max-width:768px){
+      .veh-list{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+      <div>
+        <h1>活動車流人流退場管理系統</h1>
+        <div style="font-size:.7rem;opacity:.6;">(外部前端版，給 Google Sites 嵌 URL 用)</div>
+      </div>
+      <div id="signin"></div>
+      <div id="userInfo" class="hide" style="font-size:.75rem;"></div>
+    </div>
+
+    <div id="tabs" class="card hide">
+      <div class="sheet-tabs" id="sheetTabs"></div>
+    </div>
+
+    <div id="content" class="hide">
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:.85rem;">目前工作表：<b id="currentSheet"></b></div>
+          <div style="font-size:.7rem;opacity:.6;">點一下狀態＝寫入時間，有值再點會問你要不要改時間</div>
+        </div>
+        <button onclick="reloadSheet()">重新載入</button>
+      </div>
+      <div id="vehList" class="veh-list"></div>
+    </div>
+  </div>
+
+  <div id="notif" class="notif"></div>
+
 <script>
 /* ① 這裡換成你的 client ID */
 const GOOGLE_CLIENT_ID = '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com';
 /* ② 這裡換成你部署出來的 Apps Script Web App URL */
 const API_BASE = 'https://script.google.com/macros/s/AKfycbxbeknXeJ2s2NnIqTwIwNdZnsbiI9UlGkQpSGfHq2TlmnITZ75Ub4ySwn6UGmJk3AXjNg/exec';
 
+/* 你的 5 張表 */
 const SHEET_CONFIGS = [
   {
     key: '地區專車退場（遊覽車平台）',
@@ -82,6 +211,7 @@ window.onload = function(){
   buildTabs();
 };
 
+// Google 登入成功
 async function handleCredential(resp){
   try {
     const r = await fetch(API_BASE + '?action=verify', {
@@ -109,6 +239,7 @@ async function handleCredential(resp){
   }
 }
 
+// 上方 tabs
 function buildTabs(){
   const box = document.getElementById('sheetTabs');
   box.innerHTML = '';
@@ -126,6 +257,7 @@ function buildTabs(){
   });
 }
 
+// 讀某一張表
 async function loadSheetData(key){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);
   document.getElementById('currentSheet').textContent = cfg.key;
@@ -137,11 +269,12 @@ async function loadSheetData(key){
   renderVehicles(cfg, sheetData);
 }
 
+// 產生車卡
 function renderVehicles(cfg, data){
   const box = document.getElementById('vehList');
   box.innerHTML = '';
 
-  // 找表頭那一列（編號｜區域車次編號｜車號）
+  // 找出「編號 | 區域車次編號 | 車號」的那一列
   const headerRowIdx = data.findIndex(row =>
     Array.isArray(row) &&
     String(row[0] || '').trim() === '編號' &&
@@ -156,7 +289,7 @@ function renderVehicles(cfg, data){
 
   const header = data[headerRowIdx].map(c => String(c || '').trim());
 
-  // 表頭下面、三欄都有才算一台車
+  // 表頭下面真正有資料的列（A/B/C 都要有）
   const rows = data
     .slice(headerRowIdx + 1)
     .filter(r => {
@@ -173,12 +306,13 @@ function renderVehicles(cfg, data){
   }
 
   rows.forEach((row, idx) => {
-    const area = String(row[1] || '').trim();
-    const car  = String(row[2] || '').trim();
+    const area = String(row[1] || '').trim();  // 區域車次編號
+    const car  = String(row[2] || '').trim();  // 車號
 
     const card = document.createElement('div');
     card.className = 'veh-card';
 
+    // 標題：第一列顯示區域車次編號，第二列顯示車號
     const title = document.createElement('div');
     title.innerHTML = `
       <div class="veh-title-main">${area}</div>
@@ -207,15 +341,17 @@ function renderVehicles(cfg, data){
         timeSpan.textContent = curVal;
       }
 
+      // 前一個沒做就鎖
       const prevOk = prevDone(cfg, header, row, st);
       if (!prevOk && !curVal) {
         btn.classList.add('done');
         btn.disabled = true;
       }
 
-      // 真正的試算表列號
+      // 真正的試算表列號：表頭那一列(0-based) +1(1-based) +1(下一列開始) + idx
       const sheetRow = headerRowIdx + 1 + 1 + idx;
 
+      // 還是叫原本的 onStepClick（可以改時間的那版）
       btn.onclick = () => onStepClick(cfg, sheetRow, header, st, curVal, btn, timeSpan);
 
       rowEl.appendChild(btn);
@@ -228,6 +364,7 @@ function renderVehicles(cfg, data){
   });
 }
 
+// 檢查「前面那個狀態」有沒有做
 function prevDone(cfg, header, row, st){
   const idx = cfg.steps.indexOf(st);
   if (idx === 0) return true;
@@ -237,6 +374,7 @@ function prevDone(cfg, header, row, st){
   return !!row[colIdx];
 }
 
+// 寫回試算表（維持你原本的做法，可改時間）
 async function onStepClick(cfg, rowNumber, header, st, oldVal, btn, span){
   if (!currentUser) return alert('請先登入');
   if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
@@ -284,3 +422,5 @@ function showNotif(msg, isErr){
   setTimeout(()=>box.classList.remove('show'), 2500);
 }
 </script>
+</body>
+</html>

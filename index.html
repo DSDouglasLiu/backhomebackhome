@@ -182,7 +182,7 @@ const SHEET_CONFIGS = [
       'Call 車上行李',
       '車已上遊覽車平台',
       '車前往排車隊',
-      '車暫停位置',             // ✅ 這一個變下拉
+      '車暫停位置',             // 下拉
       '退場人員已到齊',
       '已 Call 車上遊覽車平台',
       '人已前往平台',
@@ -198,7 +198,7 @@ const SHEET_CONFIGS = [
       'Call 車上行李',
       '車已上遊覽車平台',
       '車前往排車隊',
-      '車暫停位置',             // ✅ 加進來
+      '車暫停位置',             // 下拉
       '車已離開禪堂平台'
     ]
   },
@@ -211,19 +211,8 @@ const SHEET_CONFIGS = [
       '退場人員已到齊',
       '已 Call 車上遊覽車平台',
       '車已上遊覽車平台',
-      '車暫停位置',             // ✅ 加進來
+      '車暫停位置',             // 下拉
       '車已離開遊覽車平台'
-    ]
-  },
-  {
-    key: '國光號退場',
-    sheet: '國光號退場',
-    steps: [
-      '是否經過長庚',
-      '退場人員已到齊',
-      '車已經上遊覽車平台',
-      '車已經離開遊覽車平台',
-      '上車人數'
     ]
   },
   {
@@ -236,6 +225,7 @@ const SHEET_CONFIGS = [
     ]
   }
 ];
+
 
 let currentUser = null;
 let currentSheetKey = SHEET_CONFIGS[0].key;
@@ -254,6 +244,10 @@ window.onload = function(){
 };
 
 function buildTabs(){
+  if (!SHEET_CONFIGS.some(s => s.key === currentSheetKey)) {
+  currentSheetKey = SHEET_CONFIGS[0].key;
+}
+
   const box = document.getElementById('sheetTabs');
   box.innerHTML = '';
   SHEET_CONFIGS.forEach(cfg=>{

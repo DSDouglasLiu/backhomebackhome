@@ -244,30 +244,47 @@ window.onload = function(){
 };
 
 function buildTabs(){
-  if (!SHEET_CONFIGS.some(s => s.key === currentSheetKey)) {
-  currentSheetKey = SHEET_CONFIGS[0].key;
-}
-
   const box = document.getElementById('sheetTabs');
   box.innerHTML = '';
+
+  // 1) 沒有任何分頁就直接結束（也可順便隱藏 tabs/card）
+  if (!SHEET_CONFIGS.length) return;
+
+  // 2) 保底：若 currentSheetKey 不存在，改用第一個
+  const prevKey = currentSheetKey;
+  if (!SHEET_CONFIGS.some(s => s.key === currentSheetKey)) {
+    currentSheetKey = SHEET_CONFIGS[0].key; // ★ fallback
+  }
+  const keyChanged = (prevKey !== currentSheetKey);
+
+  // 3) 生成分頁按鈕
   SHEET_CONFIGS.forEach(cfg=>{
     const b = document.createElement('button');
-    b.className = 'btn-tab' + (cfg.key===currentSheetKey?' active':'');
+    b.className = 'btn-tab' + (cfg.key===currentSheetKey ? ' active' : '');
     b.textContent = cfg.key;
     b.onclick = () => {
       currentSheetKey = cfg.key;
-      document.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
+      // ★ 改成只掃箱子裡的按鈕，避免誤傷其他元素
+      box.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
       loadSheetData(currentSheetKey);
     };
     box.appendChild(b);
   });
+
   const reloadBtn = document.createElement('button');
   reloadBtn.id = 'reloadBtn';
   reloadBtn.textContent = '重新載入';
   reloadBtn.onclick = reloadSheet;
   box.appendChild(reloadBtn);
+
+  // 4) 若剛剛 fallback 了，而且內容區已經在顯示，就自動載入一次
+  const contentShown = !document.getElementById('content').classList.contains('hide');
+  if (keyChanged && contentShown) {
+    loadSheetData(currentSheetKey);
+  }
 }
+
 
 async function handleCredential(resp){
   try {

@@ -343,16 +343,15 @@ function formatSheetTime(val){
   return s;
 }
 
-/* 取台北現在時間 HH:mm:ss （給有時間的按鈕用） */
 function getTaipeiHHMMSS() {
-  const now = new Date();
-  const tzOffsetMin = now.getTimezoneOffset();
-  const taipei = new Date(now.getTime() + (480 + tzOffsetMin) * 60 * 1000);
-  const h = String(taipei.getHours()).padStart(2,'0');
-  const m = String(taipei.getMinutes()).padStart(2,'0');
-  const s = String(taipei.getSeconds()).padStart(2,'0');
-  return `${h}:${m}:${s}`;
+  const f = new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    hour12: false,
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+  return f.format(new Date()); // 例：'20:20:29'
 }
+
 
 function renderVehicles(cfg, data){
   const box = document.getElementById('vehList');
@@ -551,25 +550,20 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
     userInput = nowHHMMSS;
   }
 
-  let valueToWrite = '';
+    let valueToWrite = '';
 
   if (userInput === '') {
     valueToWrite = '';
-  } else if (/^\d{2}:\d{2}:\d{2}$/.test(userInput)) {
-    const now = new Date();
-    const localTw = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      Number(userInput.slice(0,2)),
-      Number(userInput.slice(3,5)),
-      Number(userInput.slice(6,8))
-    );
-    const utcMs = localTw.getTime() - 8*60*60*1000;
-    valueToWrite = new Date(utcMs).toISOString();
+  } else if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(userInput)) {
+    const [h,m,s='00'] = userInput.split(':');
+    const hh = String(h).padStart(2,'0');
+    const mm = String(m).padStart(2,'0');
+    const ss = String(s).padStart(2,'0');
+    valueToWrite = `${hh}:${mm}:${ss}`;   // ← 直接寫「20:20:29」
   } else {
-    valueToWrite = userInput;
+    valueToWrite = userInput;             // 其他手動輸入就原樣寫入
   }
+
 
   const body = {
     sheet: cfg.sheet,

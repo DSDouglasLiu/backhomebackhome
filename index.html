@@ -343,6 +343,30 @@ function formatSheetTime(val){
   return s;
 }
 
+function unlockNext(rowEl){
+  const nextRow = rowEl?.nextElementSibling;
+  if (!nextRow) return;
+  const nextBtn = nextRow.querySelector('.step-btn');
+  const nextSel = nextRow.querySelector('.step-select');
+  if (nextBtn && !nextBtn.classList.contains('done')) {
+    nextBtn.disabled = false;
+    nextBtn.classList.remove('done');
+  }
+  if (nextSel) nextSel.disabled = false;
+}
+
+function lockFollowing(rowEl){
+  let it = rowEl?.nextElementSibling;
+  while (it){
+    const b = it.querySelector('.step-btn');
+    const s = it.querySelector('.step-select');
+    if (b && !b.classList.contains('done')) { b.disabled = true; b.classList.add('done'); }
+    if (s && !s.value) s.disabled = true;
+    it = it.nextElementSibling;
+  }
+}
+
+  
 function getTaipeiHHMMSS() {
   const f = new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei',
@@ -526,9 +550,20 @@ async function onStopSelect(cfg, rowNumber, header, st, value, span){
     return;
   }
 
-  // 前端更新
-  span.textContent = value || '';
+// 前端更新
+span.textContent = value || '';
+
+const rowEl = span.closest('.step-row');
+if (value) {
+  unlockNext(rowEl);
   showNotif('已更新車暫停位置', false);
+} else {
+  lockFollowing(rowEl);
+  showNotif('已清除車暫停位置', false);
+}
+  /* ✅ 輕量同步 */
+setTimeout(()=>reloadSheet(), 300);
+
 }
 
 /* 原本按鈕的寫入（時間） */
@@ -582,15 +617,30 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
     return;
   }
 
-  if (userInput === '') {
-    span.textContent = '';
-    btn.classList.remove('done');
-  } else {
-    span.textContent = formatSheetTime(valueToWrite);
-    btn.classList.add('done');
-  }
+if (userInput === '') {
+  // 清空
+  span.textContent = '';
+  btn.classList.remove('done');
 
-  showNotif('已寫入「'+st+'」', false);
+  // 🔒 清空後把後面未完成步驟鎖回去
+  const rowEl = btn.closest('.step-row');
+  lockFollowing(rowEl);
+
+  showNotif('已清除「' + st + '」', false);
+} else {
+  // 寫入時間成功
+  span.textContent = formatSheetTime(valueToWrite);
+  btn.classList.add('done');
+
+  // 🔓 完成此步 -> 立刻解鎖下一步
+  const rowEl = btn.closest('.step-row');
+  unlockNext(rowEl);
+
+  showNotif('已寫入「' + st + '」', false);
+}
+/* ✅ 輕量同步（多人同時操作時建議） */
+setTimeout(()=>reloadSheet(), 300);
+  
 }
 
 function reloadSheet(){ loadSheetData(currentSheetKey); }
@@ -602,6 +652,37 @@ function showNotif(msg, isErr){
   box.classList.add('show');
   setTimeout(()=>box.classList.remove('show'), 2500);
 }
+
+function unlockNext(rowEl){
+  const nextRow = rowEl?.nextElementSibling;
+  if (!nextRow) return;
+  const nextBtn = nextRow.querySelector('.step-btn');
+  const nextSel = nextRow.querySelector('.step-select');
+
+  // 只解鎖還沒完成的
+  if (nextBtn && !nextBtn.classList.contains('done')) {
+    nextBtn.disabled = false;
+    nextBtn.classList.remove('done'); // 還原成藍色
+  }
+  if (nextSel) nextSel.disabled = false;
+}
+
+function lockFollowing(rowEl){
+  // 往後把所有未完成的步驟鎖回去
+  let it = rowEl?.nextElementSibling;
+  while (it){
+    const b = it.querySelector('.step-btn');
+    const s = it.querySelector('.step-select');
+    if (b && !b.classList.contains('done')) {
+      b.disabled = true;
+      b.classList.add('done'); // 灰掉
+    }
+    if (s && !s.value) s.disabled = true;
+    it = it.nextElementSibling;
+  }
+}
+  
+  
 </script>
 </body>
 </html>

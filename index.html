@@ -5,149 +5,123 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>活動車流人流退場管理系統</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <style>
-    :root{
-      --bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
-      --card-bg: rgba(255,255,255,0.75);
-      --text: #0f172a;
 
-      /* === 按鈕色系變數（可自行調） === */
-      --btn-punch-bg:#0f6efc; --btn-punch-fg:#fff;     /* 打卡 */
-      --btn-edit-bg:#22c55e;  --btn-edit-fg:#fff;      /* 修改 */
-      --btn-del-bg:#ef4444;   --btn-del-fg:#fff;       /* 刪除 */
-      --btn-save-bg:#1f6fe5;  --btn-save-fg:#fff;      /* 儲存（備註/頂部） */
-      --btn-disabled-bg:#cbd5e1; --btn-disabled-fg:#0f172a;
-    }
-    body.dark{
-      --bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
-      --card-bg: rgba(15,23,42,0.55);
-      --text: #e2e8f0;
-    }
-    body{
-      margin:0;
-      min-height:100vh;
-      background:var(--bg);
-      backdrop-filter: blur(14px);
-      font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;
-      color:var(--text);
-    }
-    .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
-    h1{margin:0 0 16px;}
-    .card{background:var(--card-bg);border:1px solid rgba(255,255,255,0.3);border-radius:16px;padding:16px;margin:12px 0;}
-    .hide{display:none;}
+<style>
+/* =========== Design Tokens（Preferred 版） =========== */
+:root{
+  /* 半徑 */
+  --radius-xs:6px;  --radius-sm:8px;  --radius-md:10px; --radius-lg:12px;
 
-    /* tab 列 */
-    .sheet-tabs{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;}
-    .btn-tab{
-      background:#e5e7eb;
-      border:1px solid #cbd5f5;
-      border-radius:4px;
-      padding:6px 22px;
-      font-size:.8rem;
-      cursor:pointer;
-      color:#000;
-      min-width:170px;
-      text-align:center;
-    }
-    .btn-tab.active{
-      background:#1f6fe5;
-      color:#fff;
-      border-color:#1f6fe5;
-    }
-    #reloadBtn{
-      margin-left:auto;
-      background:#fff;
-      border:1px solid #cbd5f5;
-      border-radius:4px;
-      padding:6px 22px;
-      cursor:pointer;
-    }
+  /* 色票（light） */
+  --primary-600:#1f6fe5; --primary-700:#165bd1; --primary-800:#1249ad;
+  --success-600:#22c55e; --success-700:#16a34a; --success-800:#15803d;
+  --danger-600:#ef4444;  --danger-700:#dc2626;  --danger-800:#b91c1c;
+  --gray-50:#f8fafc;  --gray-100:#f1f5f9; --gray-200:#e5e7eb;
+  --gray-300:#cbd5e1; --gray-400:#94a3b8; --gray-500:#64748b;
+  --gray-600:#475569; --gray-700:#334155; --gray-800:#1f2937; --gray-900:#0f172a;
 
-    /* 車卡片：一列兩輛 */
-    .veh-list{
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(480px, 1fr));
-      gap:12px;
-      margin-top:16px;
-    }
-    .veh-card{
-      background:rgba(255,255,255,0.85);
-      border-radius:14px;
-      border:1px solid rgba(148,163,184,0.25);
-      padding:14px 14px 10px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    body.dark .veh-card{background:rgba(15,23,42,0.28);}
-    .veh-title-main{font-weight:600;font-size:1rem;margin-bottom:2px;}
-    .veh-title-sub{font-size:.85rem;opacity:.7;}
+  --surface: rgba(255,255,255,.78);
+  --page-bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
+  --text-strong: var(--gray-900);
+  --text: var(--gray-800);
+  --text-muted: var(--gray-600);
+  --border: rgba(148,163,184,0.35);
+  --focus:#93c5fd;
 
-    /* === 步驟列改為三欄：標題 / 值 / 操作 === */
-    .step-row{
-      display:grid;
-      grid-template-columns: 180px 1fr auto;
-      align-items:center;
-      gap:8px;
-      margin-bottom:6px;
-    }
-    .step-label{ font-size:.86rem; opacity:.95; }
-    .step-time{
-      font-size:.86rem;
-      color:rgba(15,23,42,.8);
-      text-align:left;
-    }
+  /* 字級（px/line-height, weight） */
+  --fz-display:28px; --lh-display:36px; --fw-display:700;  /* 頁面大標題 */
+  --fz-title:18px;   --lh-title:24px;   --fw-title:700;   /* 卡片主標 */
+  --fz-sub:14px;     --lh-sub:20px;     --fw-sub:600;     /* 車牌/副標 */
+  --fz-label:14px;   --lh-label:20px;   --fw-label:600;   /* 步驟/表頭 */
+  --fz-body:14px;    --lh-body:20px;    --fw-body:400;    /* 內文/按鈕 */
+  --fz-note:12px;    --lh-note:16px;    --fw-note:400;    /* 備註提示 */
 
-    /* 下拉式的樣式 */
-    .step-select{
-      min-width:170px;
-      padding:5px 6px;
-      border-radius:8px;
-      border:1px solid #cbd5e1;
-      background:#fff;
-      font-size:.86rem;
-    }
-    .step-select:disabled{
-      background:#e2e8f0;
-      cursor:not-allowed;
-    }
+  --shadow-card:0 8px 24px rgba(0,0,0,.08);
+}
+body.dark{
+  --surface: rgba(15,23,42,.55);
+  --page-bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
+  --text-strong:#e5eaf3; --text:#e2e8f0; --text-muted:#93a3b5;
+  --border: rgba(148,163,184,0.25);
+  --shadow-card:0 8px 24px rgba(0,0,0,.35);
+}
 
-    .btn-group{ display:flex; gap:6px; }
+/* =========== Base =========== */
+body{
+  margin:0; min-height:100vh;
+  background:var(--page-bg); color:var(--text);
+  backdrop-filter: blur(14px);
+  font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
+h1{margin:0 0 16px;font-size:var(--fz-display);line-height:var(--lh-display);font-weight:var(--fw-display);color:var(--text-strong);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
+.hide{display:none;}
 
-    /* 共用按鈕 */
-    .btn{ border:0; border-radius:10px; padding:6px 12px 7px; font-size:.8rem; cursor:pointer; }
-    .btn:disabled{ background:var(--btn-disabled-bg); color:var(--btn-disabled-fg); cursor:not-allowed; }
-    .btn-punch{ background:var(--btn-punch-bg); color:var(--btn-punch-fg); }
-    .btn-edit{  background:var(--btn-edit-bg);  color:var(--btn-edit-fg);  }
-    .btn-del{   background:var(--btn-del-bg);   color:var(--btn-del-fg);   }
-    .btn-save{  background:var(--btn-save-bg);  color:var(--btn-save-fg);  }
+/* =========== Segmented Tabs（上方工作表） =========== */
+.sheet-tabs{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.tab,.btn-tab{
+  background:#fff;color:var(--primary-600);
+  border:1px solid var(--primary-600);border-radius:var(--radius-lg);
+  padding:6px 18px;font-size:var(--fz-body);font-weight:600;cursor:pointer;min-width:170px;text-align:center;
+}
+body.dark .tab, body.dark .btn-tab{background:transparent}
+.tab:hover,.btn-tab:hover{background:rgba(31,111,229,.06)}
+.tab.active,.btn-tab.active{background:var(--primary-600);color:#fff;border-color:var(--primary-600)}
+.tab:focus-visible,.btn-tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+#reloadBtn{margin-left:auto}
 
-    .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;}
-    .notif.show{opacity:1;transform:translateY(0);}
+/* =========== 卡片與步驟列 =========== */
+.veh-list{display:grid;grid-template-columns:repeat(auto-fit, minmax(480px,1fr));gap:12px;margin-top:16px;}
+.veh-card{background:rgba(255,255,255,0.85);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px;}
+body.dark .veh-card{background:rgba(15,23,42,0.28);}
+.veh-title-main{font-weight:700;font-size:var(--fz-title);line-height:var(--lh-title);color:var(--text-strong);}
+.veh-title-sub{font-size:var(--fz-sub);line-height:var(--lh-sub);color:var(--text-muted);}
 
-    /* 彈窗 */
-    .modal-backdrop{
-      position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:9999;
-    }
-    .modal{
-      background:#fff; color:#0f172a; border-radius:14px; padding:16px; width:min(92vw,420px);
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
-    }
-    body.dark .modal{ background:#0b1220; color:#e2e8f0; }
-    .modal h3{ margin:0 0 12px; font-size:1rem; }
-    .modal .row{ display:flex; gap:8px; align-items:center; margin:10px 0; }
-    .modal input[type="text"]{
-      width:70px; padding:6px 8px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; font-size:.9rem; text-align:center;
-    }
-    body.dark .modal input[type="text"]{ background:#111827; color:#e2e8f0; border-color:#334155; }
-    .modal .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
-    .modal .btn{ border-radius:8px; }
+.step-row{display:grid;grid-template-columns:180px 1fr auto;align-items:center;gap:10px;margin-bottom:6px;}
+.step-time{font-size:var(--fz-label);line-height:var(--lh-label);font-weight:600;color:rgba(15,23,42,.75);text-align:right;min-width:70px;font-feature-settings:"tnum" 1, "lnum" 1; font-variant-numeric:tabular-nums lining-nums;}
+body.dark .step-time{color:#cbd5e1}
 
-    @media(max-width:768px){
-      .veh-list{grid-template-columns:1fr;}
-      .sheet-tabs{gap:10px;}
-    }
-  </style>
+/* 下拉 */
+.step-select{min-width:170px;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;font-size:var(--fz-body);}
+.step-select:disabled{background:#e2e8f0;cursor:not-allowed;}
+/* 備註 */
+.textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;background:#fff;font-size:var(--fz-body);}
+.textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* =========== Buttons 系列 =========== */
+.btn,.step-btn{
+  border:0;border-radius:var(--radius-md);padding:8px 14px;
+  background:#0f6efc;color:#fff;font-size:var(--fz-body);font-weight:600;cursor:pointer;
+  transition:background-color .12s ease,border-color .12s ease,filter .12s ease;
+  min-width:64px;text-align:center;
+}
+.btn--sm{padding:6px 12px}
+.btn--lg{padding:10px 18px;font-size:15px}
+.btn:focus-visible,.step-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+.btn[disabled],.step-btn[disabled]{background:var(--gray-300)!important;color:var(--gray-700)!important;cursor:not-allowed}
+
+/* 變體 */
+.btn--primary{background:var(--primary-600);} .btn--primary:hover{background:var(--primary-700);} .btn--primary:active{background:var(--primary-800);}
+.btn--success{background:var(--success-600);} .btn--success:hover{background:var(--success-700);} .btn--success:active{background:var(--success-800);}
+.btn--danger{background:var(--danger-600);}  .btn--danger:hover{background:var(--danger-700);}  .btn--danger:active{background:var(--danger-800);}
+.btn--secondary{background:#fff;color:var(--primary-600);border:1px solid var(--primary-600);} 
+body.dark .btn--secondary{background:transparent}
+.btn--secondary:hover{background:rgba(31,111,229,.06)}
+
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+
+/* 通知 */
+.notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;z-index:9990;}
+.notif.show{opacity:1;transform:translateY(0);}
+
+@media(max-width:768px){
+  .veh-list{grid-template-columns:1fr;}
+  .sheet-tabs{gap:10px;}
+}
+</style>
+  
+  
 </head>
 <body>
   <div class="wrap">
@@ -253,30 +227,42 @@ window.onload = function(){
   buildTabs();
 };
 
+function makeBtn(label, variant = 'primary', size = 'sm') {
+  const b = document.createElement('button');
+  b.className = `btn btn--${variant} ${size==='sm'?'btn--sm':size==='lg'?'btn--lg':''}`;
+  b.textContent = label;
+  return b;
+}
+
+  
+  
 function buildTabs(){
   const box = document.getElementById('sheetTabs');
   box.innerHTML = '';
   if (!SHEET_CONFIGS.length) return;
 
+  // 保底：若 currentSheetKey 不存在，改用第一個
   const prevKey = currentSheetKey;
   if (!SHEET_CONFIGS.some(s => s.key === currentSheetKey)) {
     currentSheetKey = SHEET_CONFIGS[0].key;
   }
   const keyChanged = (prevKey !== currentSheetKey);
 
-  SHEET_CONFIGS.forEach(cfg=>{
-    const b = document.createElement('button');
-    b.className = 'btn-tab' + (cfg.key===currentSheetKey ? ' active' : '');
-    b.textContent = cfg.key;
-    b.onclick = () => {
+  // 分頁按鈕
+  SHEET_CONFIGS.forEach(cfg => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-tab tab' + (cfg.key === currentSheetKey ? ' active' : '');
+    btn.textContent = cfg.key;
+    btn.onclick = () => {
       currentSheetKey = cfg.key;
-      box.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');
+      box.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
       loadSheetData(currentSheetKey);
     };
-    box.appendChild(b);
+    box.appendChild(btn);
   });
 
+  // 重新載入
   const reloadBtn = document.createElement('button');
   reloadBtn.id = 'reloadBtn';
   reloadBtn.textContent = '重新載入';
@@ -286,6 +272,7 @@ function buildTabs(){
   const contentShown = !document.getElementById('content').classList.contains('hide');
   if (keyChanged && contentShown) loadSheetData(currentSheetKey);
 }
+
 
 async function handleCredential(resp){
   try {
@@ -434,6 +421,7 @@ function renderVehicles(cfg, data){
 
   const canWrite = (currentUser && currentUser.permission === '全功能');
 
+  // 找表頭
   const headerRowIdx = data.findIndex(row =>
     Array.isArray(row) &&
     String(row[0] || '').trim() === '編號' &&
@@ -470,6 +458,7 @@ function renderVehicles(cfg, data){
     card.appendChild(title);
 
     const stepsBox = document.createElement('div');
+    const baseRow = headerRowIdx + 2 + idx;  // 1-based row for writes
 
     cfg.steps.forEach(st => {
       const colIdx = header.indexOf(st);
@@ -479,17 +468,18 @@ function renderVehicles(cfg, data){
       const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
       const displayVal = rawVal ? formatSheetTime(rawVal) : '';
 
-      // 第一欄：標題
+      // 第一欄：步驟標題
       const labelEl = document.createElement('div');
       labelEl.className = 'step-label';
       labelEl.textContent = st;
       rowEl.appendChild(labelEl);
 
-      /* 車暫停位置：維持下拉；無修改/刪除 */
+      /* ===== 「車暫停位置」：下拉，無修改/刪除 ===== */
       if (st === '車暫停位置') {
+        // 第二欄：Select
         const valueEl = document.createElement('div');
         const sel = document.createElement('select');
-        sel.className = 'step-select';
+        sel.className = 'step-select select';  // ✅ 吃統一輸入樣式
 
         const optEmpty = document.createElement('option');
         optEmpty.value = '';
@@ -504,15 +494,19 @@ function renderVehicles(cfg, data){
         });
 
         if (rawVal) sel.value = rawVal;
+
+        // 提供給 onStopSelect 的參考節點（用來解鎖/鎖定後續）
+        const ghost = document.createElement('span');
+        ghost.style.display = 'none';
+
         valueEl.appendChild(sel);
+        valueEl.appendChild(ghost);
         rowEl.appendChild(valueEl);
 
-        // 右側空群組（對齊）
+        // 第三欄：空的按鈕群（對齊）
         const btnG = document.createElement('div');
         btnG.className = 'btn-group';
         rowEl.appendChild(btnG);
-
-        const sheetRow = headerRowIdx + 1 + 1 + idx;
 
         if (!canWrite) {
           sel.disabled = true;
@@ -520,55 +514,95 @@ function renderVehicles(cfg, data){
         } else {
           const prevOk = prevDone(cfg, header, row, st);
           if (!prevOk && !rawVal) sel.disabled = true;
-          sel.onchange = () => onStopSelect(cfg, sheetRow, header, st, sel.value, document.createElement('span'));
+          sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value, ghost);
         }
 
         stepsBox.appendChild(rowEl);
         return;
       }
 
-      // 第二欄：時間顯示
+      /* ===== 一般步驟：時間 + 三鍵（打卡/修改/刪除） ===== */
+
+      // 第二欄：時間
       const timeSpan = document.createElement('span');
       timeSpan.className = 'step-time';
-      timeSpan.textContent = displayVal;
+      timeSpan.textContent = displayVal || '—';
       rowEl.appendChild(timeSpan);
 
-      // 第三欄：操作按鈕群（打卡 / 修改 / 刪除）
-      const btnG = document.createElement('div'); btnG.className = 'btn-group';
+      // 第三欄：按鈕群
+      const btnG = document.createElement('div');
+      btnG.className = 'btn-group';
 
       const btnPunch = document.createElement('button');
-      btnPunch.className = 'btn btn-punch';
+      btnPunch.className = 'btn btn--primary btn--sm';
       btnPunch.textContent = '打卡';
 
       const btnEdit = document.createElement('button');
-      btnEdit.className  = 'btn btn-edit';
+      btnEdit.className  = 'btn btn--success btn--sm';
       btnEdit.textContent = '修改';
 
       const btnDel = document.createElement('button');
-      btnDel.className   = 'btn btn-del';
+      btnDel.className   = 'btn btn--danger btn--sm';
       btnDel.textContent = '刪除';
 
-      btnG.appendChild(btnPunch); btnG.appendChild(btnEdit); btnG.appendChild(btnDel);
+      btnG.appendChild(btnPunch);
+      btnG.appendChild(btnEdit);
+      btnG.appendChild(btnDel);
       rowEl.appendChild(btnG);
-
-      const sheetRow = headerRowIdx + 1 + 1 + idx;
 
       if (!canWrite) {
         btnPunch.disabled = true; btnEdit.disabled = true; btnDel.disabled = true;
         rowEl.classList.add('locked');
       } else {
         const prevOk = prevDone(cfg, header, row, st);
-        if (!prevOk && !rawVal) {
-          btnPunch.disabled = true; btnEdit.disabled = true; btnDel.disabled = true;
+        const hasVal = !!rawVal;
+
+        // 前置未完成且尚未打卡 → 三鍵都鎖
+        if (!prevOk && !hasVal) {
+          btnPunch.disabled = true;
+          btnEdit.disabled  = true;
+          btnDel.disabled   = true;
         } else {
-          const hasVal = !!rawVal;
+          // 僅能新增：已有時間就不能再「打卡」
           btnPunch.disabled = hasVal;
+          // 修改 / 刪除 需先有值
           btnEdit.disabled  = !hasVal;
           btnDel.disabled   = !hasVal;
 
-          btnPunch.onclick = () => onPunchClick(cfg, sheetRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
-          btnEdit.onclick  = () => onEditTimeClick(cfg, sheetRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
-          btnDel.onclick   = () => onDeleteTimeClick(cfg, sheetRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+          // 使用你現有 onStepClick（打卡=新增；修改=開啟輸入）
+          btnPunch.onclick = () => onStepClick(
+            cfg, baseRow, header, st, '', btnPunch, timeSpan   // 傳空字串 → 當作新增
+          );
+          btnEdit.onclick  = () => onStepClick(
+            cfg, baseRow, header, st, displayVal, btnPunch, timeSpan
+          );
+
+          // 刪除：直接清空該格
+          btnDel.onclick   = async () => {
+            if (!confirm('確定要刪除資料嗎？')) return;
+            const body = {
+              sheet: cfg.sheet,
+              email: currentUser.email,
+              writes: [{ row: baseRow, col: colIdx+1, value: '' }]
+            };
+            const r = await fetch(API_BASE + '?action=update', {
+              method:'POST',
+              headers:{'Content-Type':'text/plain;charset=utf-8'},
+              body: JSON.stringify(body)
+            });
+            const j = await r.json();
+            if (!j.ok){ showNotif('刪除失敗：'+(j.error||'unknown'), true); return; }
+
+            timeSpan.textContent = '—';
+            btnPunch.disabled = false;
+            btnEdit.disabled  = true;
+            btnDel.disabled   = true;
+
+            // 清空後鎖回後續步驟（沿用你的工具）
+            lockFollowing(rowEl);
+            showNotif('已刪除', false);
+            setTimeout(()=>reloadSheet(), 300);
+          };
         }
       }
 
@@ -577,43 +611,45 @@ function renderVehicles(cfg, data){
 
     card.appendChild(stepsBox);
 
-    /* === 備註區 === */
+    /* ===== 備註區（最後一欄或名為「備註」） ===== */
     const memoWrap = document.createElement('div');
     memoWrap.style.marginTop = '8px';
+
     const memoRow = document.createElement('div');
     memoRow.style.display = 'flex';
     memoRow.style.gap = '8px';
-    memoRow.style.alignItems = 'stretch';
+    memoRow.style.alignItems = 'flex-start';
 
     const memoTA = document.createElement('textarea');
+    memoTA.className = 'textarea';
     memoTA.placeholder = '備註';
     memoTA.style.flex = '1';
-    memoTA.style.minHeight = '84px';
-    memoTA.style.padding = '8px';
-    memoTA.style.border = '1px solid #cbd5e1';
-    memoTA.style.borderRadius = '10px';
-    memoTA.style.fontSize = '.9rem';
-    memoTA.style.background = 'rgba(255,255,255,.9)';
-    if (document.body.classList.contains('dark')) memoTA.style.background = 'rgba(15,23,42,.15)';
 
-    // 備註欄位：找「備註」，找不到就用最後一欄
+    // 尋找備註欄位
     let memoColIdx = header.indexOf('備註');
     if (memoColIdx === -1) memoColIdx = header.length - 1;
     const memoRaw = (memoColIdx !== -1 && row[memoColIdx]) ? String(row[memoColIdx]) : '';
     memoTA.value = memoRaw;
 
     const memoBtn = document.createElement('button');
-    memoBtn.className = 'btn btn-save';
+    memoBtn.className = 'btn btn--primary';   // ✅ 主操作配色
     memoBtn.textContent = '儲存';
-    memoBtn.style.alignSelf = 'flex-start';
-    if (!(currentUser && currentUser.permission === '全功能')) memoBtn.disabled = true;
+    if (!canWrite) memoBtn.disabled = true;
 
     memoBtn.onclick = async ()=>{
       if (!currentUser) return alert('請先登入');
       if (currentUser.permission !== '全功能') return alert('權限不足');
-      const sheetRow = headerRowIdx + 1 + 1 + idx;
-      const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: sheetRow, col: memoColIdx+1, value: memoTA.value }] };
-      const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
+
+      const body = {
+        sheet: cfg.sheet,
+        email: currentUser.email,
+        writes: [{ row: baseRow, col: memoColIdx+1, value: memoTA.value }]
+      };
+      const r = await fetch(API_BASE + '?action=update', {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify(body)
+      });
       const j = await r.json();
       if (!j.ok){ showNotif('備註儲存失敗：'+(j.error||'unknown'), true); return; }
       showNotif('備註已儲存', false);
@@ -628,6 +664,8 @@ function renderVehicles(cfg, data){
     box.appendChild(card);
   });
 }
+
+
 
 function prevDone(cfg, header, row, st){
   const idx = cfg.steps.indexOf(st);

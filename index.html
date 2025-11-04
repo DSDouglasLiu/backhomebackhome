@@ -286,6 +286,7 @@ function buildTabs(){
 }
 
 
+
 async function handleCredential(resp){
   try {
     const r = await fetch(API_BASE + '?action=verify', {
@@ -295,19 +296,28 @@ async function handleCredential(resp){
     });
     const j = await r.json();
     if (j.error) { showNotif('登入失敗：' + j.error, true); return; }
+
     currentUser = j;
+
     document.getElementById('signin').classList.add('hide');
     const ui = document.getElementById('userInfo');
     ui.classList.remove('hide');
     ui.innerHTML = `${j.name||''} &lt;${j.email}&gt; ｜ 權限：<b>${j.permission}</b>`;
     document.getElementById('tabs').classList.remove('hide');
     document.getElementById('content').classList.remove('hide');
+
+    // ✅ 放到 try 裡：唯讀提示
+    if (j.permission === '檢視') {
+      showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
+    }
+
     loadSheetData(currentSheetKey);
   } catch (err) {
     showNotif('登入錯誤：' + err.message, true);
   }
 }
 
+  
 async function loadSheetData(key){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);
   document.getElementById('vehList').textContent = '讀取中...';
@@ -391,6 +401,9 @@ function getTaipeiHHMMSS() {
 function renderVehicles(cfg, data){
   const box = document.getElementById('vehList');
   box.innerHTML = '';
+
+  // ✅ 只有全功能可互動；檢視一律鎖住
+  const canWrite = (currentUser && currentUser.permission === '全功能');
 
   const headerRowIdx = data.findIndex(row =>
     Array.isArray(row) &&
@@ -538,8 +551,8 @@ function prevDone(cfg, header, row, st){
 /* ✅ 下拉式「車暫停位置」專用的寫入 */
 async function onStopSelect(cfg, rowNumber, header, st, value, span){
   if (!currentUser) return alert('請先登入');
-  if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
-
+  if (currentUser.permission !== '全功能') return alert('權限不足'); // ← 只允許全功能
+  
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);
 
@@ -580,7 +593,7 @@ setTimeout(()=>reloadSheet(), 300);
 /* 原本按鈕的寫入（時間） */
 async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
   if (!currentUser) return alert('請先登入');
-  if (!['輸入','全功能'].includes(currentUser.permission)) return alert('權限不足');
+  if (currentUser.permission !== '全功能') return alert('權限不足'); // ← 只允許全功能
 
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);

@@ -111,6 +111,15 @@ body.dark .btn--secondary{background:transparent}
 
 .btn-group{display:flex;gap:8px;flex-wrap:wrap}
 
+/* 標題：區域車次編號（左）＋ 車號（右） */
+.veh-title-line{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.veh-title-id{font-size:var(--fz-title);line-height:var(--lh-title);font-weight:var(--fw-title);} /* 與 veh-title-main 同級別 */
+
+/* 時間欄位：有值靠左；沒值的 dash 置中 */
+.step-time{ text-align:left; }
+.step-time.is-empty{ text-align:center; color: var(--text-muted); }
+
+  
 /* 通知 */
 .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;z-index:9990;}
 .notif.show{opacity:1;transform:translateY(0);}
@@ -452,10 +461,13 @@ function renderVehicles(cfg, data){
 
     const title = document.createElement('div');
     title.innerHTML = `
-      <div class="veh-title-main">${area}</div>
-      <div class="veh-title-sub">${car}</div>
-    `;
-    card.appendChild(title);
+    <div class="veh-title-line">
+    <div class="veh-title-main">${area}</div>
+    <div class="veh-title-id">${car}</div>
+  </div>
+`;
+card.appendChild(title);
+
 
     const stepsBox = document.createElement('div');
     const baseRow = headerRowIdx + 2 + idx;  // 1-based row for writes
@@ -525,9 +537,22 @@ function renderVehicles(cfg, data){
 
       // 第二欄：時間
       const timeSpan = document.createElement('span');
-      timeSpan.className = 'step-time';
-      timeSpan.textContent = displayVal || '—';
-      rowEl.appendChild(timeSpan);
+timeSpan.className = 'step-time';
+if (displayVal) {
+  timeSpan.textContent = displayVal;      // 有時間 → 靠左
+} else {
+timeSpan.textContent = '—';
+timeSpan.classList.add('is-empty'); // 讓 dash 置中
+btnPunch.disabled = false;
+btnEdit.disabled  = true;
+btnDel.disabled   = true;
+lockFollowing(rowEl);
+showNotif('已刪除', false);
+setTimeout(()=>reloadSheet(), 300);
+
+}
+rowEl.appendChild(timeSpan);
+
 
       // 第三欄：按鈕群
       const btnG = document.createElement('div');

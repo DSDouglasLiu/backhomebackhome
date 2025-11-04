@@ -457,81 +457,104 @@ function renderVehicles(cfg, data){
       const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
 
       /* ✅ 這一段：如果是「車暫停位置」就改成下拉式 */
-      if (st === '車暫停位置') {
-        const sel = document.createElement('select');
-        sel.className = 'step-select';
+     if (st === '車暫停位置') {
+  const sel = document.createElement('select');
+  sel.className = 'step-select';
 
-        // 預設一個空的，可做清空
-        const optEmpty = document.createElement('option');
-        optEmpty.value = '';
-        optEmpty.textContent = '— 請選擇 —';
-        sel.appendChild(optEmpty);
+  // 空白選項
+  const optEmpty = document.createElement('option');
+  optEmpty.value = '';
+  optEmpty.textContent = '— 請選擇 —';
+  sel.appendChild(optEmpty);
 
-        STOP_OPTIONS.forEach(opt => {
-          const o = document.createElement('option');
-          o.value = opt;
-          o.textContent = opt;
-          sel.appendChild(o);
-        });
+  // 選項
+  STOP_OPTIONS.forEach(opt => {
+    const o = document.createElement('option');
+    o.value = opt;
+    o.textContent = opt;
+    sel.appendChild(o);
+  });
 
-        // 有原本的值，就選起來
-        if (rawVal) sel.value = rawVal;
+  // 有原值就選起來
+  if (rawVal) sel.value = rawVal;
 
-        // 右邊顯示選到的文字
-        const placeSpan = document.createElement('span');
-        placeSpan.className = 'step-time';
-        placeSpan.textContent = rawVal ? rawVal : '';
+  // 右側顯示
+  const placeSpan = document.createElement('span');
+  placeSpan.className = 'step-time';
+  placeSpan.textContent = rawVal ? rawVal : '';
 
-        // 跟其他一樣，前一步沒做就鎖住
-        const prevOk = prevDone(cfg, header, row, st);
-        if (!prevOk && !rawVal) {
-          sel.disabled = true;
-        }
+  const sheetRow = headerRowIdx + 1 + 1 + idx;
 
-        const sheetRow = headerRowIdx + 1 + 1 + idx;
+  if (!canWrite) {
+    // 檢視：鎖住
+    sel.disabled = true;
+    rowEl.classList.add('locked');
+  } else {
+    // 全功能：維持既有前置步驟鎖定邏輯
+    const prevOk = prevDone(cfg, header, row, st);
+    if (!prevOk && !rawVal) sel.disabled = true;
 
-        sel.onchange = () => onStopSelect(
-          cfg,
-          sheetRow,
-          header,
-          st,
-          sel.value,
-          placeSpan
-        );
+    sel.onchange = () => onStopSelect(
+      cfg,
+      sheetRow,
+      header,
+      st,
+      sel.value,
+      placeSpan
+    );
+  }
 
-        rowEl.appendChild(sel);
-        rowEl.appendChild(placeSpan);
-        stepsBox.appendChild(rowEl);
-        return; // 這一列結束
-      }
+  rowEl.appendChild(sel);
+  rowEl.appendChild(placeSpan);
+  stepsBox.appendChild(rowEl);
+  return; // 這一列結束
+}
+
 
       /* 一般按鈕的流程 */
-      const btn = document.createElement('button');
-      btn.className = 'step-btn';
-      btn.textContent = st;
+// 一般按鈕的流程
+const btn = document.createElement('button');
+btn.className = 'step-btn';
+btn.textContent = st;
 
-      const timeSpan = document.createElement('span');
-      timeSpan.className = 'step-time';
+const timeSpan = document.createElement('span');
+timeSpan.className = 'step-time';
 
-      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
+const displayVal = rawVal ? formatSheetTime(rawVal) : '';
+if (rawVal) {
+  btn.classList.add('done');
+  timeSpan.textContent = displayVal;
+}
 
-      if (rawVal) {
-        btn.classList.add('done');
-        timeSpan.textContent = displayVal;
-      }
+const sheetRow = headerRowIdx + 1 + 1 + idx;
 
-      const prevOk = prevDone(cfg, header, row, st);
-      if (!prevOk && !rawVal) {
-        btn.classList.add('done');
-        btn.disabled = true;
-      }
+if (!canWrite) {
+  // 檢視：鎖住
+  btn.disabled = true;
+  btn.classList.add('locked');
+} else {
+  // 全功能：維持既有前置步驟鎖定邏輯
+  const prevOk = prevDone(cfg, header, row, st);
+  if (!prevOk && !rawVal) {
+    btn.classList.add('done');
+    btn.disabled = true;
+  }
 
-      const sheetRow = headerRowIdx + 1 + 1 + idx;
-      btn.onclick = () => onStepClick(cfg, sheetRow, header, st, rawVal, btn, timeSpan);
+  // 可寫入時綁定事件（即使 disabled 也不會觸發）
+  btn.onclick = () => onStepClick(
+    cfg,
+    sheetRow,
+    header,
+    st,
+    rawVal,
+    btn,
+    timeSpan
+  );
+}
 
-      rowEl.appendChild(btn);
-      rowEl.appendChild(timeSpan);
-      stepsBox.appendChild(rowEl);
+rowEl.appendChild(btn);
+rowEl.appendChild(timeSpan);
+stepsBox.appendChild(rowEl);
     });
 
     card.appendChild(stepsBox);

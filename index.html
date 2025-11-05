@@ -5,124 +5,130 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>活動車流人流退場管理系統</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <style>
-    :root{
-      --bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
-      --card-bg: rgba(255,255,255,0.75);
-      --text: #0f172a;
-    }
-    body.dark{
-      --bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
-      --card-bg: rgba(15,23,42,0.55);
-      --text: #e2e8f0;
-    }
-    body{
-      margin:0;
-      min-height:100vh;
-      background:var(--bg);
-      backdrop-filter: blur(14px);
-      font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;
-      color:var(--text);
-    }
-    .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
-    h1{margin:0 0 16px;}
-    .card{background:var(--card-bg);border:1px solid rgba(255,255,255,0.3);border-radius:16px;padding:16px;margin:12px 0;}
-    .hide{display:none;}
 
-    /* tab 列 */
-    .sheet-tabs{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;}
-    .btn-tab{
-      background:#e5e7eb;
-      border:1px solid #cbd5f5;
-      border-radius:4px;
-      padding:6px 22px;
-      font-size:.8rem;
-      cursor:pointer;
-      color:#000;
-      min-width:170px;
-      text-align:center;
-    }
-    .btn-tab.active{
-      background:#1f6fe5;
-      color:#fff;
-      border-color:#1f6fe5;
-    }
-    #reloadBtn{
-      margin-left:auto;
-      background:#fff;
-      border:1px solid #cbd5f5;
-      border-radius:4px;
-      padding:6px 22px;
-      cursor:pointer;
-    }
+<style>
+/* =========== Design Tokens（Preferred 版） =========== */
+:root{
+  /* 半徑 */
+  --radius-xs:6px;  --radius-sm:8px;  --radius-md:10px; --radius-lg:12px;
 
-    /* 車卡片：一列兩輛 */
-    .veh-list{
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(480px, 1fr));
-      gap:12px;
-      margin-top:16px;
-    }
-    .veh-card{
-      background:rgba(255,255,255,0.85);
-      border-radius:14px;
-      border:1px solid rgba(148,163,184,0.25);
-      padding:14px 14px 10px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    body.dark .veh-card{background:rgba(15,23,42,0.28);}
-    .veh-title-main{font-weight:600;font-size:1rem;margin-bottom:2px;}
-    .veh-title-sub{font-size:.85rem;opacity:.7;}
+  /* 色票（light） */
+  --primary-600:#1f6fe5; --primary-700:#165bd1; --primary-800:#1249ad;
+  --success-600:#22c55e; --success-700:#16a34a; --success-800:#15803d;
+  --danger-600:#ef4444;  --danger-700:#dc2626;  --danger-800:#b91c1c;
+  --gray-50:#f8fafc;  --gray-100:#f1f5f9; --gray-200:#e5e7eb;
+  --gray-300:#cbd5e1; --gray-400:#94a3b8; --gray-500:#64748b;
+  --gray-600:#475569; --gray-700:#334155; --gray-800:#1f2937; --gray-900:#0f172a;
 
-    .step-row{ display:flex; align-items:center; gap:8px; margin-bottom:5px; }
-    .step-btn{
-      border:0;border-radius:10px;padding:6px 12px 7px;
-      background:#0f6efc;color:#fff;font-size:.74rem;cursor:pointer;
-      flex:0 0 auto;min-width:170px;text-align:center;
-    }
-    .step-btn.done{ background:#cbd5e1;color:#0f172a;cursor:pointer; }
-    .step-btn.locked{ background:#94a3b8;color:#0f172a;opacity:.65;cursor:not-allowed; }
-    .step-time{ font-size:.7rem;color:rgba(15,23,42,.55);min-width:70px;text-align:right; }
+  --surface: rgba(255,255,255,.78);
+  --page-bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
+  --text-strong: var(--gray-900);
+  --text: var(--gray-800);
+  --text-muted: var(--gray-600);
+  --border: rgba(148,163,184,0.35);
+  --focus:#93c5fd;
 
-    .step-select{ min-width:170px; padding:5px 6px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; font-size:.74rem; }
-    .step-select:disabled{ background:#e2e8f0; cursor:not-allowed; }
+  /* 字級（px/line-height, weight） */
+  --fz-display:28px; --lh-display:36px; --fw-display:700;  /* 頁面大標題 */
+  --fz-title:18px;   --lh-title:24px;   --fw-title:700;   /* 卡片主標 */
+  --fz-sub:14px;     --lh-sub:20px;     --fw-sub:600;     /* 車牌/副標 */
+  --fz-label:14px;   --lh-label:20px;   --fw-label:600;   /* 步驟/表頭 */
+  --fz-body:14px;    --lh-body:20px;    --fw-body:400;    /* 內文/按鈕 */
+  --fz-note:12px;    --lh-note:16px;    --fw-note:400;    /* 備註提示 */
 
-    .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;}
-    .notif.show{opacity:1;transform:translateY(0);}
+  --shadow-card:0 8px 24px rgba(0,0,0,.08);
+}
+body.dark{
+  --surface: rgba(15,23,42,.55);
+  --page-bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
+  --text-strong:#e5eaf3; --text:#e2e8f0; --text-muted:#93a3b5;
+  --border: rgba(148,163,184,0.25);
+  --shadow-card:0 8px 24px rgba(0,0,0,.35);
+}
 
-    @media(max-width:768px){
-      .veh-list{grid-template-columns:1fr;}
-      .sheet-tabs{gap:10px;}
-    }
+/* =========== Base =========== */
+body{
+  margin:0; min-height:100vh;
+  background:var(--page-bg); color:var(--text);
+  backdrop-filter: blur(14px);
+  font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
+h1{margin:0 0 16px;font-size:var(--fz-display);line-height:var(--lh-display);font-weight:var(--fw-display);color:var(--text-strong);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
+.hide{display:none;}
 
-    /* ===== 全域 Modal（方案 A）===== */
-    #modal-root{
-      position:fixed; inset:0; display:none; z-index:2147483647;
-      /* 用 grid 置中，避免任何父層布局影響 */
-      place-items:center;
-    }
-    #modal-root.show{ display:grid; }
-    .modal-mask{ position:absolute; inset:0; background:rgba(0,0,0,.45); }
-    .modal-card{
-      position:relative; background:#fff; color:#0f172a;
-      width:min(92vw, 520px); border-radius:12px;
-      border:1px solid rgba(0,0,0,.08);
-      box-shadow:0 12px 40px rgba(0,0,0,.2); padding:18px;
-    }
-    .modal-title{ font-weight:600; margin-bottom:8px; }
-    .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
-    .modal-btn{ padding:8px 14px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; cursor:pointer; }
-    .modal-btn.primary{ background:#1f6fe5; color:#fff; border-color:#1f6fe5; }
-    .modal-input{ width:100%; box-sizing:border-box; padding:10px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px; }
-    .modal-hint{ font-size:12px; color:#64748b; margin-top:6px; }
-  </style>
+/* =========== Segmented Tabs（上方工作表） =========== */
+.sheet-tabs{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.tab,.btn-tab{
+  background:#fff;color:var(--primary-600);
+  border:1px solid var(--primary-600);border-radius:var(--radius-lg);
+  padding:6px 18px;font-size:var(--fz-body);font-weight:600;cursor:pointer;min-width:170px;text-align:center;
+}
+body.dark .tab, body.dark .btn-tab{background:transparent}
+.tab:hover,.btn-tab:hover{background:rgba(31,111,229,.06)}
+.tab.active,.btn-tab.active{background:var(--primary-600);color:#fff;border-color:var(--primary-600)}
+.tab:focus-visible,.btn-tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+#reloadBtn{margin-left:auto}
+
+/* =========== 卡片與步驟列 =========== */
+.veh-list{display:grid;grid-template-columns:repeat(auto-fit, minmax(480px,1fr));gap:12px;margin-top:16px;}
+.veh-card{background:rgba(255,255,255,0.85);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px;}
+body.dark .veh-card{background:rgba(15,23,42,0.28);}
+.veh-title-main{font-weight:700;font-size:var(--fz-title);line-height:var(--lh-title);color:var(--text-strong);}
+.veh-title-sub{font-size:var(--fz-sub);line-height:var(--lh-sub);color:var(--text-muted);}
+
+.step-row{display:grid;grid-template-columns:180px 1fr auto;align-items:center;gap:10px;margin-bottom:6px;}
+.step-time{font-size:var(--fz-label);line-height:var(--lh-label);font-weight:600;color:rgba(15,23,42,.75);text-align:right;min-width:70px;font-feature-settings:"tnum" 1, "lnum" 1; font-variant-numeric:tabular-nums lining-nums;}
+body.dark .step-time{color:#cbd5e1}
+
+/* 下拉 */
+.step-select{min-width:170px;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;font-size:var(--fz-body);}
+.step-select:disabled{background:#e2e8f0;cursor:not-allowed;}
+/* 備註 */
+.textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;background:#fff;font-size:var(--fz-body);}
+.textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* =========== Buttons 系列 =========== */
+.btn,.step-btn{
+  border:0;border-radius:var(--radius-md);padding:8px 14px;
+  background:#0f6efc;color:#fff;font-size:var(--fz-body);font-weight:600;cursor:pointer;
+  transition:background-color .12s ease,border-color .12s ease,filter .12s ease;
+  min-width:64px;text-align:center;
+}
+.btn--sm{padding:6px 12px}
+.btn--lg{padding:10px 18px;font-size:15px}
+.btn:focus-visible,.step-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+.btn[disabled],.step-btn[disabled]{background:var(--gray-300)!important;color:var(--gray-700)!important;cursor:not-allowed}
+
+/* 變體 */
+.btn--primary{background:var(--primary-600);} .btn--primary:hover{background:var(--primary-700);} .btn--primary:active{background:var(--primary-800);}
+.btn--success{background:var(--success-600);} .btn--success:hover{background:var(--success-700);} .btn--success:active{background:var(--success-800);}
+.btn--danger{background:var(--danger-600);}  .btn--danger:hover{background:var(--danger-700);}  .btn--danger:active{background:var(--danger-800);}
+.btn--secondary{background:#fff;color:var(--primary-600);border:1px solid var(--primary-600);} 
+body.dark .btn--secondary{background:transparent}
+.btn--secondary:hover{background:rgba(31,111,229,.06)}
+
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+
+/* 通知 */
+.notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;z-index:9990;}
+.notif.show{opacity:1;transform:translateY(0);}
+
+@media(max-width:768px){
+  .veh-list{grid-template-columns:1fr;}
+  .sheet-tabs{gap:10px;}
+}
+</style>
+  
+  
 </head>
 <body>
   <div class="wrap">
     <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-      <div><h1>活動車流人流退場管理系統</h1></div>
+      <div>
+        <h1>活動車流人流退場管理系統</h1>
+      </div>
       <div id="signin"></div>
       <div id="userInfo" class="hide" style="font-size:.75rem;"></div>
     </div>
@@ -136,9 +142,6 @@
       <div id="vehList" class="veh-list"></div>
     </div>
   </div>
-
-  <!-- ✅ 方案 A：全域 Modal Root（掛在 body 直下） -->
-  <div id="modal-root" aria-hidden="true"></div>
 
   <div id="notif" class="notif"></div>
 
@@ -164,7 +167,7 @@ const SHEET_CONFIGS = [
       'Call 車上行李',
       '車已上遊覽車平台',
       '車前往排車隊',
-      '車暫停位置',
+      '車暫停位置',             // 下拉
       '退場人員已到齊',
       '已 Call 車上遊覽車平台',
       '人已前往平台',
@@ -180,7 +183,7 @@ const SHEET_CONFIGS = [
       'Call 車上行李',
       '車已上遊覽車平台',
       '車前往排車隊',
-      '車暫停位置',
+      '車暫停位置',             // 下拉
       '車已離開禪堂平台'
     ]
   },
@@ -193,7 +196,7 @@ const SHEET_CONFIGS = [
       '退場人員已到齊',
       '已 Call 車上遊覽車平台',
       '車已上遊覽車平台',
-      '車暫停位置',
+      '車暫停位置',             // 下拉
       '車已離開遊覽車平台'
     ]
   },
@@ -224,30 +227,42 @@ window.onload = function(){
   buildTabs();
 };
 
+function makeBtn(label, variant = 'primary', size = 'sm') {
+  const b = document.createElement('button');
+  b.className = `btn btn--${variant} ${size==='sm'?'btn--sm':size==='lg'?'btn--lg':''}`;
+  b.textContent = label;
+  return b;
+}
+
+  
+  
 function buildTabs(){
   const box = document.getElementById('sheetTabs');
   box.innerHTML = '';
   if (!SHEET_CONFIGS.length) return;
 
+  // 保底：若 currentSheetKey 不存在，改用第一個
   const prevKey = currentSheetKey;
   if (!SHEET_CONFIGS.some(s => s.key === currentSheetKey)) {
     currentSheetKey = SHEET_CONFIGS[0].key;
   }
   const keyChanged = (prevKey !== currentSheetKey);
 
-  SHEET_CONFIGS.forEach(cfg=>{
-    const b = document.createElement('button');
-    b.className = 'btn-tab' + (cfg.key===currentSheetKey ? ' active' : '');
-    b.textContent = cfg.key;
-    b.onclick = () => {
+  // 分頁按鈕
+  SHEET_CONFIGS.forEach(cfg => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-tab tab' + (cfg.key === currentSheetKey ? ' active' : '');
+    btn.textContent = cfg.key;
+    btn.onclick = () => {
       currentSheetKey = cfg.key;
-      box.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');
+      box.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
       loadSheetData(currentSheetKey);
     };
-    box.appendChild(b);
+    box.appendChild(btn);
   });
 
+  // 重新載入
   const reloadBtn = document.createElement('button');
   reloadBtn.id = 'reloadBtn';
   reloadBtn.textContent = '重新載入';
@@ -255,10 +270,9 @@ function buildTabs(){
   box.appendChild(reloadBtn);
 
   const contentShown = !document.getElementById('content').classList.contains('hide');
-  if (keyChanged && contentShown) {
-    loadSheetData(currentSheetKey);
-  }
+  if (keyChanged && contentShown) loadSheetData(currentSheetKey);
 }
+
 
 async function handleCredential(resp){
   try {
@@ -282,7 +296,6 @@ async function handleCredential(resp){
     if (j.permission === '檢視') {
       showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
     }
-
     loadSheetData(currentSheetKey);
   } catch (err) {
     showNotif('登入錯誤：' + err.message, true);
@@ -299,9 +312,11 @@ async function loadSheetData(key){
   renderVehicles(cfg, sheetData);
 }
 
+/* 把各種時間 → HH:mm:ss */
 function formatSheetTime(val){
   if (!val) return '';
   const s = String(val).trim();
+
   if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) {
     const parts = s.split(':');
     return parts.map(p=>p.padStart(2,'0')).join(':');
@@ -335,131 +350,85 @@ function getTaipeiHHMMSS() {
     hour12: false,
     hour: '2-digit', minute: '2-digit', second: '2-digit'
   });
-  return f.format(new Date());
+  return f.format(new Date()); // 例：'20:20:29'
 }
 
-function prevDone(cfg, header, row, st){
-  const idx = cfg.steps.indexOf(st);
-  if (idx === 0) return true;
-  const prevName = cfg.steps[idx-1];
-  const colIdx = header.indexOf(prevName);
-  if (colIdx === -1) return true;
-  return !!row[colIdx];
+/* ====== UI 輔助：彈窗與時間欄位 ====== */
+const pad2 = n => String(n).padStart(2,'0');
+const splitHMS = (val) => {
+  const s = String(val||'').trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  return m ? [pad2(m[1]), m[2], m[3] ? m[3] : '00'] : ['','',''];
+};
+const isValidHMS = (h,m,s) => {
+  const hh = Number(h), mm = Number(m), ss = Number(s);
+  if (!/^\d{2}$/.test(h) || !/^\d{2}$/.test(m) || !/^\d{2}$/.test(s)) return false;
+  return hh>=0 && hh<=23 && mm>=0 && mm<=59 && ss>=0 && ss<=59;
+};
+function openModal(element){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.appendChild(element);
+  document.body.appendChild(backdrop);
+  return () => backdrop.remove();
+}
+function openConfirmDialog(msg, onOK){
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3>確認刪除</h3>
+    <div style="line-height:1.5;">${msg}</div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-del">確定</button>
+    </div>`;
+  const close = openModal(box);
+  const [btnCancel, btnOK] = box.querySelectorAll('button');
+  btnCancel.onclick = close;
+  btnOK.onclick = ()=>{ try{ onOK&&onOK(); } finally{ close(); } };
+}
+function openEditTimeDialog(initialHHMMSS, onOK){
+  const [h0,m0,s0] = splitHMS(initialHHMMSS);
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3>修改時間</h3>
+    <div class="row">
+      <label>HH</label><input id="hh" type="text" maxlength="2" value="${h0}">
+      <label>MM</label><input id="mm" type="text" maxlength="2" value="${m0}">
+      <label>SS</label><input id="ss" type="text" maxlength="2" value="${s0}">
+    </div>
+    <div style="font-size:.8rem;opacity:.7;">請輸入 2 位數（00–23 / 00–59 / 00–59）</div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-edit">確定</button>
+    </div>`;
+  const close = openModal(box);
+  const hh = box.querySelector('#hh'), mm = box.querySelector('#mm'), ss = box.querySelector('#ss');
+  const [btnCancel, btnOK] = box.querySelectorAll('button');
+  btnCancel.onclick = close;
+  btnOK.onclick = ()=>{
+    const H = pad2(hh.value||''), M = pad2(mm.value||''), S = pad2(ss.value||'');
+    if (!isValidHMS(H,M,S)){ showNotif('格式需為 HH(00–23) / MM(00–59) / SS(00–59)', true); return; }
+    try{ onOK(`${H}:${M}:${S}`); } finally{ close(); }
+  };
 }
 
-function unlockNext(rowEl){
-  const nextRow = rowEl?.nextElementSibling;
-  if (!nextRow) return;
-  const nextBtn = nextRow.querySelector('.step-btn');
-  const nextSel = nextRow.querySelector('.step-select');
-  if (nextBtn && !nextBtn.classList.contains('done')) {
-    nextBtn.disabled = false;
-    nextBtn.classList.remove('done');
-  }
-  if (nextSel) nextSel.disabled = false;
-}
-
-function lockFollowing(rowEl){
-  let it = rowEl?.nextElementSibling;
-  while (it){
-    const b = it.querySelector('.step-btn');
-    const s = it.querySelector('.step-select');
-    if (b && !b.classList.contains('done')) {
-      b.disabled = true;
-      b.classList.add('done');
-    }
-    if (s && !s.value) s.disabled = true;
-    it = it.nextElementSibling;
-  }
-}
-
-/* ====== 方案 A：全域 Modal 工具 ====== */
-function confirmBox(message, title='確認'){
-  return new Promise(resolve=>{
-    const root = document.getElementById('modal-root');
-    root.innerHTML = `
-      <div class="modal-mask"></div>
-      <div class="modal-card" role="dialog" aria-modal="true">
-        <div class="modal-title">${title}</div>
-        <div>${message}</div>
-        <div class="modal-actions">
-          <button class="modal-btn" id="mCancel">取消</button>
-          <button class="modal-btn primary" id="mOk">確定</button>
-        </div>
-      </div>`;
-    root.classList.add('show');
-
-    const close = (v)=>{
-      root.classList.remove('show');
-      root.innerHTML = '';
-      resolve(v);
-    };
-    root.querySelector('#mCancel').onclick = ()=>close(false);
-    root.querySelector('#mOk').onclick = ()=>close(true);
-    root.querySelector('.modal-mask').onclick = ()=>close(false);
-    const esc = (e)=>{ if(e.key==='Escape'){ close(false); document.removeEventListener('keydown', esc);} };
-    document.addEventListener('keydown', esc);
-  });
-}
-
-function promptBox({title='輸入', value='', placeholder='請輸入', hint='', okText='確定', cancelText='取消', allowEmpty=true}={}){
-  return new Promise(resolve=>{
-    const root = document.getElementById('modal-root');
-    root.innerHTML = `
-      <div class="modal-mask"></div>
-      <div class="modal-card" role="dialog" aria-modal="true">
-        <div class="modal-title">${title}</div>
-        <div>
-          <input class="modal-input" id="mInput" placeholder="${placeholder}" value="${value}">
-          ${hint ? `<div class="modal-hint">${hint}</div>` : ''}
-        </div>
-        <div class="modal-actions">
-          <button class="modal-btn" id="mCancel">${cancelText}</button>
-          <button class="modal-btn primary" id="mOk">${okText}</button>
-        </div>
-      </div>`;
-    root.classList.add('show');
-
-    const input = root.querySelector('#mInput');
-    setTimeout(()=>input.select(), 0);
-
-    const close = (v)=>{
-      root.classList.remove('show');
-      root.innerHTML = '';
-      resolve(v);
-    };
-    root.querySelector('#mCancel').onclick = ()=>close(null);
-    root.querySelector('#mOk').onclick = ()=>{
-      const val = input.value.trim();
-      if (!allowEmpty && !val) return;
-      close(val);
-    };
-    root.querySelector('.modal-mask').onclick = ()=>close(null);
-    const esc = (e)=>{ if(e.key==='Escape'){ close(null); document.removeEventListener('keydown', esc);} };
-    const enter = (e)=>{ if(e.key==='Enter'){ root.querySelector('#mOk').click(); } };
-    document.addEventListener('keydown', esc);
-    input.addEventListener('keydown', enter);
-  });
-}
-/* ====== /Modal 工具 ====== */
-
+/* ====== 主渲染 ====== */
 function renderVehicles(cfg, data){
   const box = document.getElementById('vehList');
   box.innerHTML = '';
 
   const canWrite = (currentUser && currentUser.permission === '全功能');
 
+  // 找表頭
   const headerRowIdx = data.findIndex(row =>
     Array.isArray(row) &&
     String(row[0] || '').trim() === '編號' &&
     String(row[1] || '').trim().startsWith('區域') &&
     String(row[2] || '').trim() === '車號'
   );
-
-  if (headerRowIdx === -1) {
-    box.textContent = '❌ 找不到表頭';
-    return;
-  }
+  if (headerRowIdx === -1) { box.textContent = '❌ 找不到表頭'; return; }
 
   const header = data[headerRowIdx].map(c => String(c || '').trim());
   const rows = data
@@ -472,10 +441,7 @@ function renderVehicles(cfg, data){
       return no && area && car;
     });
 
-  if (!rows.length){
-    box.textContent = '(這張表目前沒有車輛資料)';
-    return;
-  }
+  if (!rows.length){ box.textContent = '(這張表目前沒有車輛資料)'; return; }
 
   rows.forEach((row, idx) => {
     const area = String(row[1] || '').trim();
@@ -492,6 +458,7 @@ function renderVehicles(cfg, data){
     card.appendChild(title);
 
     const stepsBox = document.createElement('div');
+    const baseRow = headerRowIdx + 2 + idx;  // 1-based row for writes
 
     cfg.steps.forEach(st => {
       const colIdx = header.indexOf(st);
@@ -499,11 +466,20 @@ function renderVehicles(cfg, data){
       rowEl.className = 'step-row';
 
       const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
+      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
 
-      /* 特例：車暫停位置（下拉） */
+      // 第一欄：步驟標題
+      const labelEl = document.createElement('div');
+      labelEl.className = 'step-label';
+      labelEl.textContent = st;
+      rowEl.appendChild(labelEl);
+
+      /* ===== 「車暫停位置」：下拉，無修改/刪除 ===== */
       if (st === '車暫停位置') {
+        // 第二欄：Select
+        const valueEl = document.createElement('div');
         const sel = document.createElement('select');
-        sel.className = 'step-select';
+        sel.className = 'step-select select';  // ✅ 吃統一輸入樣式
 
         const optEmpty = document.createElement('option');
         optEmpty.value = '';
@@ -519,11 +495,18 @@ function renderVehicles(cfg, data){
 
         if (rawVal) sel.value = rawVal;
 
-        const placeSpan = document.createElement('span');
-        placeSpan.className = 'step-time';
-        placeSpan.textContent = rawVal ? rawVal : '';
+        // 提供給 onStopSelect 的參考節點（用來解鎖/鎖定後續）
+        const ghost = document.createElement('span');
+        ghost.style.display = 'none';
 
-        const sheetRow = headerRowIdx + 1 + 1 + idx;
+        valueEl.appendChild(sel);
+        valueEl.appendChild(ghost);
+        rowEl.appendChild(valueEl);
+
+        // 第三欄：空的按鈕群（對齊）
+        const btnG = document.createElement('div');
+        btnG.className = 'btn-group';
+        rowEl.appendChild(btnG);
 
         if (!canWrite) {
           sel.disabled = true;
@@ -531,70 +514,169 @@ function renderVehicles(cfg, data){
         } else {
           const prevOk = prevDone(cfg, header, row, st);
           if (!prevOk && !rawVal) sel.disabled = true;
-
-          sel.onchange = () => onStopSelect(
-            cfg,
-            sheetRow,
-            header,
-            st,
-            sel.value,
-            placeSpan
-          );
+          sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value, ghost);
         }
 
-        rowEl.appendChild(sel);
-        rowEl.appendChild(placeSpan);
         stepsBox.appendChild(rowEl);
         return;
       }
 
-      /* 一般步驟：按鈕 + 時間 */
-      const btn = document.createElement('button');
-      btn.className = 'step-btn';
-      btn.textContent = st;
+      /* ===== 一般步驟：時間 + 三鍵（打卡/修改/刪除） ===== */
 
+      // 第二欄：時間
       const timeSpan = document.createElement('span');
       timeSpan.className = 'step-time';
+      timeSpan.textContent = displayVal || '—';
+      rowEl.appendChild(timeSpan);
 
-      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
-      if (rawVal) {
-        btn.classList.add('done');
-        timeSpan.textContent = displayVal;
-      }
+      // 第三欄：按鈕群
+      const btnG = document.createElement('div');
+      btnG.className = 'btn-group';
 
-      const sheetRow = headerRowIdx + 1 + 1 + idx;
+      const btnPunch = document.createElement('button');
+      btnPunch.className = 'btn btn--primary btn--sm';
+      btnPunch.textContent = '打卡';
+
+      const btnEdit = document.createElement('button');
+      btnEdit.className  = 'btn btn--success btn--sm';
+      btnEdit.textContent = '修改';
+
+      const btnDel = document.createElement('button');
+      btnDel.className   = 'btn btn--danger btn--sm';
+      btnDel.textContent = '刪除';
+
+      btnG.appendChild(btnPunch);
+      btnG.appendChild(btnEdit);
+      btnG.appendChild(btnDel);
+      rowEl.appendChild(btnG);
 
       if (!canWrite) {
-        btn.disabled = true;
-        btn.classList.add('locked');
+        btnPunch.disabled = true; btnEdit.disabled = true; btnDel.disabled = true;
+        rowEl.classList.add('locked');
       } else {
         const prevOk = prevDone(cfg, header, row, st);
-        if (!prevOk && !rawVal) {
-          btn.classList.add('done');
-          btn.disabled = true;
+        const hasVal = !!rawVal;
+
+        // 前置未完成且尚未打卡 → 三鍵都鎖
+        if (!prevOk && !hasVal) {
+          btnPunch.disabled = true;
+          btnEdit.disabled  = true;
+          btnDel.disabled   = true;
+        } else {
+          // 僅能新增：已有時間就不能再「打卡」
+          btnPunch.disabled = hasVal;
+          // 修改 / 刪除 需先有值
+          btnEdit.disabled  = !hasVal;
+          btnDel.disabled   = !hasVal;
+
+          // 使用你現有 onStepClick（打卡=新增；修改=開啟輸入）
+          btnPunch.onclick = () => onStepClick(
+            cfg, baseRow, header, st, '', btnPunch, timeSpan   // 傳空字串 → 當作新增
+          );
+          btnEdit.onclick  = () => onStepClick(
+            cfg, baseRow, header, st, displayVal, btnPunch, timeSpan
+          );
+
+          // 刪除：直接清空該格
+          btnDel.onclick   = async () => {
+            if (!confirm('確定要刪除資料嗎？')) return;
+            const body = {
+              sheet: cfg.sheet,
+              email: currentUser.email,
+              writes: [{ row: baseRow, col: colIdx+1, value: '' }]
+            };
+            const r = await fetch(API_BASE + '?action=update', {
+              method:'POST',
+              headers:{'Content-Type':'text/plain;charset=utf-8'},
+              body: JSON.stringify(body)
+            });
+            const j = await r.json();
+            if (!j.ok){ showNotif('刪除失敗：'+(j.error||'unknown'), true); return; }
+
+            timeSpan.textContent = '—';
+            btnPunch.disabled = false;
+            btnEdit.disabled  = true;
+            btnDel.disabled   = true;
+
+            // 清空後鎖回後續步驟（沿用你的工具）
+            lockFollowing(rowEl);
+            showNotif('已刪除', false);
+            setTimeout(()=>reloadSheet(), 300);
+          };
         }
-        btn.onclick = () => onStepClick(
-          cfg,
-          sheetRow,
-          header,
-          st,
-          rawVal,
-          btn,
-          timeSpan
-        );
       }
 
-      rowEl.appendChild(btn);
-      rowEl.appendChild(timeSpan);
       stepsBox.appendChild(rowEl);
     });
 
     card.appendChild(stepsBox);
+
+    /* ===== 備註區（最後一欄或名為「備註」） ===== */
+    const memoWrap = document.createElement('div');
+    memoWrap.style.marginTop = '8px';
+
+    const memoRow = document.createElement('div');
+    memoRow.style.display = 'flex';
+    memoRow.style.gap = '8px';
+    memoRow.style.alignItems = 'flex-start';
+
+    const memoTA = document.createElement('textarea');
+    memoTA.className = 'textarea';
+    memoTA.placeholder = '備註';
+    memoTA.style.flex = '1';
+
+    // 尋找備註欄位
+    let memoColIdx = header.indexOf('備註');
+    if (memoColIdx === -1) memoColIdx = header.length - 1;
+    const memoRaw = (memoColIdx !== -1 && row[memoColIdx]) ? String(row[memoColIdx]) : '';
+    memoTA.value = memoRaw;
+
+    const memoBtn = document.createElement('button');
+    memoBtn.className = 'btn btn--primary';   // ✅ 主操作配色
+    memoBtn.textContent = '儲存';
+    if (!canWrite) memoBtn.disabled = true;
+
+    memoBtn.onclick = async ()=>{
+      if (!currentUser) return alert('請先登入');
+      if (currentUser.permission !== '全功能') return alert('權限不足');
+
+      const body = {
+        sheet: cfg.sheet,
+        email: currentUser.email,
+        writes: [{ row: baseRow, col: memoColIdx+1, value: memoTA.value }]
+      };
+      const r = await fetch(API_BASE + '?action=update', {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify(body)
+      });
+      const j = await r.json();
+      if (!j.ok){ showNotif('備註儲存失敗：'+(j.error||'unknown'), true); return; }
+      showNotif('備註已儲存', false);
+      setTimeout(()=>reloadSheet(), 300);
+    };
+
+    memoRow.appendChild(memoTA);
+    memoRow.appendChild(memoBtn);
+    memoWrap.appendChild(memoRow);
+    card.appendChild(memoWrap);
+
     box.appendChild(card);
   });
 }
 
-/* ✅ 下拉「車暫停位置」寫入 */
+
+
+function prevDone(cfg, header, row, st){
+  const idx = cfg.steps.indexOf(st);
+  if (idx === 0) return true;
+  const prevName = cfg.steps[idx-1];
+  const colIdx = header.indexOf(prevName);
+  if (colIdx === -1) return true;
+  return !!row[colIdx];
+}
+
+/* 下拉式「車暫停位置」專用寫入（選空 = 清除；選其他 = 修改） */
 async function onStopSelect(cfg, rowNumber, header, st, value, span){
   if (!currentUser) return alert('請先登入');
   if (currentUser.permission !== '全功能') return alert('權限不足');
@@ -602,112 +684,94 @@ async function onStopSelect(cfg, rowNumber, header, st, value, span){
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  const body = {
-    sheet: cfg.sheet,
-    email: currentUser.email,
-    writes: [{ row: rowNumber, col: colIdx+1, value: value }]
-  };
-
-  const r = await fetch(API_BASE + '?action=update', {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(body)
-  });
+  const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: value }] };
+  const r = await fetch(API_BASE + '?action=update', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
   const j = await r.json();
-  if (!j.ok){
-    showNotif('寫入失敗：'+(j.error||'unknown'), true);
-    return;
-  }
+  if (!j.ok){ showNotif('寫入失敗：'+(j.error||'unknown'), true); return; }
 
   span.textContent = value || '';
-  const rowEl = span.closest('.step-row');
-  if (value) {
-    unlockNext(rowEl);
-    showNotif('已更新車暫停位置', false);
-  } else {
-    lockFollowing(rowEl);
-    showNotif('已清除車暫停位置', false);
-  }
+  const rowEl = document.querySelector('.step-row'); // 不用顯示時間的行，僅提示/解鎖
+  if (value) showNotif('已更新車暫停位置', false);
+  else showNotif('已清除車暫停位置', false);
   setTimeout(()=>reloadSheet(), 300);
 }
 
-/* ✅ 改用自家 modal（取代原本 window.prompt） */
-async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
+/* 打卡：只允許新增 */
+async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl){
   if (!currentUser) return alert('請先登入');
   if (currentUser.permission !== '全功能') return alert('權限不足');
 
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  const nowHHMMSS = getTaipeiHHMMSS();
-  let userInput;
-
-  if (oldRawVal) {
-    // 有舊值：彈出可編輯時間的 modal，留空代表清除
-    userInput = await promptBox({
-      title: `修改「${st}」時間`,
-      value: nowHHMMSS,
-      placeholder: 'HH:MM 或 HH:MM:SS，留空可清除',
-      hint: '範例：13:45 或 13:45:20；留空 → 清除時間',
-      allowEmpty: true
-    });
-    if (userInput === null) return; // 取消
-    userInput = userInput.trim();
-  } else {
-    // 沒舊值：先確認是否要寫入現在時間
-    const ok = await confirmBox(`要寫入目前時間 ${nowHHMMSS} 到「${st}」嗎？`, '確認打卡');
-    if (!ok) return;
-    userInput = nowHHMMSS;
-  }
-
-  let valueToWrite = '';
-  if (userInput === '') {
-    valueToWrite = '';
-  } else if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(userInput)) {
-    const [h,m,s='00'] = userInput.split(':');
-    const hh = String(h).padStart(2,'0');
-    const mm = String(m).padStart(2,'0');
-    const ss = String(s).padStart(2,'0');
-    valueToWrite = `${hh}:${mm}:${ss}`;
-  } else {
-    valueToWrite = userInput; // 其他手動輸入原樣寫入
-  }
-
-  const body = {
-    sheet: cfg.sheet,
-    email: currentUser.email,
-    writes: [{ row: rowNumber, col: colIdx+1, value: valueToWrite }]
-  };
-
-  const r = await fetch(API_BASE + '?action=update', {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(body)
-  });
-  const j = await r.json();
-  if (!j.ok){
-    showNotif('寫入失敗：'+(j.error||'unknown'), true);
+  if (timeSpan.textContent && timeSpan.textContent.trim()){
+    showNotif('此步驟已有時間，請用「修改」或「刪除」', true);
     return;
   }
 
-  if (userInput === '') {
-    span.textContent = '';
-    btn.classList.remove('done');
-    const rowEl = btn.closest('.step-row');
-    lockFollowing(rowEl);
-    showNotif('已清除「' + st + '」', false);
-  } else {
-    span.textContent = formatSheetTime(valueToWrite);
-    btn.classList.add('done');
-    const rowEl = btn.closest('.step-row');
-    unlockNext(rowEl);
-    showNotif('已寫入「' + st + '」', false);
-  }
+  const now = getTaipeiHHMMSS();
+  const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: now }] };
+  const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (!j.ok){ showNotif('寫入失敗：'+(j.error||'unknown'), true); return; }
+
+  timeSpan.textContent = formatSheetTime(now);
+  btnPunch.disabled = true; btnEdit.disabled = false; btnDel.disabled = false;
+  unlockNext(rowEl);
+  showNotif('已打卡', false);
   setTimeout(()=>reloadSheet(), 300);
 }
 
+/* 修改（hh/mm/ss 三欄） */
+async function onEditTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, currentVal){
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission !== '全功能') return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
+
+  openEditTimeDialog(currentVal || timeSpan.textContent || getTaipeiHHMMSS(), async (newHHMMSS)=>{
+    const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: newHHMMSS }] };
+    const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!j.ok){ showNotif('修改失敗：'+(j.error||'unknown'), true); return; }
+
+    const wasEmpty = !timeSpan.textContent;
+    timeSpan.textContent = formatSheetTime(newHHMMSS);
+    if (wasEmpty) unlockNext(rowEl);
+    btnPunch.disabled = true; btnEdit.disabled = false; btnDel.disabled = false;
+
+    showNotif('已修改時間', false);
+    setTimeout(()=>reloadSheet(), 300);
+  });
+}
+
+/* 刪除（確認對話框） */
+async function onDeleteTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl){
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission !== '全功能') return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
+
+  openConfirmDialog('確定要刪除資料嗎？', async ()=>{
+    const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: '' }] };
+    const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!j.ok){ showNotif('刪除失敗：'+(j.error||'unknown'), true); return; }
+
+    timeSpan.textContent = '';
+    btnPunch.disabled = false; btnEdit.disabled = true; btnDel.disabled = true;
+    lockFollowing(rowEl);
+    showNotif('已刪除', false);
+    setTimeout(()=>reloadSheet(), 300);
+  });
+}
+
+/* 重新載入 */
 function reloadSheet(){ loadSheetData(currentSheetKey); }
 
+/* 通知 */
 function showNotif(msg, isErr){
   const box = document.getElementById('notif');
   box.textContent = msg;
@@ -716,17 +780,53 @@ function showNotif(msg, isErr){
   setTimeout(()=>box.classList.remove('show'), 2500);
 }
 
-/* ===== 你頁面其他地方要做「刪除/編輯」時，直接這樣呼叫： =====
-   // 刪除
-   const ok = await confirmBox('確定要刪除資料嗎？', '刪除確認');
-   if (!ok) return;
-   // ...真的執行刪除
+/* 解鎖下一步 / 鎖回後續（新版：支援下拉與三鍵） */
+function unlockNext(rowEl){
+  const nextRow = rowEl?.nextElementSibling;
+  if (!nextRow) return;
 
-   // 文字輸入（例如編輯備註）
-   const txt = await promptBox({ title:'編輯備註', value: oldNote, placeholder:'輸入備註（可留空）', allowEmpty:true });
-   if (txt === null) return; // 取消
-   // ...寫入 txt
-================================================================== */
+  const sel = nextRow.querySelector('.step-select');
+  const timeSpan = nextRow.querySelector('.step-time');
+  const btnPunch = nextRow.querySelector('.btn-punch');
+  const btnEdit  = nextRow.querySelector('.btn-edit');
+  const btnDel   = nextRow.querySelector('.btn-del');
+
+  if (currentUser?.permission !== '全功能') return;
+
+  if (sel){
+    sel.disabled = false;
+    return;
+  }
+  if (btnPunch){
+    const hasVal = !!(timeSpan && timeSpan.textContent.trim());
+    btnPunch.disabled = hasVal;
+    if (btnEdit) btnEdit.disabled = !hasVal;
+    if (btnDel)  btnDel.disabled  = !hasVal;
+  }
+}
+
+function lockFollowing(rowEl){
+  let it = rowEl?.nextElementSibling;
+  while (it){
+    const sel = it.querySelector('.step-select');
+    const timeSpan = it.querySelector('.step-time');
+    const btnPunch = it.querySelector('.btn-punch');
+    const btnEdit  = it.querySelector('.btn-edit');
+    const btnDel   = it.querySelector('.btn-del');
+
+    if (sel && !sel.value) sel.disabled = true;
+
+    if (btnPunch){
+      const hasVal = !!(timeSpan && timeSpan.textContent.trim());
+      if (!hasVal){
+        btnPunch.disabled = true;
+        if (btnEdit) btnEdit.disabled = true;
+        if (btnDel)  btnDel.disabled  = true;
+      }
+    }
+    it = it.nextElementSibling;
+  }
+}
 </script>
 </body>
 </html>

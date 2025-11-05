@@ -677,29 +677,33 @@ async function onStopSelect(cfg, rowNumber, header, st, value, rowEl){
 
 
 /* 打卡：只允許新增 */
+/* 打卡：只允許新增 */
 async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl){
-  if (!currentUser) return alert('請先登入');
-  if (currentUser.permission !== '全功能') return alert('權限不足');
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission !== '全功能') return alert('權限不足');
 
-  const colIdx = header.indexOf(st);
-  if (colIdx === -1) return alert('此欄位不存在：'+st);
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  if (timeSpan.textContent && timeSpan.textContent.trim()){
-    showNotif('此步驟已有時間，請用「修改」或「刪除」', true);
-    return;
-  }
+  // ✅【這就是修正的地方】
+  // 檢查欄位內容，必須排除 '—' 才算是「已有值」
+  const currentContent = timeSpan.textContent ? timeSpan.textContent.trim() : '';
+  if (currentContent && currentContent !== '—') {
+    showNotif('此步驟已有時間，請用「修改」或「刪除」', true);
+    return;
+  }
 
-  const now = getTaipeiHHMMSS();
-  const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: now }] };
-  const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
-  const j = await r.json();
-  if (!j.ok){ showNotif('寫入失敗：'+(j.error||'unknown'), true); return; }
+  const now = getTaipeiHHMMSS();
+  const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: now }] };
+  const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (!j.ok){ showNotif('寫入失敗：'+(j.error||'unknown'), true); return; }
 
-  timeSpan.textContent = formatSheetTime(now);
-  btnPunch.disabled = true; btnEdit.disabled = false; btnDel.disabled = false;
-  unlockNext(rowEl);
-  showNotif('已打卡', false);
-  setTimeout(()=>reloadSheet(), 300);
+  timeSpan.textContent = formatSheetTime(now);
+  btnPunch.disabled = true; btnEdit.disabled = false; btnDel.disabled = false;
+  unlockNext(rowEl);
+  showNotif('已打卡', false);
+  setTimeout(()=>reloadSheet(), 300);
 }
 
 /* 修改（hh/mm/ss 三欄） */

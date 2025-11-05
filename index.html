@@ -116,28 +116,32 @@ body.dark .btn--secondary{background:transparent}
 .notif.show{opacity:1;transform:translateY(0);}
 
 /* ====== Modal（補上樣式） ====== */
-.modal-backdrop{
+/* 背景遮罩層（保證背景遮罩層會覆蓋整個視窗） */
+.modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .45);  /* 灰色背景遮罩 */
-  z-index: 9999;
-  display: block;  /* 確保背景顯示 */
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9998;
+  display: block;
 }
 
-.modal{
+.modal {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: #fff;
-  color: #111827;
   padding: 16px;
   border-radius: 12px;
   min-width: 280px;
   max-width: 90vw;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
-  display: block;  /* 確保它顯示 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+  display: block; /* 確保顯示 */
 }
+
+
+
 
 body.dark .modal{ background:#0b1325; color:#e2e8f0 }
 .modal h3{ margin:0 0 10px; font-size:16px }
@@ -158,6 +162,7 @@ body.modal-open{
   overflow: hidden;  /* 禁止頁面滾動 */
   touch-action: none;  /* 禁用觸控滾動 */
 }
+ 
 
 /* 行動裝置 100dvh 修正 */
 @supports (height: 100dvh){
@@ -422,15 +427,16 @@ function openModal(element){
   backdrop.className = 'modal-backdrop';
   backdrop.appendChild(element);
   document.body.appendChild(backdrop);
-  document.body.classList.add('modal-open');  // 鎖定背景滾動
-  element.style.display = 'block';  // 確保對話框顯示
+  
+  document.body.classList.add('modal-open');  // 鎖住背景滾動
+  
+  element.style.display = 'block';  // 確保顯示
+  
   return () => {
     document.body.classList.remove('modal-open');
-    backdrop.remove();  // 移除背景與彈窗
+    backdrop.remove();  // 移除背景和彈窗
   };
 }
-
-
   
 function openConfirmDialog(msg, onOK){
   const box = document.createElement('div');
@@ -643,15 +649,66 @@ function renderVehicles(cfg, data){
           btnDel.disabled   = !hasVal;
 
           // ✅ 改綁到既有函式
-          btnPunch.onclick = () => onPunchClick(
-            cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl
-          );
-          btnEdit.onclick  = () => onEditTimeClick(
-            cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal
-          );
-          btnDel.onclick   = () => onDeleteTimeClick(
-            cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl
-          );
+btnPunch.onclick = () => {
+  // 在這裡可以選擇顯示打卡對話框
+  const dialogContent = document.createElement('div');
+  dialogContent.innerHTML = `
+    <h3>打卡時間</h3>
+    <div class="time-edit">
+      <input id="hh" class="time-input" type="text" maxlength="2" placeholder="HH">
+      <span class="colon">:</span>
+      <input id="mm" class="time-input" type="text" maxlength="2" placeholder="MM">
+      <span class="colon">:</span>
+      <input id="ss" class="time-input" type="text" maxlength="2" placeholder="SS">
+    </div>
+    <div class="hint">請輸入 2 位數！</div>
+    <div class="hint">下午兩點，請輸入14！</div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-edit">確定</button>
+    </div>
+  `;
+  
+  openModal(dialogContent);  // 顯示對話框
+};
+
+btnEdit.onclick = () => {
+  const dialogContent = document.createElement('div');
+  dialogContent.innerHTML = `
+    <h3>修改時間</h3>
+    <div class="time-edit">
+      <input id="hh" class="time-input" type="text" maxlength="2" placeholder="HH" value="${displayVal}">
+      <span class="colon">:</span>
+      <input id="mm" class="time-input" type="text" maxlength="2" placeholder="MM">
+      <span class="colon">:</span>
+      <input id="ss" class="time-input" type="text" maxlength="2" placeholder="SS">
+    </div>
+    <div class="hint">請輸入 2 位數！</div>
+    <div class="hint">下午兩點，請輸入14！</div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-edit">確定</button>
+    </div>
+  `;
+  
+  openModal(dialogContent);  // 顯示對話框
+};
+
+btnDel.onclick = () => {
+  const dialogContent = document.createElement('div');
+  dialogContent.innerHTML = `
+    <h3>確認刪除</h3>
+    <div class="modal-msg" style="font-size:15px;line-height:1.6;margin:4px 0 8px;">確定要刪除時間資料嗎？</div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-del">確定</button>
+    </div>
+  `;
+  
+  openModal(dialogContent);  // 顯示對話框
+};
+
+          
         }
       }
 

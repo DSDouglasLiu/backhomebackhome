@@ -475,51 +475,49 @@ function renderVehicles(cfg, data){
       rowEl.appendChild(labelEl);
 
       /* ===== 「車暫停位置」：下拉，無修改/刪除 ===== */
-      if (st === '車暫停位置') {
-        // 第二欄：Select
-        const valueEl = document.createElement('div');
-        const sel = document.createElement('select');
-        sel.className = 'step-select select';  // ✅ 吃統一輸入樣式
+     if (st === '車暫停位置') {
+  // 第二欄：Select
+  const valueEl = document.createElement('div');
+  const sel = document.createElement('select');
+  sel.className = 'step-select select';
 
-        const optEmpty = document.createElement('option');
-        optEmpty.value = '';
-        optEmpty.textContent = '— 請選擇 —';
-        sel.appendChild(optEmpty);
+  const optEmpty = document.createElement('option');
+  optEmpty.value = '';
+  optEmpty.textContent = '— 請選擇 —';
+  sel.appendChild(optEmpty);
 
-        STOP_OPTIONS.forEach(opt => {
-          const o = document.createElement('option');
-          o.value = opt;
-          o.textContent = opt;
-          sel.appendChild(o);
-        });
+  STOP_OPTIONS.forEach(opt => {
+    const o = document.createElement('option');
+    o.value = opt;
+    o.textContent = opt;
+    sel.appendChild(o);
+  });
 
-        if (rawVal) sel.value = rawVal;
+  if (rawVal) sel.value = rawVal;
 
-        // 提供給 onStopSelect 的參考節點（用來解鎖/鎖定後續）
-        const ghost = document.createElement('span');
-        ghost.style.display = 'none';
+  // 不需要 ghost 了
+  valueEl.appendChild(sel);
+  rowEl.appendChild(valueEl);
 
-        valueEl.appendChild(sel);
-        valueEl.appendChild(ghost);
-        rowEl.appendChild(valueEl);
+  // 第三欄：空的按鈕群（對齊）
+  const btnG = document.createElement('div');
+  btnG.className = 'btn-group';
+  rowEl.appendChild(btnG);
 
-        // 第三欄：空的按鈕群（對齊）
-        const btnG = document.createElement('div');
-        btnG.className = 'btn-group';
-        rowEl.appendChild(btnG);
+  if (!canWrite) {
+    sel.disabled = true;
+    rowEl.classList.add('locked');
+  } else {
+    const prevOk = prevDone(cfg, header, row, st);
+    if (!prevOk && !rawVal) sel.disabled = true;
+    // ★ 這一行就加在這裡：
+    sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value, rowEl);
+  }
 
-        if (!canWrite) {
-          sel.disabled = true;
-          rowEl.classList.add('locked');
-        } else {
-          const prevOk = prevDone(cfg, header, row, st);
-          if (!prevOk && !rawVal) sel.disabled = true;
-          sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value, ghost);
-        }
+  stepsBox.appendChild(rowEl);
+  return;
+}
 
-        stepsBox.appendChild(rowEl);
-        return;
-      }
 
       /* ===== 一般步驟：時間 + 三鍵（打卡/修改/刪除） ===== */
 
@@ -530,25 +528,37 @@ function renderVehicles(cfg, data){
       rowEl.appendChild(timeSpan);
 
       // 第三欄：按鈕群
-      const btnG = document.createElement('div');
-      btnG.className = 'btn-group';
+      // 第三欄：按鈕群
+const btnG = document.createElement('div');
+btnG.className = 'btn-group';
 
-      const btnPunch = document.createElement('button');
-      btnPunch.className = 'btn btn--primary btn--sm';
-      btnPunch.textContent = '打卡';
+const btnPunch = document.createElement('button');
+btnPunch.className = 'btn btn--primary btn--sm btn-punch';
+btnPunch.textContent = '打卡';
 
-      const btnEdit = document.createElement('button');
-      btnEdit.className  = 'btn btn--success btn--sm';
-      btnEdit.textContent = '修改';
+const btnEdit = document.createElement('button');
+btnEdit.className  = 'btn btn--success btn--sm btn-edit';
+btnEdit.textContent = '修改';
 
-      const btnDel = document.createElement('button');
-      btnDel.className   = 'btn btn--danger btn--sm';
-      btnDel.textContent = '刪除';
+const btnDel = document.createElement('button');
+btnDel.className   = 'btn btn--danger btn--sm btn-del';
+btnDel.textContent = '刪除';
 
-      btnG.appendChild(btnPunch);
-      btnG.appendChild(btnEdit);
-      btnG.appendChild(btnDel);
-      rowEl.appendChild(btnG);
+btnG.appendChild(btnPunch);
+btnG.appendChild(btnEdit);
+btnG.appendChild(btnDel);
+rowEl.appendChild(btnG);
+
+// …省略權限/前置檢查後，綁定事件（不要再呼叫 onStepClick）
+btnPunch.onclick = () =>
+  onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+
+btnEdit.onclick = () =>
+  onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
+
+btnDel.onclick = () =>
+  onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+
 
       if (!canWrite) {
         btnPunch.disabled = true; btnEdit.disabled = true; btnDel.disabled = true;
@@ -677,24 +687,32 @@ function prevDone(cfg, header, row, st){
 }
 
 /* 下拉式「車暫停位置」專用寫入（選空 = 清除；選其他 = 修改） */
-async function onStopSelect(cfg, rowNumber, header, st, value, span){
+async function onStopSelect(cfg, rowNumber, header, st, value, rowEl){
   if (!currentUser) return alert('請先登入');
   if (currentUser.permission !== '全功能') return alert('權限不足');
 
   const colIdx = header.indexOf(st);
-  if (colIdx === -1) return alert('此欄位不存在：'+st);
+  if (colIdx === -1) return alert('此欄位不存在：' + st);
 
-  const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: value }] };
-  const r = await fetch(API_BASE + '?action=update', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+  const body = {
+    sheet: cfg.sheet,
+    email: currentUser.email,
+    writes: [{ row: rowNumber, col: colIdx + 1, value }]
+  };
+  const r = await fetch(API_BASE + '?action=update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  });
   const j = await r.json();
-  if (!j.ok){ showNotif('寫入失敗：'+(j.error||'unknown'), true); return; }
+  if (!j.ok){ showNotif('寫入失敗：' + (j.error || 'unknown'), true); return; }
 
-  span.textContent = value || '';
-  const rowEl = document.querySelector('.step-row'); // 不用顯示時間的行，僅提示/解鎖
-  if (value) showNotif('已更新車暫停位置', false);
-  else showNotif('已清除車暫停位置', false);
+  if (value) { unlockNext(rowEl); showNotif('已更新車暫停位置', false); }
+  else       { lockFollowing(rowEl); showNotif('已清除車暫停位置', false); }
+
   setTimeout(()=>reloadSheet(), 300);
 }
+
 
 /* 打卡：只允許新增 */
 async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl){

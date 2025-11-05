@@ -76,58 +76,18 @@
     .veh-title-main{font-weight:600;font-size:1rem;margin-bottom:2px;}
     .veh-title-sub{font-size:.85rem;opacity:.7;}
 
-    .step-row{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      margin-bottom:5px; /* 上下 3px */
-    }
-    /* 未按過：藍底白字 */
+    .step-row{ display:flex; align-items:center; gap:8px; margin-bottom:5px; }
     .step-btn{
-      border:0;
-      border-radius:10px;
-      padding:6px 12px 7px;
-      background:#0f6efc;
-      color:#fff;
-      font-size:.74rem;
-      cursor:pointer;
-      flex:0 0 auto;
-      min-width:170px;
-      text-align:center;
+      border:0;border-radius:10px;padding:6px 12px 7px;
+      background:#0f6efc;color:#fff;font-size:.74rem;cursor:pointer;
+      flex:0 0 auto;min-width:170px;text-align:center;
     }
-    /* 已按過：灰要深一點 */
-    .step-btn.done{
-      background:#cbd5e1;
-      color:#0f172a;
-      cursor:pointer;
-    }
-    /* 鎖住的再深一點 */
-    .step-btn.locked{
-      background:#94a3b8;
-      color:#0f172a;
-      opacity:.65;
-      cursor:not-allowed;
-    }
-    .step-time{
-      font-size:.7rem;
-      color:rgba(15,23,42,.55);
-      min-width:70px;
-      text-align:right;
-    }
+    .step-btn.done{ background:#cbd5e1;color:#0f172a;cursor:pointer; }
+    .step-btn.locked{ background:#94a3b8;color:#0f172a;opacity:.65;cursor:not-allowed; }
+    .step-time{ font-size:.7rem;color:rgba(15,23,42,.55);min-width:70px;text-align:right; }
 
-    /* 下拉式的樣式 */
-    .step-select{
-      min-width:170px;
-      padding:5px 6px;
-      border-radius:8px;
-      border:1px solid #cbd5e1;
-      background:#fff;
-      font-size:.74rem;
-    }
-    .step-select:disabled{
-      background:#e2e8f0;
-      cursor:not-allowed;
-    }
+    .step-select{ min-width:170px; padding:5px 6px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; font-size:.74rem; }
+    .step-select:disabled{ background:#e2e8f0; cursor:not-allowed; }
 
     .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;}
     .notif.show{opacity:1;transform:translateY(0);}
@@ -136,14 +96,33 @@
       .veh-list{grid-template-columns:1fr;}
       .sheet-tabs{gap:10px;}
     }
+
+    /* ===== 全域 Modal（方案 A）===== */
+    #modal-root{
+      position:fixed; inset:0; display:none; z-index:2147483647;
+      /* 用 grid 置中，避免任何父層布局影響 */
+      place-items:center;
+    }
+    #modal-root.show{ display:grid; }
+    .modal-mask{ position:absolute; inset:0; background:rgba(0,0,0,.45); }
+    .modal-card{
+      position:relative; background:#fff; color:#0f172a;
+      width:min(92vw, 520px); border-radius:12px;
+      border:1px solid rgba(0,0,0,.08);
+      box-shadow:0 12px 40px rgba(0,0,0,.2); padding:18px;
+    }
+    .modal-title{ font-weight:600; margin-bottom:8px; }
+    .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+    .modal-btn{ padding:8px 14px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; cursor:pointer; }
+    .modal-btn.primary{ background:#1f6fe5; color:#fff; border-color:#1f6fe5; }
+    .modal-input{ width:100%; box-sizing:border-box; padding:10px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px; }
+    .modal-hint{ font-size:12px; color:#64748b; margin-top:6px; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-      <div>
-        <h1>活動車流人流退場管理系統</h1>
-      </div>
+      <div><h1>活動車流人流退場管理系統</h1></div>
       <div id="signin"></div>
       <div id="userInfo" class="hide" style="font-size:.75rem;"></div>
     </div>
@@ -157,6 +136,9 @@
       <div id="vehList" class="veh-list"></div>
     </div>
   </div>
+
+  <!-- ✅ 方案 A：全域 Modal Root（掛在 body 直下） -->
+  <div id="modal-root" aria-hidden="true"></div>
 
   <div id="notif" class="notif"></div>
 
@@ -182,7 +164,7 @@ const SHEET_CONFIGS = [
       'Call 車上行李',
       '車已上遊覽車平台',
       '車前往排車隊',
-      '車暫停位置',             // 下拉
+      '車暫停位置',
       '退場人員已到齊',
       '已 Call 車上遊覽車平台',
       '人已前往平台',
@@ -198,7 +180,7 @@ const SHEET_CONFIGS = [
       'Call 車上行李',
       '車已上遊覽車平台',
       '車前往排車隊',
-      '車暫停位置',             // 下拉
+      '車暫停位置',
       '車已離開禪堂平台'
     ]
   },
@@ -211,7 +193,7 @@ const SHEET_CONFIGS = [
       '退場人員已到齊',
       '已 Call 車上遊覽車平台',
       '車已上遊覽車平台',
-      '車暫停位置',             // 下拉
+      '車暫停位置',
       '車已離開遊覽車平台'
     ]
   },
@@ -225,7 +207,6 @@ const SHEET_CONFIGS = [
     ]
   }
 ];
-
 
 let currentUser = null;
 let currentSheetKey = SHEET_CONFIGS[0].key;
@@ -246,25 +227,20 @@ window.onload = function(){
 function buildTabs(){
   const box = document.getElementById('sheetTabs');
   box.innerHTML = '';
-
-  // 1) 沒有任何分頁就直接結束（也可順便隱藏 tabs/card）
   if (!SHEET_CONFIGS.length) return;
 
-  // 2) 保底：若 currentSheetKey 不存在，改用第一個
   const prevKey = currentSheetKey;
   if (!SHEET_CONFIGS.some(s => s.key === currentSheetKey)) {
-    currentSheetKey = SHEET_CONFIGS[0].key; // ★ fallback
+    currentSheetKey = SHEET_CONFIGS[0].key;
   }
   const keyChanged = (prevKey !== currentSheetKey);
 
-  // 3) 生成分頁按鈕
   SHEET_CONFIGS.forEach(cfg=>{
     const b = document.createElement('button');
     b.className = 'btn-tab' + (cfg.key===currentSheetKey ? ' active' : '');
     b.textContent = cfg.key;
     b.onclick = () => {
       currentSheetKey = cfg.key;
-      // ★ 改成只掃箱子裡的按鈕，避免誤傷其他元素
       box.querySelectorAll('.btn-tab').forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
       loadSheetData(currentSheetKey);
@@ -278,14 +254,11 @@ function buildTabs(){
   reloadBtn.onclick = reloadSheet;
   box.appendChild(reloadBtn);
 
-  // 4) 若剛剛 fallback 了，而且內容區已經在顯示，就自動載入一次
   const contentShown = !document.getElementById('content').classList.contains('hide');
   if (keyChanged && contentShown) {
     loadSheetData(currentSheetKey);
   }
 }
-
-
 
 async function handleCredential(resp){
   try {
@@ -306,7 +279,6 @@ async function handleCredential(resp){
     document.getElementById('tabs').classList.remove('hide');
     document.getElementById('content').classList.remove('hide');
 
-    // ✅ 放到 try 裡：唯讀提示
     if (j.permission === '檢視') {
       showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
     }
@@ -317,7 +289,6 @@ async function handleCredential(resp){
   }
 }
 
-  
 async function loadSheetData(key){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);
   document.getElementById('vehList').textContent = '讀取中...';
@@ -328,20 +299,16 @@ async function loadSheetData(key){
   renderVehicles(cfg, sheetData);
 }
 
-/* 把各種時間 → HH:mm:ss（留著，給其他按鈕用） */
 function formatSheetTime(val){
   if (!val) return '';
   const s = String(val).trim();
-
   if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) {
     const parts = s.split(':');
     return parts.map(p=>p.padStart(2,'0')).join(':');
   }
-
   if (/^\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}$/.test(s)) {
     return s.split(' ')[1].split(':').map(p=>p.padStart(2,'0')).join(':');
   }
-
   const m = s.match(/^(上午|下午)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if (m){
     let h = parseInt(m[2],10);
@@ -351,7 +318,6 @@ function formatSheetTime(val){
     if (m[1] === '上午' && h === 12) h = 0;
     return `${String(h).padStart(2,'0')}:${mm}:${ss}`;
   }
-
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(s)) {
     const d = new Date(s);
     const tw = new Date(d.getTime() + 8*60*60*1000);
@@ -360,8 +326,25 @@ function formatSheetTime(val){
     const ss = String(tw.getUTCSeconds()).padStart(2,'0');
     return `${hh}:${mm}:${ss}`;
   }
-
   return s;
+}
+
+function getTaipeiHHMMSS() {
+  const f = new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    hour12: false,
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+  return f.format(new Date());
+}
+
+function prevDone(cfg, header, row, st){
+  const idx = cfg.steps.indexOf(st);
+  if (idx === 0) return true;
+  const prevName = cfg.steps[idx-1];
+  const colIdx = header.indexOf(prevName);
+  if (colIdx === -1) return true;
+  return !!row[colIdx];
 }
 
 function unlockNext(rowEl){
@@ -381,28 +364,89 @@ function lockFollowing(rowEl){
   while (it){
     const b = it.querySelector('.step-btn');
     const s = it.querySelector('.step-select');
-    if (b && !b.classList.contains('done')) { b.disabled = true; b.classList.add('done'); }
+    if (b && !b.classList.contains('done')) {
+      b.disabled = true;
+      b.classList.add('done');
+    }
     if (s && !s.value) s.disabled = true;
     it = it.nextElementSibling;
   }
 }
 
-  
-function getTaipeiHHMMSS() {
-  const f = new Intl.DateTimeFormat('zh-TW', {
-    timeZone: 'Asia/Taipei',
-    hour12: false,
-    hour: '2-digit', minute: '2-digit', second: '2-digit'
+/* ====== 方案 A：全域 Modal 工具 ====== */
+function confirmBox(message, title='確認'){
+  return new Promise(resolve=>{
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-mask"></div>
+      <div class="modal-card" role="dialog" aria-modal="true">
+        <div class="modal-title">${title}</div>
+        <div>${message}</div>
+        <div class="modal-actions">
+          <button class="modal-btn" id="mCancel">取消</button>
+          <button class="modal-btn primary" id="mOk">確定</button>
+        </div>
+      </div>`;
+    root.classList.add('show');
+
+    const close = (v)=>{
+      root.classList.remove('show');
+      root.innerHTML = '';
+      resolve(v);
+    };
+    root.querySelector('#mCancel').onclick = ()=>close(false);
+    root.querySelector('#mOk').onclick = ()=>close(true);
+    root.querySelector('.modal-mask').onclick = ()=>close(false);
+    const esc = (e)=>{ if(e.key==='Escape'){ close(false); document.removeEventListener('keydown', esc);} };
+    document.addEventListener('keydown', esc);
   });
-  return f.format(new Date()); // 例：'20:20:29'
 }
 
+function promptBox({title='輸入', value='', placeholder='請輸入', hint='', okText='確定', cancelText='取消', allowEmpty=true}={}){
+  return new Promise(resolve=>{
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-mask"></div>
+      <div class="modal-card" role="dialog" aria-modal="true">
+        <div class="modal-title">${title}</div>
+        <div>
+          <input class="modal-input" id="mInput" placeholder="${placeholder}" value="${value}">
+          ${hint ? `<div class="modal-hint">${hint}</div>` : ''}
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn" id="mCancel">${cancelText}</button>
+          <button class="modal-btn primary" id="mOk">${okText}</button>
+        </div>
+      </div>`;
+    root.classList.add('show');
+
+    const input = root.querySelector('#mInput');
+    setTimeout(()=>input.select(), 0);
+
+    const close = (v)=>{
+      root.classList.remove('show');
+      root.innerHTML = '';
+      resolve(v);
+    };
+    root.querySelector('#mCancel').onclick = ()=>close(null);
+    root.querySelector('#mOk').onclick = ()=>{
+      const val = input.value.trim();
+      if (!allowEmpty && !val) return;
+      close(val);
+    };
+    root.querySelector('.modal-mask').onclick = ()=>close(null);
+    const esc = (e)=>{ if(e.key==='Escape'){ close(null); document.removeEventListener('keydown', esc);} };
+    const enter = (e)=>{ if(e.key==='Enter'){ root.querySelector('#mOk').click(); } };
+    document.addEventListener('keydown', esc);
+    input.addEventListener('keydown', enter);
+  });
+}
+/* ====== /Modal 工具 ====== */
 
 function renderVehicles(cfg, data){
   const box = document.getElementById('vehList');
   box.innerHTML = '';
 
-  // ✅ 只有全功能可互動；檢視一律鎖住
   const canWrite = (currentUser && currentUser.permission === '全功能');
 
   const headerRowIdx = data.findIndex(row =>
@@ -456,105 +500,93 @@ function renderVehicles(cfg, data){
 
       const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
 
-      /* ✅ 這一段：如果是「車暫停位置」就改成下拉式 */
-     if (st === '車暫停位置') {
-  const sel = document.createElement('select');
-  sel.className = 'step-select';
+      /* 特例：車暫停位置（下拉） */
+      if (st === '車暫停位置') {
+        const sel = document.createElement('select');
+        sel.className = 'step-select';
 
-  // 空白選項
-  const optEmpty = document.createElement('option');
-  optEmpty.value = '';
-  optEmpty.textContent = '— 請選擇 —';
-  sel.appendChild(optEmpty);
+        const optEmpty = document.createElement('option');
+        optEmpty.value = '';
+        optEmpty.textContent = '— 請選擇 —';
+        sel.appendChild(optEmpty);
 
-  // 選項
-  STOP_OPTIONS.forEach(opt => {
-    const o = document.createElement('option');
-    o.value = opt;
-    o.textContent = opt;
-    sel.appendChild(o);
-  });
+        STOP_OPTIONS.forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt;
+          o.textContent = opt;
+          sel.appendChild(o);
+        });
 
-  // 有原值就選起來
-  if (rawVal) sel.value = rawVal;
+        if (rawVal) sel.value = rawVal;
 
-  // 右側顯示
-  const placeSpan = document.createElement('span');
-  placeSpan.className = 'step-time';
-  placeSpan.textContent = rawVal ? rawVal : '';
+        const placeSpan = document.createElement('span');
+        placeSpan.className = 'step-time';
+        placeSpan.textContent = rawVal ? rawVal : '';
 
-  const sheetRow = headerRowIdx + 1 + 1 + idx;
+        const sheetRow = headerRowIdx + 1 + 1 + idx;
 
-  if (!canWrite) {
-    // 檢視：鎖住
-    sel.disabled = true;
-    rowEl.classList.add('locked');
-  } else {
-    // 全功能：維持既有前置步驟鎖定邏輯
-    const prevOk = prevDone(cfg, header, row, st);
-    if (!prevOk && !rawVal) sel.disabled = true;
+        if (!canWrite) {
+          sel.disabled = true;
+          rowEl.classList.add('locked');
+        } else {
+          const prevOk = prevDone(cfg, header, row, st);
+          if (!prevOk && !rawVal) sel.disabled = true;
 
-    sel.onchange = () => onStopSelect(
-      cfg,
-      sheetRow,
-      header,
-      st,
-      sel.value,
-      placeSpan
-    );
-  }
+          sel.onchange = () => onStopSelect(
+            cfg,
+            sheetRow,
+            header,
+            st,
+            sel.value,
+            placeSpan
+          );
+        }
 
-  rowEl.appendChild(sel);
-  rowEl.appendChild(placeSpan);
-  stepsBox.appendChild(rowEl);
-  return; // 這一列結束
-}
+        rowEl.appendChild(sel);
+        rowEl.appendChild(placeSpan);
+        stepsBox.appendChild(rowEl);
+        return;
+      }
 
+      /* 一般步驟：按鈕 + 時間 */
+      const btn = document.createElement('button');
+      btn.className = 'step-btn';
+      btn.textContent = st;
 
-      /* 一般按鈕的流程 */
-// 一般按鈕的流程
-const btn = document.createElement('button');
-btn.className = 'step-btn';
-btn.textContent = st;
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'step-time';
 
-const timeSpan = document.createElement('span');
-timeSpan.className = 'step-time';
+      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
+      if (rawVal) {
+        btn.classList.add('done');
+        timeSpan.textContent = displayVal;
+      }
 
-const displayVal = rawVal ? formatSheetTime(rawVal) : '';
-if (rawVal) {
-  btn.classList.add('done');
-  timeSpan.textContent = displayVal;
-}
+      const sheetRow = headerRowIdx + 1 + 1 + idx;
 
-const sheetRow = headerRowIdx + 1 + 1 + idx;
+      if (!canWrite) {
+        btn.disabled = true;
+        btn.classList.add('locked');
+      } else {
+        const prevOk = prevDone(cfg, header, row, st);
+        if (!prevOk && !rawVal) {
+          btn.classList.add('done');
+          btn.disabled = true;
+        }
+        btn.onclick = () => onStepClick(
+          cfg,
+          sheetRow,
+          header,
+          st,
+          rawVal,
+          btn,
+          timeSpan
+        );
+      }
 
-if (!canWrite) {
-  // 檢視：鎖住
-  btn.disabled = true;
-  btn.classList.add('locked');
-} else {
-  // 全功能：維持既有前置步驟鎖定邏輯
-  const prevOk = prevDone(cfg, header, row, st);
-  if (!prevOk && !rawVal) {
-    btn.classList.add('done');
-    btn.disabled = true;
-  }
-
-  // 可寫入時綁定事件（即使 disabled 也不會觸發）
-  btn.onclick = () => onStepClick(
-    cfg,
-    sheetRow,
-    header,
-    st,
-    rawVal,
-    btn,
-    timeSpan
-  );
-}
-
-rowEl.appendChild(btn);
-rowEl.appendChild(timeSpan);
-stepsBox.appendChild(rowEl);
+      rowEl.appendChild(btn);
+      rowEl.appendChild(timeSpan);
+      stepsBox.appendChild(rowEl);
     });
 
     card.appendChild(stepsBox);
@@ -562,24 +594,14 @@ stepsBox.appendChild(rowEl);
   });
 }
 
-function prevDone(cfg, header, row, st){
-  const idx = cfg.steps.indexOf(st);
-  if (idx === 0) return true;
-  const prevName = cfg.steps[idx-1];
-  const colIdx = header.indexOf(prevName);
-  if (colIdx === -1) return true;
-  return !!row[colIdx];
-}
-
-/* ✅ 下拉式「車暫停位置」專用的寫入 */
+/* ✅ 下拉「車暫停位置」寫入 */
 async function onStopSelect(cfg, rowNumber, header, st, value, span){
   if (!currentUser) return alert('請先登入');
-  if (currentUser.permission !== '全功能') return alert('權限不足'); // ← 只允許全功能
-  
+  if (currentUser.permission !== '全功能') return alert('權限不足');
+
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  // 直接把選到的文字寫進去（沒有要轉時間格式）
   const body = {
     sheet: cfg.sheet,
     email: currentUser.email,
@@ -597,26 +619,22 @@ async function onStopSelect(cfg, rowNumber, header, st, value, span){
     return;
   }
 
-// 前端更新
-span.textContent = value || '';
-
-const rowEl = span.closest('.step-row');
-if (value) {
-  unlockNext(rowEl);
-  showNotif('已更新車暫停位置', false);
-} else {
-  lockFollowing(rowEl);
-  showNotif('已清除車暫停位置', false);
-}
-  /* ✅ 輕量同步 */
-setTimeout(()=>reloadSheet(), 300);
-
+  span.textContent = value || '';
+  const rowEl = span.closest('.step-row');
+  if (value) {
+    unlockNext(rowEl);
+    showNotif('已更新車暫停位置', false);
+  } else {
+    lockFollowing(rowEl);
+    showNotif('已清除車暫停位置', false);
+  }
+  setTimeout(()=>reloadSheet(), 300);
 }
 
-/* 原本按鈕的寫入（時間） */
+/* ✅ 改用自家 modal（取代原本 window.prompt） */
 async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
   if (!currentUser) return alert('請先登入');
-  if (currentUser.permission !== '全功能') return alert('權限不足'); // ← 只允許全功能
+  if (currentUser.permission !== '全功能') return alert('權限不足');
 
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);
@@ -625,15 +643,24 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
   let userInput;
 
   if (oldRawVal) {
-    userInput = prompt('此狀態已有時間，要修改嗎？（留空→清除）', nowHHMMSS);
-    if (userInput === null) return;
+    // 有舊值：彈出可編輯時間的 modal，留空代表清除
+    userInput = await promptBox({
+      title: `修改「${st}」時間`,
+      value: nowHHMMSS,
+      placeholder: 'HH:MM 或 HH:MM:SS，留空可清除',
+      hint: '範例：13:45 或 13:45:20；留空 → 清除時間',
+      allowEmpty: true
+    });
+    if (userInput === null) return; // 取消
     userInput = userInput.trim();
   } else {
+    // 沒舊值：先確認是否要寫入現在時間
+    const ok = await confirmBox(`要寫入目前時間 ${nowHHMMSS} 到「${st}」嗎？`, '確認打卡');
+    if (!ok) return;
     userInput = nowHHMMSS;
   }
 
-    let valueToWrite = '';
-
+  let valueToWrite = '';
   if (userInput === '') {
     valueToWrite = '';
   } else if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(userInput)) {
@@ -641,11 +668,10 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
     const hh = String(h).padStart(2,'0');
     const mm = String(m).padStart(2,'0');
     const ss = String(s).padStart(2,'0');
-    valueToWrite = `${hh}:${mm}:${ss}`;   // ← 直接寫「20:20:29」
+    valueToWrite = `${hh}:${mm}:${ss}`;
   } else {
-    valueToWrite = userInput;             // 其他手動輸入就原樣寫入
+    valueToWrite = userInput; // 其他手動輸入原樣寫入
   }
-
 
   const body = {
     sheet: cfg.sheet,
@@ -664,30 +690,20 @@ async function onStepClick(cfg, rowNumber, header, st, oldRawVal, btn, span){
     return;
   }
 
-if (userInput === '') {
-  // 清空
-  span.textContent = '';
-  btn.classList.remove('done');
-
-  // 🔒 清空後把後面未完成步驟鎖回去
-  const rowEl = btn.closest('.step-row');
-  lockFollowing(rowEl);
-
-  showNotif('已清除「' + st + '」', false);
-} else {
-  // 寫入時間成功
-  span.textContent = formatSheetTime(valueToWrite);
-  btn.classList.add('done');
-
-  // 🔓 完成此步 -> 立刻解鎖下一步
-  const rowEl = btn.closest('.step-row');
-  unlockNext(rowEl);
-
-  showNotif('已寫入「' + st + '」', false);
-}
-/* ✅ 輕量同步（多人同時操作時建議） */
-setTimeout(()=>reloadSheet(), 300);
-  
+  if (userInput === '') {
+    span.textContent = '';
+    btn.classList.remove('done');
+    const rowEl = btn.closest('.step-row');
+    lockFollowing(rowEl);
+    showNotif('已清除「' + st + '」', false);
+  } else {
+    span.textContent = formatSheetTime(valueToWrite);
+    btn.classList.add('done');
+    const rowEl = btn.closest('.step-row');
+    unlockNext(rowEl);
+    showNotif('已寫入「' + st + '」', false);
+  }
+  setTimeout(()=>reloadSheet(), 300);
 }
 
 function reloadSheet(){ loadSheetData(currentSheetKey); }
@@ -700,36 +716,17 @@ function showNotif(msg, isErr){
   setTimeout(()=>box.classList.remove('show'), 2500);
 }
 
-function unlockNext(rowEl){
-  const nextRow = rowEl?.nextElementSibling;
-  if (!nextRow) return;
-  const nextBtn = nextRow.querySelector('.step-btn');
-  const nextSel = nextRow.querySelector('.step-select');
+/* ===== 你頁面其他地方要做「刪除/編輯」時，直接這樣呼叫： =====
+   // 刪除
+   const ok = await confirmBox('確定要刪除資料嗎？', '刪除確認');
+   if (!ok) return;
+   // ...真的執行刪除
 
-  // 只解鎖還沒完成的
-  if (nextBtn && !nextBtn.classList.contains('done')) {
-    nextBtn.disabled = false;
-    nextBtn.classList.remove('done'); // 還原成藍色
-  }
-  if (nextSel) nextSel.disabled = false;
-}
-
-function lockFollowing(rowEl){
-  // 往後把所有未完成的步驟鎖回去
-  let it = rowEl?.nextElementSibling;
-  while (it){
-    const b = it.querySelector('.step-btn');
-    const s = it.querySelector('.step-select');
-    if (b && !b.classList.contains('done')) {
-      b.disabled = true;
-      b.classList.add('done'); // 灰掉
-    }
-    if (s && !s.value) s.disabled = true;
-    it = it.nextElementSibling;
-  }
-}
-  
-  
+   // 文字輸入（例如編輯備註）
+   const txt = await promptBox({ title:'編輯備註', value: oldNote, placeholder:'輸入備註（可留空）', allowEmpty:true });
+   if (txt === null) return; // 取消
+   // ...寫入 txt
+================================================================== */
 </script>
 </body>
 </html>

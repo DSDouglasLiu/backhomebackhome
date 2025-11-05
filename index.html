@@ -122,7 +122,7 @@ body.dark .btn--secondary{background:transparent}
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 9998;  /* 確保在背景最上層 */
+  z-index: 10000;  /* 確保在背景最上層 */
   display: block; /* 確保顯示 */
 }
 
@@ -138,7 +138,7 @@ body.dark .btn--secondary{background:transparent}
   min-width: 280px;
   max-width: 90vw;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-  z-index: 9999;  /* 確保對話框顯示在最上層 */
+  z-index: 10001;  /* 確保對話框顯示在最上層 */
   display: block; /* 確保顯示 */
 }
 
@@ -426,18 +426,32 @@ const isValidHMS = (h,m,s) => {
 };
 
 function openModal(element){
+  // 確保是 .modal
+  if (!element.classList.contains('modal')) element.classList.add('modal');
+
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
-  backdrop.appendChild(element);
+
+  // 先掛遮罩，再掛對話框（兩者為兄弟節點）
   document.body.appendChild(backdrop);
+  document.body.appendChild(element);
+
   document.body.classList.add('modal-open');
 
-  // 只負責掛上去與回收
-  return () => {
+  // 支援 ESC 關閉
+  const onEsc = (e) => { if (e.key === 'Escape') cleanup(); };
+  document.addEventListener('keydown', onEsc);
+
+  const cleanup = () => {
     document.body.classList.remove('modal-open');
-    backdrop.remove();
+    document.removeEventListener('keydown', onEsc);
+    try { element.remove(); } catch{}
+    try { backdrop.remove(); } catch{}
   };
+
+  return cleanup;
 }
+
 
 
 

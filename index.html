@@ -427,16 +427,19 @@ function openModal(element){
   backdrop.className = 'modal-backdrop';
   backdrop.appendChild(element);
   document.body.appendChild(backdrop);
-  
-  document.body.classList.add('modal-open');  // 鎖住背景滾動
-  
-  element.style.display = 'block';  // 確保顯示
-  
+
+  // 鎖住背景滾動
+  document.body.classList.add('modal-open');
+
+  // 顯示對話框
+  element.style.display = 'block';  // 確保顯示對話框
+
   return () => {
     document.body.classList.remove('modal-open');
-    backdrop.remove();  // 移除背景和彈窗
+    backdrop.remove();  // 移除背景與彈窗
   };
 }
+
   
 function openConfirmDialog(msg, onOK){
   const box = document.createElement('div');
@@ -648,28 +651,29 @@ function renderVehicles(cfg, data){
           btnEdit.disabled  = !hasVal;
           btnDel.disabled   = !hasVal;
 
-          // ✅ 改綁到既有函式
 btnPunch.onclick = () => {
-  // 在這裡可以選擇顯示打卡對話框
-  const dialogContent = document.createElement('div');
-  dialogContent.innerHTML = `
-    <h3>打卡時間</h3>
-    <div class="time-edit">
-      <input id="hh" class="time-input" type="text" maxlength="2" placeholder="HH">
-      <span class="colon">:</span>
-      <input id="mm" class="time-input" type="text" maxlength="2" placeholder="MM">
-      <span class="colon">:</span>
-      <input id="ss" class="time-input" type="text" maxlength="2" placeholder="SS">
-    </div>
-    <div class="hint">請輸入 2 位數！</div>
-    <div class="hint">下午兩點，請輸入14！</div>
-    <div class="actions">
-      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
-      <button class="btn btn-edit">確定</button>
-    </div>
-  `;
-  
-  openModal(dialogContent);  // 顯示對話框
+  // 顯示當前時間
+  const now = getTaipeiHHMMSS();  // 取得當前台北時間
+  timeSpan.textContent = formatSheetTime(now);  // 顯示時間
+  btnPunch.disabled = true;  // 禁用打卡按鈕，避免重複打卡
+  btnEdit.disabled = false;  // 允許修改
+  btnDel.disabled = false;   // 允許刪除
+
+  // 更新後端資料
+  const body = {
+    sheet: cfg.sheet,
+    email: currentUser.email,
+    writes: [{ row: baseRow, col: colIdx + 1, value: now }]
+  };
+  fetch(API_BASE + '?action=update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  }).then((res) => res.json())
+    .then((j) => {
+      if (!j.ok) { showNotif('寫入失敗：' + (j.error || 'unknown'), true); return; }
+      showNotif('已打卡', false);
+    });
 };
 
 btnEdit.onclick = () => {
@@ -677,11 +681,11 @@ btnEdit.onclick = () => {
   dialogContent.innerHTML = `
     <h3>修改時間</h3>
     <div class="time-edit">
-      <input id="hh" class="time-input" type="text" maxlength="2" placeholder="HH" value="${displayVal}">
+      <input id="hh" class="time-input" type="text" maxlength="2" value="${timeSpan.textContent.split(':')[0]}">
       <span class="colon">:</span>
-      <input id="mm" class="time-input" type="text" maxlength="2" placeholder="MM">
+      <input id="mm" class="time-input" type="text" maxlength="2" value="${timeSpan.textContent.split(':')[1]}">
       <span class="colon">:</span>
-      <input id="ss" class="time-input" type="text" maxlength="2" placeholder="SS">
+      <input id="ss" class="time-input" type="text" maxlength="2" value="${timeSpan.textContent.split(':')[2]}">
     </div>
     <div class="hint">請輸入 2 位數！</div>
     <div class="hint">下午兩點，請輸入14！</div>
@@ -690,7 +694,6 @@ btnEdit.onclick = () => {
       <button class="btn btn-edit">確定</button>
     </div>
   `;
-  
   openModal(dialogContent);  // 顯示對話框
 };
 
@@ -704,7 +707,6 @@ btnDel.onclick = () => {
       <button class="btn btn-del">確定</button>
     </div>
   `;
-  
   openModal(dialogContent);  // 顯示對話框
 };
 

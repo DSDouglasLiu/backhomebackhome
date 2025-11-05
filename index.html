@@ -117,28 +117,31 @@ body.dark .btn--secondary{background:transparent}
 
 /* ====== Modal（補上樣式） ====== */
 /* 背景遮罩層（保證背景遮罩層會覆蓋整個視窗） */
+/* 背景遮罩層 */
 .modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 9998;
-  display: block;
+  z-index: 9998;  /* 確保在背景最上層 */
+  display: block; /* 確保顯示 */
 }
 
+/* 彈窗（居中顯示） */
 .modal {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 50%; /* 垂直居中 */
+  left: 50%; /* 水平居中 */
+  transform: translate(-50%, -50%); /* 完全居中 */
   background: #fff;
   padding: 16px;
   border-radius: 12px;
   min-width: 280px;
   max-width: 90vw;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-  z-index: 9999;
+  z-index: 9999;  /* 確保對話框顯示在最上層 */
   display: block; /* 確保顯示 */
 }
+
 
 
 
@@ -432,13 +435,31 @@ function openModal(element){
   document.body.classList.add('modal-open');
 
   // 顯示對話框
-  element.style.display = 'block';  // 確保顯示對話框
+  element.style.display = 'block';
+
+  // 設定取消與確定按鈕的事件
+  const btnCancel = element.querySelector('.btn');
+  const btnOK = element.querySelector('.btn-edit');
+
+  // 取消按鈕事件
+  btnCancel.onclick = () => {
+    document.body.classList.remove('modal-open');
+    backdrop.remove();  // 移除對話框
+  };
+
+  // 確定按鈕事件
+  btnOK.onclick = () => {
+    // 在這裡加入具體操作，通常是更新或刪除資料
+    document.body.classList.remove('modal-open');
+    backdrop.remove();  // 移除對話框
+  };
 
   return () => {
     document.body.classList.remove('modal-open');
-    backdrop.remove();  // 移除背景與彈窗
+    backdrop.remove();  // 移除背景與對話框
   };
 }
+
 
   
 function openConfirmDialog(msg, onOK){
@@ -652,28 +673,24 @@ function renderVehicles(cfg, data){
           btnDel.disabled   = !hasVal;
 
 btnPunch.onclick = () => {
-  // 顯示當前時間
-  const now = getTaipeiHHMMSS();  // 取得當前台北時間
-  timeSpan.textContent = formatSheetTime(now);  // 顯示時間
-  btnPunch.disabled = true;  // 禁用打卡按鈕，避免重複打卡
-  btnEdit.disabled = false;  // 允許修改
-  btnDel.disabled = false;   // 允許刪除
-
-  // 更新後端資料
-  const body = {
-    sheet: cfg.sheet,
-    email: currentUser.email,
-    writes: [{ row: baseRow, col: colIdx + 1, value: now }]
-  };
-  fetch(API_BASE + '?action=update', {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(body)
-  }).then((res) => res.json())
-    .then((j) => {
-      if (!j.ok) { showNotif('寫入失敗：' + (j.error || 'unknown'), true); return; }
-      showNotif('已打卡', false);
-    });
+  const dialogContent = document.createElement('div');
+  dialogContent.innerHTML = `
+    <h3>打卡時間</h3>
+    <div class="time-edit">
+      <input id="hh" class="time-input" type="text" maxlength="2" placeholder="HH">
+      <span class="colon">:</span>
+      <input id="mm" class="time-input" type="text" maxlength="2" placeholder="MM">
+      <span class="colon">:</span>
+      <input id="ss" class="time-input" type="text" maxlength="2" placeholder="SS">
+    </div>
+    <div class="hint">請輸入 2 位數！</div>
+    <div class="hint">下午兩點，請輸入14！</div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-edit">確定</button>
+    </div>
+  `;
+  openModal(dialogContent);  // 顯示對話框
 };
 
 btnEdit.onclick = () => {
@@ -709,6 +726,7 @@ btnDel.onclick = () => {
   `;
   openModal(dialogContent);  // 顯示對話框
 };
+
 
           
         }

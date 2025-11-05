@@ -119,19 +119,26 @@ body.dark .btn--secondary{background:transparent}
 .modal-backdrop{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.45);
+  background: rgba(0, 0, 0, .45);  /* 灰色背景遮罩 */
   z-index: 9999;
+  display: block;  /* 確保背景顯示 */
 }
+
 .modal{
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background:#fff; color:#111827;
-  padding:16px; border-radius:12px;
-  min-width:280px; max-width:90vw;
-  box-shadow:0 10px 30px rgba(0,0,0,.25);
+  background: #fff;
+  color: #111827;
+  padding: 16px;
+  border-radius: 12px;
+  min-width: 280px;
+  max-width: 90vw;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+  display: block;  /* 確保它顯示 */
 }
+
 body.dark .modal{ background:#0b1325; color:#e2e8f0 }
 .modal h3{ margin:0 0 10px; font-size:16px }
 .modal .row{ display:flex; gap:8px; align-items:center; margin:8px 0 }
@@ -147,7 +154,10 @@ body.dark .modal{ background:#0b1325; color:#e2e8f0 }
 .modal .colon{ font-size:20px; line-height:1; opacity:.5; margin:0 2px; user-select:none; }
 .modal .hint{ font-size:.9rem; line-height:1.6; opacity:.8; margin:2px 0; }
   
-body.modal-open{ overflow:hidden; touch-action:none; }
+body.modal-open{
+  overflow: hidden;  /* 禁止頁面滾動 */
+  touch-action: none;  /* 禁用觸控滾動 */
+}
 
 /* 行動裝置 100dvh 修正 */
 @supports (height: 100dvh){
@@ -412,16 +422,14 @@ function openModal(element){
   backdrop.className = 'modal-backdrop';
   backdrop.appendChild(element);
   document.body.appendChild(backdrop);
-
-  // 鎖住背景頁面卷動
-  document.body.classList.add('modal-open');
-
-  // 關閉時解除
+  document.body.classList.add('modal-open');  // 鎖定背景滾動
+  element.style.display = 'block';  // 確保對話框顯示
   return () => {
     document.body.classList.remove('modal-open');
-    backdrop.remove();
+    backdrop.remove();  // 移除背景與彈窗
   };
 }
+
 
   
 function openConfirmDialog(msg, onOK){

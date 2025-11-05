@@ -116,18 +116,40 @@ body.dark .btn--secondary{background:transparent}
 .notif.show{opacity:1;transform:translateY(0);}
 
 /* ====== Modal（補上樣式） ====== */
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;}
-.modal{background:#fff;color:#111827;padding:16px;border-radius:12px;min-width:280px;max-width:90vw;box-shadow:0 10px 30px rgba(0,0,0,.25);}
-body.dark .modal{background:#0b1325;color:#e2e8f0}
-.modal h3{margin:0 0 10px;font-size:16px}
-.modal .row{display:flex;gap:8px;align-items:center;margin:8px 0}
-.modal input{width:56px;padding:6px 8px;border:1px solid var(--border);border-radius:8px}
-.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 9999;
+}
+.modal{
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background:#fff; color:#111827;
+  padding:16px; border-radius:12px;
+  min-width:280px; max-width:90vw;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+body.dark .modal{ background:#0b1325; color:#e2e8f0 }
+.modal h3{ margin:0 0 10px; font-size:16px }
+.modal .row{ display:flex; gap:8px; align-items:center; margin:8px 0 }
+.modal input{ width:56px; padding:6px 8px; border:1px solid var(--border); border-radius:8px }
+.modal .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px }
+
+body.modal-open{ overflow:hidden; touch-action:none; }
+
+/* 行動裝置 100dvh 修正 */
+@supports (height: 100dvh){
+  .modal-backdrop{ height: 100dvh; }
+} /* ← 這個大括號要有！ */
 
 @media(max-width:768px){
-  .veh-list{grid-template-columns:1fr;}
-  .sheet-tabs{gap:10px;}
+  .veh-list{ grid-template-columns:1fr; }
+  .sheet-tabs{ gap:10px; }
 }
+
 </style>
   
   
@@ -371,13 +393,24 @@ const isValidHMS = (h,m,s) => {
   if (!/^\d{2}$/.test(h) || !/^\d{2}$/.test(m) || !/^\d{2}$/.test(s)) return false;
   return hh>=0 && hh<=23 && mm>=0 && mm<=59 && ss>=0 && ss<=59;
 };
+
 function openModal(element){
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.appendChild(element);
   document.body.appendChild(backdrop);
-  return () => backdrop.remove();
+
+  // 鎖住背景頁面卷動
+  document.body.classList.add('modal-open');
+
+  // 關閉時解除
+  return () => {
+    document.body.classList.remove('modal-open');
+    backdrop.remove();
+  };
 }
+
+  
 function openConfirmDialog(msg, onOK){
   const box = document.createElement('div');
   box.className = 'modal';

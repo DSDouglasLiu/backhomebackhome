@@ -115,6 +115,15 @@ body.dark .btn--secondary{background:transparent}
 .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;z-index:9990;}
 .notif.show{opacity:1;transform:translateY(0);}
 
+/* ====== Modal（補上樣式） ====== */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.modal{background:#fff;color:#111827;padding:16px;border-radius:12px;min-width:280px;max-width:90vw;box-shadow:0 10px 30px rgba(0,0,0,.25);}
+body.dark .modal{background:#0b1325;color:#e2e8f0}
+.modal h3{margin:0 0 10px;font-size:16px}
+.modal .row{display:flex;gap:8px;align-items:center;margin:8px 0}
+.modal input{width:56px;padding:6px 8px;border:1px solid var(--border);border-radius:8px}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
 @media(max-width:768px){
   .veh-list{grid-template-columns:1fr;}
   .sheet-tabs{gap:10px;}
@@ -234,8 +243,6 @@ function makeBtn(label, variant = 'primary', size = 'sm') {
   return b;
 }
 
-  
-  
 function buildTabs(){
   const box = document.getElementById('sheetTabs');
   box.innerHTML = '';
@@ -272,7 +279,6 @@ function buildTabs(){
   const contentShown = !document.getElementById('content').classList.contains('hide');
   if (keyChanged && contentShown) loadSheetData(currentSheetKey);
 }
-
 
 async function handleCredential(resp){
   try {
@@ -479,7 +485,7 @@ function renderVehicles(cfg, data){
         // 第二欄：Select
         const valueEl = document.createElement('div');
         const sel = document.createElement('select');
-        sel.className = 'step-select select';  // ✅ 吃統一輸入樣式
+        sel.className = 'step-select select';
 
         const optEmpty = document.createElement('option');
         optEmpty.value = '';
@@ -534,15 +540,15 @@ function renderVehicles(cfg, data){
       btnG.className = 'btn-group';
 
       const btnPunch = document.createElement('button');
-      btnPunch.className = 'btn btn--primary btn--sm';
+      btnPunch.className = 'btn btn--primary btn--sm btn-punch';
       btnPunch.textContent = '打卡';
 
       const btnEdit = document.createElement('button');
-      btnEdit.className  = 'btn btn--success btn--sm';
+      btnEdit.className  = 'btn btn--success btn--sm btn-edit';
       btnEdit.textContent = '修改';
 
       const btnDel = document.createElement('button');
-      btnDel.className   = 'btn btn--danger btn--sm';
+      btnDel.className   = 'btn btn--danger btn--sm btn-del';
       btnDel.textContent = '刪除';
 
       btnG.appendChild(btnPunch);
@@ -569,40 +575,16 @@ function renderVehicles(cfg, data){
           btnEdit.disabled  = !hasVal;
           btnDel.disabled   = !hasVal;
 
-          // 使用你現有 onStepClick（打卡=新增；修改=開啟輸入）
-          btnPunch.onclick = () => onStepClick(
-            cfg, baseRow, header, st, '', btnPunch, timeSpan   // 傳空字串 → 當作新增
+          // ✅ 改綁到既有函式
+          btnPunch.onclick = () => onPunchClick(
+            cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl
           );
-          btnEdit.onclick  = () => onStepClick(
-            cfg, baseRow, header, st, displayVal, btnPunch, timeSpan
+          btnEdit.onclick  = () => onEditTimeClick(
+            cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal
           );
-
-          // 刪除：直接清空該格
-          btnDel.onclick   = async () => {
-            if (!confirm('確定要刪除資料嗎？')) return;
-            const body = {
-              sheet: cfg.sheet,
-              email: currentUser.email,
-              writes: [{ row: baseRow, col: colIdx+1, value: '' }]
-            };
-            const r = await fetch(API_BASE + '?action=update', {
-              method:'POST',
-              headers:{'Content-Type':'text/plain;charset=utf-8'},
-              body: JSON.stringify(body)
-            });
-            const j = await r.json();
-            if (!j.ok){ showNotif('刪除失敗：'+(j.error||'unknown'), true); return; }
-
-            timeSpan.textContent = '—';
-            btnPunch.disabled = false;
-            btnEdit.disabled  = true;
-            btnDel.disabled   = true;
-
-            // 清空後鎖回後續步驟（沿用你的工具）
-            lockFollowing(rowEl);
-            showNotif('已刪除', false);
-            setTimeout(()=>reloadSheet(), 300);
-          };
+          btnDel.onclick   = () => onDeleteTimeClick(
+            cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl
+          );
         }
       }
 
@@ -632,7 +614,7 @@ function renderVehicles(cfg, data){
     memoTA.value = memoRaw;
 
     const memoBtn = document.createElement('button');
-    memoBtn.className = 'btn btn--primary';   // ✅ 主操作配色
+    memoBtn.className = 'btn btn--primary';
     memoBtn.textContent = '儲存';
     if (!canWrite) memoBtn.disabled = true;
 
@@ -665,8 +647,6 @@ function renderVehicles(cfg, data){
   });
 }
 
-
-
 function prevDone(cfg, header, row, st){
   const idx = cfg.steps.indexOf(st);
   if (idx === 0) return true;
@@ -690,7 +670,6 @@ async function onStopSelect(cfg, rowNumber, header, st, value, span){
   if (!j.ok){ showNotif('寫入失敗：'+(j.error||'unknown'), true); return; }
 
   span.textContent = value || '';
-  const rowEl = document.querySelector('.step-row'); // 不用顯示時間的行，僅提示/解鎖
   if (value) showNotif('已更新車暫停位置', false);
   else showNotif('已清除車暫停位置', false);
   setTimeout(()=>reloadSheet(), 300);
@@ -704,7 +683,7 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
   const colIdx = header.indexOf(st);
   if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  if (timeSpan.textContent && timeSpan.textContent.trim()){
+  if (timeSpan.textContent && timeSpan.textContent.trim() && timeSpan.textContent.trim() !== '—'){
     showNotif('此步驟已有時間，請用「修改」或「刪除」', true);
     return;
   }
@@ -736,7 +715,7 @@ async function onEditTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, b
     const j = await r.json();
     if (!j.ok){ showNotif('修改失敗：'+(j.error||'unknown'), true); return; }
 
-    const wasEmpty = !timeSpan.textContent;
+    const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim()==='—';
     timeSpan.textContent = formatSheetTime(newHHMMSS);
     if (wasEmpty) unlockNext(rowEl);
     btnPunch.disabled = true; btnEdit.disabled = false; btnDel.disabled = false;
@@ -798,7 +777,7 @@ function unlockNext(rowEl){
     return;
   }
   if (btnPunch){
-    const hasVal = !!(timeSpan && timeSpan.textContent.trim());
+    const hasVal = !!(timeSpan && timeSpan.textContent.trim() && timeSpan.textContent.trim() !== '—');
     btnPunch.disabled = hasVal;
     if (btnEdit) btnEdit.disabled = !hasVal;
     if (btnDel)  btnDel.disabled  = !hasVal;
@@ -817,7 +796,7 @@ function lockFollowing(rowEl){
     if (sel && !sel.value) sel.disabled = true;
 
     if (btnPunch){
-      const hasVal = !!(timeSpan && timeSpan.textContent.trim());
+      const hasVal = !!(timeSpan && timeSpan.textContent.trim() && timeSpan.textContent.trim() !== '—');
       if (!hasVal){
         btnPunch.disabled = true;
         if (btnEdit) btnEdit.disabled = true;

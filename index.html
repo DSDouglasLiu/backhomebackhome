@@ -414,7 +414,7 @@ function openEditTimeDialog(initialHHMMSS, onOK){
   };
 }
 
-/* ====== 主渲染 ====== */
+/* ====== 主渲染（整段取代） ====== */
 function renderVehicles(cfg, data){
   const box = document.getElementById('vehList');
   box.innerHTML = '';
@@ -431,21 +431,24 @@ function renderVehicles(cfg, data){
   if (headerRowIdx === -1) { box.textContent = '❌ 找不到表頭'; return; }
 
   const header = data[headerRowIdx].map(c => String(c || '').trim());
-  const rows = data
-    .slice(headerRowIdx + 1)
-    .filter(r => {
-      if (!Array.isArray(r)) return false;
-      const no   = String(r[0] || '').trim();
-      const area = String(r[1] || '').trim();
-      const car  = String(r[2] || '').trim();
-      return no && area && car;
-    });
 
-  if (!rows.length){ box.textContent = '(這張表目前沒有車輛資料)'; return; }
+  // 重要：保留原始資料的行號 → baseRow 不受 filter 影響
+  const dataRows = data.slice(headerRowIdx + 1).map((r, i) => ({
+    row: r,
+    baseRow: headerRowIdx + 2 + i   // 1-based，直接對應試算表實際行
+  }));
 
-  rows.forEach((row, idx) => {
+  let rendered = 0;
+
+  dataRows.forEach(({ row, baseRow }) => {
+    if (!Array.isArray(row)) return;
+
+    const no   = String(row[0] || '').trim();
     const area = String(row[1] || '').trim();
     const car  = String(row[2] || '').trim();
+    if (!(no && area && car)) return; // 跳過空列/分隔列，但 baseRow 仍準確
+
+    rendered++;
 
     const card = document.createElement('div');
     card.className = 'veh-card';
@@ -458,7 +461,6 @@ function renderVehicles(cfg, data){
     card.appendChild(title);
 
     const stepsBox = document.createElement('div');
-    const baseRow = headerRowIdx + 2 + idx;  // 1-based row for writes
 
     cfg.steps.forEach(st => {
       const colIdx = header.indexOf(st);
@@ -475,52 +477,48 @@ function renderVehicles(cfg, data){
       rowEl.appendChild(labelEl);
 
       /* ===== 「車暫停位置」：下拉，無修改/刪除 ===== */
-     if (st === '車暫停位置') {
-  // 第二欄：Select
-  const valueEl = document.createElement('div');
-  const sel = document.createElement('select');
-  sel.className = 'step-select select';
+      if (st === '車暫停位置') {
+        // 第二欄：Select
+        const valueEl = document.createElement('div');
+        const sel = document.createElement('select');
+        sel.className = 'step-select select';
 
-  const optEmpty = document.createElement('option');
-  optEmpty.value = '';
-  optEmpty.textContent = '— 請選擇 —';
-  sel.appendChild(optEmpty);
+        const optEmpty = document.createElement('option');
+        optEmpty.value = '';
+        optEmpty.textContent = '— 請選擇 —';
+        sel.appendChild(optEmpty);
 
-  STOP_OPTIONS.forEach(opt => {
-    const o = document.createElement('option');
-    o.value = opt;
-    o.textContent = opt;
-    sel.appendChild(o);
-  });
+        STOP_OPTIONS.forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt;
+          o.textContent = opt;
+          sel.appendChild(o);
+        });
 
-  if (rawVal) sel.value = rawVal;
+        if (rawVal) sel.value = rawVal;
 
-  // 不需要 ghost 了
-  valueEl.appendChild(sel);
-  rowEl.appendChild(valueEl);
+        valueEl.appendChild(sel);
+        rowEl.appendChild(valueEl);
 
-  // 第三欄：空的按鈕群（對齊）
-  const btnG = document.createElement('div');
-  btnG.className = 'btn-group';
-  rowEl.appendChild(btnG);
+        // 第三欄：空的按鈕群（對齊）
+        const btnG = document.createElement('div');
+        btnG.className = 'btn-group';
+        rowEl.appendChild(btnG);
 
-  if (!canWrite) {
-    sel.disabled = true;
-    rowEl.classList.add('locked');
-  } else {
-    const prevOk = prevDone(cfg, header, row, st);
-    if (!prevOk && !rawVal) sel.disabled = true;
-    // ★ 這一行就加在這裡：
-    sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value, rowEl);
-  }
+        if (!canWrite) {
+          sel.disabled = true;
+          rowEl.classList.add('locked');
+        } else {
+          const prevOk = prevDone(cfg, header, row, st);
+          if (!prevOk && !rawVal) sel.disabled = true;
+          sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value, rowEl);
+        }
 
-  stepsBox.appendChild(rowEl);
-  return;
-}
-
+        stepsBox.appendChild(rowEl);
+        return;
+      }
 
       /* ===== 一般步驟：時間 + 三鍵（打卡/修改/刪除） ===== */
-
       // 第二欄：時間
       const timeSpan = document.createElement('span');
       timeSpan.className = 'step-time';
@@ -528,38 +526,37 @@ function renderVehicles(cfg, data){
       rowEl.appendChild(timeSpan);
 
       // 第三欄：按鈕群
-      // 第三欄：按鈕群
-const btnG = document.createElement('div');
-btnG.className = 'btn-group';
+      const btnG = document.createElement('div');
+      btnG.className = 'btn-group';
 
-const btnPunch = document.createElement('button');
-btnPunch.className = 'btn btn--primary btn--sm btn-punch';
-btnPunch.textContent = '打卡';
+      const btnPunch = document.createElement('button');
+      btnPunch.className = 'btn btn--primary btn--sm btn-punch';
+      btnPunch.textContent = '打卡';
 
-const btnEdit = document.createElement('button');
-btnEdit.className  = 'btn btn--success btn--sm btn-edit';
-btnEdit.textContent = '修改';
+      const btnEdit = document.createElement('button');
+      btnEdit.className  = 'btn btn--success btn--sm btn-edit';
+      btnEdit.textContent = '修改';
 
-const btnDel = document.createElement('button');
-btnDel.className   = 'btn btn--danger btn--sm btn-del';
-btnDel.textContent = '刪除';
+      const btnDel = document.createElement('button');
+      btnDel.className   = 'btn btn--danger btn--sm btn-del';
+      btnDel.textContent = '刪除';
 
-btnG.appendChild(btnPunch);
-btnG.appendChild(btnEdit);
-btnG.appendChild(btnDel);
-rowEl.appendChild(btnG);
+      btnG.appendChild(btnPunch);
+      btnG.appendChild(btnEdit);
+      btnG.appendChild(btnDel);
+      rowEl.appendChild(btnG);
 
-// …省略權限/前置檢查後，綁定事件（不要再呼叫 onStepClick）
-btnPunch.onclick = () =>
-  onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+      // 正確的事件綁定（不要再覆蓋為 onStepClick）
+      btnPunch.onclick = () =>
+        onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
 
-btnEdit.onclick = () =>
-  onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
+      btnEdit.onclick = () =>
+        onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
 
-btnDel.onclick = () =>
-  onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+      btnDel.onclick = () =>
+        onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
 
-
+      // 權限與前置檢查：只改 disabled，不改 onclick
       if (!canWrite) {
         btnPunch.disabled = true; btnEdit.disabled = true; btnDel.disabled = true;
         rowEl.classList.add('locked');
@@ -567,52 +564,14 @@ btnDel.onclick = () =>
         const prevOk = prevDone(cfg, header, row, st);
         const hasVal = !!rawVal;
 
-        // 前置未完成且尚未打卡 → 三鍵都鎖
         if (!prevOk && !hasVal) {
           btnPunch.disabled = true;
           btnEdit.disabled  = true;
           btnDel.disabled   = true;
         } else {
-          // 僅能新增：已有時間就不能再「打卡」
-          btnPunch.disabled = hasVal;
-          // 修改 / 刪除 需先有值
+          btnPunch.disabled = hasVal; // 有值就不能再打卡
           btnEdit.disabled  = !hasVal;
           btnDel.disabled   = !hasVal;
-
-          // 使用你現有 onStepClick（打卡=新增；修改=開啟輸入）
-          btnPunch.onclick = () => onStepClick(
-            cfg, baseRow, header, st, '', btnPunch, timeSpan   // 傳空字串 → 當作新增
-          );
-          btnEdit.onclick  = () => onStepClick(
-            cfg, baseRow, header, st, displayVal, btnPunch, timeSpan
-          );
-
-          // 刪除：直接清空該格
-          btnDel.onclick   = async () => {
-            if (!confirm('確定要刪除資料嗎？')) return;
-            const body = {
-              sheet: cfg.sheet,
-              email: currentUser.email,
-              writes: [{ row: baseRow, col: colIdx+1, value: '' }]
-            };
-            const r = await fetch(API_BASE + '?action=update', {
-              method:'POST',
-              headers:{'Content-Type':'text/plain;charset=utf-8'},
-              body: JSON.stringify(body)
-            });
-            const j = await r.json();
-            if (!j.ok){ showNotif('刪除失敗：'+(j.error||'unknown'), true); return; }
-
-            timeSpan.textContent = '—';
-            btnPunch.disabled = false;
-            btnEdit.disabled  = true;
-            btnDel.disabled   = true;
-
-            // 清空後鎖回後續步驟（沿用你的工具）
-            lockFollowing(rowEl);
-            showNotif('已刪除', false);
-            setTimeout(()=>reloadSheet(), 300);
-          };
         }
       }
 
@@ -642,7 +601,7 @@ btnDel.onclick = () =>
     memoTA.value = memoRaw;
 
     const memoBtn = document.createElement('button');
-    memoBtn.className = 'btn btn--primary';   // ✅ 主操作配色
+    memoBtn.className = 'btn btn--primary';
     memoBtn.textContent = '儲存';
     if (!canWrite) memoBtn.disabled = true;
 
@@ -673,7 +632,10 @@ btnDel.onclick = () =>
 
     box.appendChild(card);
   });
+
+  if (!rendered){ box.textContent = '(這張表目前沒有車輛資料)'; return; }
 }
+
 
 
 

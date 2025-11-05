@@ -124,6 +124,7 @@ body.dark .btn--secondary{background:transparent}
   background: rgba(0, 0, 0, 0.5);
   z-index: 9998;  /* 確保在背景最上層 */
   display: block; /* 確保顯示 */
+  overscroll-behavior: contain;
 }
 
 /* 彈窗（居中顯示） */
@@ -430,35 +431,15 @@ function openModal(element){
   backdrop.className = 'modal-backdrop';
   backdrop.appendChild(element);
   document.body.appendChild(backdrop);
-
-  // 鎖住背景滾動
   document.body.classList.add('modal-open');
 
-  // 顯示對話框
-  element.style.display = 'block';
-
-  // 設定取消與確定按鈕的事件
-  const btnCancel = element.querySelector('.btn');
-  const btnOK = element.querySelector('.btn-edit');
-
-  // 取消按鈕事件
-  btnCancel.onclick = () => {
-    document.body.classList.remove('modal-open');
-    backdrop.remove();  // 移除對話框
-  };
-
-  // 確定按鈕事件
-  btnOK.onclick = () => {
-    // 在這裡加入具體操作，通常是更新或刪除資料
-    document.body.classList.remove('modal-open');
-    backdrop.remove();  // 移除對話框
-  };
-
+  // 只負責掛上去與回收
   return () => {
     document.body.classList.remove('modal-open');
-    backdrop.remove();  // 移除背景與對話框
+    backdrop.remove();
   };
 }
+
 
 
   
@@ -466,6 +447,7 @@ function openConfirmDialog(msg, onOK){
   const box = document.createElement('div');
   box.className = 'modal';
   box.innerHTML = `
+    <h3>確認刪除</h3>
     <div class="modal-msg" style="font-size:15px;line-height:1.6;margin:4px 0 8px;">${msg}</div>
     <div class="actions">
       <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
@@ -476,6 +458,7 @@ function openConfirmDialog(msg, onOK){
   btnCancel.onclick = close;
   btnOK.onclick = ()=>{ try{ onOK && onOK(); } finally{ close(); } };
 }
+
 
 
 function openEditTimeDialog(initialHHMMSS, onOK){
@@ -624,115 +607,68 @@ function renderVehicles(cfg, data){
         return;
       }
 
-      /* ===== 一般步驟：時間 + 三鍵（打卡/修改/刪除） ===== */
+/* ===== 一般步驟：時間 + 三鍵（打卡/修改/刪除） ===== */
 
-      // 第二欄：時間
-      const timeSpan = document.createElement('span');
-      timeSpan.className = 'step-time';
-      timeSpan.textContent = displayVal || '—';
-      rowEl.appendChild(timeSpan);
+// 第二欄：時間
+const timeSpan = document.createElement('span');
+timeSpan.className = 'step-time';
+timeSpan.textContent = displayVal || '—';
+rowEl.appendChild(timeSpan);
 
-      // 第三欄：按鈕群
-      const btnG = document.createElement('div');
-      btnG.className = 'btn-group';
+// 第三欄：按鈕群
+const btnG = document.createElement('div');
+btnG.className = 'btn-group';
 
-      const btnPunch = document.createElement('button');
-      btnPunch.className = 'btn btn--primary btn--sm btn-punch';
-      btnPunch.textContent = '打卡';
+const btnPunch = document.createElement('button');
+btnPunch.className = 'btn btn--primary btn--sm btn-punch';
+btnPunch.textContent = '打卡';
 
-      const btnEdit = document.createElement('button');
-      btnEdit.className  = 'btn btn--success btn--sm btn-edit';
-      btnEdit.textContent = '修改';
+const btnEdit = document.createElement('button');
+btnEdit.className  = 'btn btn--success btn--sm btn-edit';
+btnEdit.textContent = '修改';
 
-      const btnDel = document.createElement('button');
-      btnDel.className   = 'btn btn--danger btn--sm btn-del';
-      btnDel.textContent = '刪除';
+const btnDel = document.createElement('button');
+btnDel.className   = 'btn btn--danger btn--sm btn-del';
+btnDel.textContent = '刪除';
 
-      btnG.appendChild(btnPunch);
-      btnG.appendChild(btnEdit);
-      btnG.appendChild(btnDel);
-      rowEl.appendChild(btnG);
+btnG.appendChild(btnPunch);
+btnG.appendChild(btnEdit);
+btnG.appendChild(btnDel);
+rowEl.appendChild(btnG);
 
-      if (!canWrite) {
-        btnPunch.disabled = true; btnEdit.disabled = true; btnDel.disabled = true;
-        rowEl.classList.add('locked');
-      } else {
-        const prevOk = prevDone(cfg, header, row, st);
-        const hasVal = !!rawVal;
+if (!canWrite) {
+  btnPunch.disabled = true;
+  btnEdit.disabled  = true;
+  btnDel.disabled   = true;
+  rowEl.classList.add('locked');
+} else {
+  const prevOk = prevDone(cfg, header, row, st);
+  const hasVal = !!rawVal;
 
-        // 前置未完成且尚未打卡 → 三鍵都鎖
-        if (!prevOk && !hasVal) {
-          btnPunch.disabled = true;
-          btnEdit.disabled  = true;
-          btnDel.disabled   = true;
-        } else {
-          // 僅能新增：已有時間就不能再「打卡」
-          btnPunch.disabled = hasVal;
-          // 修改 / 刪除 需先有值
-          btnEdit.disabled  = !hasVal;
-          btnDel.disabled   = !hasVal;
+  if (!prevOk && !hasVal) {
+    btnPunch.disabled = true;
+    btnEdit.disabled  = true;
+    btnDel.disabled   = true;
+  } else {
+    btnPunch.disabled = hasVal;
+    btnEdit.disabled  = !hasVal;
+    btnDel.disabled   = !hasVal;
 
-btnPunch.onclick = () => {
-  const dialogContent = document.createElement('div');
-  dialogContent.innerHTML = `
-    <h3>打卡時間</h3>
-    <div class="time-edit">
-      <input id="hh" class="time-input" type="text" maxlength="2" placeholder="HH">
-      <span class="colon">:</span>
-      <input id="mm" class="time-input" type="text" maxlength="2" placeholder="MM">
-      <span class="colon">:</span>
-      <input id="ss" class="time-input" type="text" maxlength="2" placeholder="SS">
-    </div>
-    <div class="hint">請輸入 2 位數！</div>
-    <div class="hint">下午兩點，請輸入14！</div>
-    <div class="actions">
-      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
-      <button class="btn btn-edit">確定</button>
-    </div>
-  `;
-  openModal(dialogContent);  // 顯示對話框
-};
+    // ✅ 正確綁定既有邏輯（不要自組 dialogContent / openModal）
+    btnPunch.onclick = () => onPunchClick(
+      cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl
+    );
+    btnEdit.onclick  = () => onEditTimeClick(
+      cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal
+    );
+    btnDel.onclick   = () => onDeleteTimeClick(
+      cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl
+    );
+  }
+}
 
-btnEdit.onclick = () => {
-  const dialogContent = document.createElement('div');
-  dialogContent.innerHTML = `
-    <h3>修改時間</h3>
-    <div class="time-edit">
-      <input id="hh" class="time-input" type="text" maxlength="2" value="${timeSpan.textContent.split(':')[0]}">
-      <span class="colon">:</span>
-      <input id="mm" class="time-input" type="text" maxlength="2" value="${timeSpan.textContent.split(':')[1]}">
-      <span class="colon">:</span>
-      <input id="ss" class="time-input" type="text" maxlength="2" value="${timeSpan.textContent.split(':')[2]}">
-    </div>
-    <div class="hint">請輸入 2 位數！</div>
-    <div class="hint">下午兩點，請輸入14！</div>
-    <div class="actions">
-      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
-      <button class="btn btn-edit">確定</button>
-    </div>
-  `;
-  openModal(dialogContent);  // 顯示對話框
-};
+stepsBox.appendChild(rowEl);
 
-btnDel.onclick = () => {
-  const dialogContent = document.createElement('div');
-  dialogContent.innerHTML = `
-    <h3>確認刪除</h3>
-    <div class="modal-msg" style="font-size:15px;line-height:1.6;margin:4px 0 8px;">確定要刪除時間資料嗎？</div>
-    <div class="actions">
-      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
-      <button class="btn btn-del">確定</button>
-    </div>
-  `;
-  openModal(dialogContent);  // 顯示對話框
-};
-
-
-          
-        }
-      }
-
-      stepsBox.appendChild(rowEl);
     });
 
     card.appendChild(stepsBox);

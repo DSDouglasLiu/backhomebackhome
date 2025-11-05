@@ -490,35 +490,59 @@ function closeAllModals(){
   document.querySelectorAll('.modal, .modal-backdrop').forEach(el=>{ try{ el.remove(); }catch{} });
   document.body.classList.remove('modal-open');
 }
+
+
 function openModal(element){
-  closeAllModals(); // 先清理殘留，避免灰階擋住卻沒視窗
+  // 1) 建立全螢幕 overlay（固定在視窗、置中子元素）
+  const layer = document.createElement('div');
+  // 用 inline style 確保任何 CSS 都蓋不掉
+  Object.assign(layer.style, {
+    position: 'fixed',
+    inset: '0',
+    width: '100vw',
+    height: '100dvh',
+    background: 'rgba(0,0,0,.45)',
+    zIndex: '2147483000',       // 最高層，避免被其它東西蓋住
+    display: 'grid',
+    placeItems: 'center'
+  });
 
-  if (!element.classList.contains('modal')) element.classList.add('modal');
-  element.setAttribute('role','dialog');
-  element.setAttribute('aria-modal','true');
-  element.tabIndex = -1;
+  // 2) 確保對話框樣式正常：把 fixed/transform 拿掉改由 overlay 置中
+  element.classList.add('modal'); // 仍保留你原本的視覺樣式（底色/圓角/陰影等）
+  Object.assign(element.style, {
+    position: 'relative',
+    top: 'auto',
+    left: 'auto',
+    right: 'auto',
+    bottom: 'auto',
+    transform: 'none',
+    margin: '0'
+  });
 
-  const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop';
+  // 3) 掛上去
+  layer.appendChild(element);
+  document.body.appendChild(layer);
+  document.body.classList.add('modal-open'); // 鎖捲動
 
-  // 重要：遮罩與視窗為兄弟節點，保證 z-index 疊層
-  document.body.append(backdrop, element);
-  document.body.classList.add('modal-open');
-
+  // 4) ESC 關閉
   const onEsc = (e) => { if (e.key === 'Escape') cleanup(); };
   document.addEventListener('keydown', onEsc);
-  backdrop.addEventListener('click', ()=> cleanup());
 
-  requestAnimationFrame(()=> element.focus());
+  // 5) 點遮罩不關閉（若要點遮罩關閉，解除註解下面兩行）
+  layer.addEventListener('click', (e) => {
+    // if (e.target === layer) cleanup();
+  });
+  element.addEventListener('click', (e) => e.stopPropagation());
 
   function cleanup(){
-    try{ element.remove(); }catch{}
-    try{ backdrop.remove(); }catch{}
-    document.removeEventListener('keydown', onEsc);
     document.body.classList.remove('modal-open');
+    document.removeEventListener('keydown', onEsc);
+    try { layer.remove(); } catch {}
   }
   return cleanup;
 }
+
+  
 function openConfirmDialog(msg, onOK){
   const box = document.createElement('div');
   box.className = 'modal';

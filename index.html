@@ -316,6 +316,26 @@ body.login #signin{ display: block; }
   white-space: nowrap;
 }
 #logoutBtn:hover { background:rgba(239,68,68,.1) !important; }  
+
+/* ===== 頂層三頁 Tab（比四顆 button 更高一層） ===== */
+.main-tabs{
+  display:flex; gap:12px; margin:6px 0 8px; flex-wrap:wrap;
+}
+.main-tab{
+  background:#fff; color:var(--primary-600);
+  border:1px solid var(--primary-600); border-radius:var(--radius-lg);
+  padding:8px 20px; font-size:15px; font-weight:700; cursor:pointer;
+  min-width:120px; text-align:center;
+}
+body.dark .main-tab{ background:transparent; }
+.main-tab:hover{ background:rgba(31,111,229,.06) }
+.main-tab.active{ background:var(--primary-600); color:#fff }
+
+/* 每個頁面容器 */
+.tab-pane{ margin-top:8px; }
+
+/* 未登入時隱藏頂層三頁籤（避免閃動） */
+body.login #mainTabs{ display:none !important; }
   
   
 </style>
@@ -336,15 +356,39 @@ body.login #signin{ display: block; }
 </div>
     </div>
 
-<!-- tabs -->
-    <div id="tabs" class="card hide" style="padding-bottom:6px;">
-      <div class="sheet-tabs" id="sheetTabs"></div>
-    </div>
+<!-- ✅ 頂層 3 個 Tab（比四顆 button 更高一層） -->
+<div id="mainTabs" class="main-tabs">
+  <button class="main-tab active" data-target="pane-punch">登錄</button>
+  <button class="main-tab" data-target="pane-dashboard">整體情報</button>
+  <button class="main-tab" data-target="pane-single">個別情報</button>
+</div>
 
-    <div id="content" class="hide">
-      <div id="vehList" class="veh-list"></div>
-    </div>
+<!-- ✅ 第 1 頁：沿用你原本的畫面（四顆小 button + 車卡列表） -->
+<div id="pane-punch" class="tab-pane">
+  <!-- （原本）tabs：四顆小按鈕的容器 -->
+  <div id="tabs" class="card hide" style="padding-bottom:6px;">
+    <div class="sheet-tabs" id="sheetTabs"></div>
   </div>
+  <!-- （原本）內容：車卡列表 -->
+  <div id="content" class="hide">
+    <div id="vehList" class="veh-list"></div>
+  </div>
+</div>
+
+<!-- ✅ 第 2 頁：整體情報（暫空） -->
+<div id="pane-dashboard" class="tab-pane hide">
+  <div class="card" style="min-height:360px;display:flex;align-items:center;justify-content:center;">
+    （整體情報頁：先空白，之後再放內容）
+  </div>
+</div>
+
+<!-- ✅ 第 3 頁：單台情報（暫空） -->
+<div id="pane-single" class="tab-pane hide">
+  <div class="card" style="min-height:360px;display:flex;align-items:center;justify-content:center;">
+    （個別情報頁：先空白，之後再放內容）
+  </div>
+</div>
+
 
   <div id="notif" class="notif"></div>
 
@@ -1215,6 +1259,31 @@ function computeCompletion(cfg, header, row) {
   }
   return { completed, total: usableSteps.length };
 }
+/* ===== 頂層三頁切換 ===== */
+const PANE_IDS = ['pane-punch','pane-dashboard','pane-single'];
+
+function switchPane(targetId){
+  // 頁籤外觀
+  document.querySelectorAll('#mainTabs .main-tab').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.target === targetId);
+  });
+  // 顯示/隱藏各頁
+  PANE_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hide', id !== targetId);
+  });
+}
+
+// 監聽點擊頂層三個 Tab
+document.getElementById('mainTabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.main-tab');
+  if (!btn) return;
+  switchPane(btn.dataset.target);
+});
+
+// ✅ 登入成功後預設切到「登錄」那頁
+// 在你原本的 finishLoginUI() 最後面，加上這一行：
+// switchPane('pane-punch');
 
   
 </script>

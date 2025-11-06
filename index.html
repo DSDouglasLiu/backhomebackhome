@@ -293,11 +293,6 @@ let currentSheetKey = SHEET_CONFIGS[0].key;
 let sheetData = []; // 打卡頁使用
 const TOKEN_STORAGE_KEY = 'ddcc_user_token';
 let idToken = null;
-/* ===== 整體情報：差異更新所需 ===== */
-const DASH_REFRESH_MS = 10000;   // ← 自動刷新間隔（毫秒）
-let dashTimer = null;
-
-let DASH_BUILT = false;                  // 是否已畫過骨架
 const DASH_NODES = Object.create(null);  // key -> { el }（數字節點快取）
 let ALL_SHEETS = {};                     // 開清單/明細會用到
 
@@ -649,9 +644,9 @@ function isDashboardVisible() {
 }
 function startDashboardAutoRefresh() {
   stopDashboardAutoRefresh();
-  dashTimer = setInterval(() => {
-    if (isDashboardVisible()) buildDashboard(true); // 靜默刷新
-  }, DASH_REFRESH_MS);
+  
+  if (isDashboardVisible()) updateDashboardData(true); // 這裡要呼叫 update，不是 build
+}, DASH_REFRESH_MS);
 }
 function stopDashboardAutoRefresh() {
   if (dashTimer) { clearInterval(dashTimer); dashTimer = null; }

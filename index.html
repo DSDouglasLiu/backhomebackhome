@@ -70,6 +70,21 @@ body.dark .tab, body.dark .btn-tab{background:transparent}
 .tab.active,.btn-tab.active{background:var(--primary-600);color:#fff;border-color:var(--primary-600)}
 .tab:focus-visible,.btn-tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
+/* ======= 新增：上方時鐘 + 更新頻率 ======= */
+.refresh-bar{ display:flex; gap:10px; align-items:center; justify-content:flex-end; margin:4px 0 6px; }
+.clock{ font-weight:900; letter-spacing:.5px; font-variant-numeric: tabular-nums; }
+.seg-group{ display:flex; gap:8px; flex-wrap:wrap; }
+.seg-btn{
+  background:#fff; color:var(--primary-600);
+  border:1px solid var(--primary-600); border-radius:var(--radius-lg);
+  padding:6px 14px; font-size:var(--fz-body); font-weight:700; cursor:pointer; min-width:72px; text-align:center;
+}
+body.dark .seg-btn{ background:transparent; }
+.seg-btn:hover{ background:rgba(31,111,229,.06); }
+.seg-btn.active{ background:var(--primary-600); color:#fff; border-color:var(--primary-600); }
+.seg-btn:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+.seg-btn[disabled]{ cursor:not-allowed; }
+
 /* =========== 原「登錄」頁卡片 =========== */
 .veh-list{display:grid;grid-template-columns:repeat(auto-fit, minmax(480px,1fr));gap:12px;margin-top:16px;}
 .veh-card{background:rgba(255,255,255,0.85);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px;}
@@ -209,6 +224,12 @@ body.dark .loc-pill{ background:rgba(15,23,42,.28); }
       </div>
     </div>
 
+    <!-- 新增：上方時鐘 + 自動更新頻率 -->
+    <div class="refresh-bar">
+      <div class="clock" id="clockDisplay" aria-live="polite">--:--:--</div>
+      <div class="seg-group" id="refreshControls"></div>
+    </div>
+
     <!-- 頂層 3 個 Tab -->
     <div id="mainTabs" class="main-tabs">
       <button class="main-tab active" data-target="pane-punch">登錄</button>
@@ -258,7 +279,7 @@ const STOP_OPTIONS = [
   '禪堂平台','法心北路','法心南路（西）','法心南路（東）','法大路','雙環路到三門','三門到大停車場','靈山勝境石往外','雙環路至法大一橋'
 ];
 
-/* 四個工作表（步驟順序會用來決定「最新狀態」與進退場分隔） */
+/* 四個工作表 */
 const SHEET_CONFIGS = [
   { key:'地區專車退場（遊覽車平台）', sheet:'地區專車退場（遊覽車平台）', steps:[
     '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
@@ -274,7 +295,19 @@ const SHEET_CONFIGS = [
     '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
   ]}
 ];
-const DASH_REFRESH_MS = 20000;   // ← 想改間隔就改這個（毫秒）
+
+/* ===== 新增：時鐘 + 自動更新頻率設定 ===== */
+const REFRESH_PRESETS = [
+  { label:'5分',  ms: 5*60*1000 },
+  { label:'2分',  ms: 2*60*1000 },
+  { label:'60秒', ms: 60*1000 },
+  { label:'30秒', ms: 30*1000 }
+];
+const REFRESH_STORAGE_KEY = 'dash_refresh_ms';
+let refreshMs = parseInt(localStorage.getItem(REFRESH_STORAGE_KEY) || '', 10);
+if (!Number.isFinite(refreshMs) || refreshMs <= 0) refreshMs = 30*1000; // 預設 30 秒
+
+/* 原本的 dashboard 計時器 */
 let dashTimer = null;
 
 let currentUser = null;
@@ -285,6 +318,10 @@ let idToken = null;
 
 /* ---------------- 初始登入與頁籤 ---------------- */
 window.onload = function(){
+  // 啟動時鐘 & 建立更新頻率控制列
+  startClock();
+  buildRefreshControls();
+
   const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
   if (saved) {
     idToken = saved;
@@ -305,6 +342,89 @@ window.onload = function(){
   }
   document.getElementById('logoutBtn').addEventListener('click', logout);
 };
+
+/* ===== 時鐘（時區 +8、hh:mm:ss） ===== */
+function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
+function startClock(){
+  const el = document.getElementById('clockDisplay');
+  const tick = ()=>{ if (el) el.textContent = getTaipeiHHMMSS(); };
+  tick();
+  setInterval(tick, 1000);
+}
+
+/* ===== 自動更新頻率控制列 ===== */
+function buildRefreshControls(){
+  const box = document.getElementById('refreshControls');
+  if (!box) return;
+  box.innerHTML = '';
+
+  // 頻率按鈕
+  REFRESH_PRESETS.forEach(p=>{
+    const btn = document.createElement('button');
+    btn.className = 'seg-btn';
+    btn.textContent = p.label;
+    btn.dataset.ms = String(p.ms);
+    if (p.ms === refreshMs){
+      btn.classList.add('active');
+      btn.disabled = true; // 當前選擇：不可按、變色
+    }
+    btn.onclick = ()=> openRefreshSaveDialog(p.ms, p.label);
+    box.appendChild(btn);
+  });
+
+  // 立即更新
+  const nowBtn = document.createElement('button');
+  nowBtn.className = 'seg-btn';
+  nowBtn.textContent = '立即更新';
+  nowBtn.title = '立刻重新整理整體情報';
+  nowBtn.onclick = ()=> {
+    if (isDashboardVisible()) buildDashboard(false);
+    else showNotif('切到「整體情報」即可看到最新資料', false);
+  };
+  box.appendChild(nowBtn);
+}
+
+function openRefreshSaveDialog(ms, label){
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3>儲存自動更新頻率</h3>
+    <div class="modal-msg" style="font-size:15px;line-height:1.7;margin:6px 0 10px;">
+      將自動更新頻率設定為 <b>${label}</b>。按「儲存」後即刻生效。
+    </div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn--primary">儲存</button>
+    </div>
+  `;
+  const close = openModal(box);
+  const [btnCancel, btnOK] = box.querySelectorAll('button');
+  btnCancel.onclick = close;
+  btnOK.onclick = ()=>{
+    try{
+      refreshMs = ms;
+      localStorage.setItem(REFRESH_STORAGE_KEY, String(refreshMs));
+      updateRefreshButtonsUI();
+      if (isDashboardVisible()){
+        startDashboardAutoRefresh();     // 重啟定時（新頻率）
+      }
+      showNotif(`已設定為每 ${label} 自動更新`, false);
+    } finally{ close(); }
+  };
+}
+
+function updateRefreshButtonsUI(){
+  const btns = document.querySelectorAll('#refreshControls .seg-btn');
+  btns.forEach(btn=>{
+    if (btn.textContent === '立即更新') return; // 永遠不變色
+    const ms = parseInt(btn.dataset.ms||'0',10);
+    const isActive = (ms === refreshMs);
+    btn.classList.toggle('active', isActive);
+    btn.disabled = isActive;
+  });
+}
+
+/* ---------------- Google Sign-In（原） ---------------- */
 function initGoogleSignIn() {
   document.body.classList.add('login');
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
@@ -377,7 +497,6 @@ function formatSheetTime(val){
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(s)){ const d=new Date(s); const tw=new Date(d.getTime()+8*3600*1000); const hh=String(tw.getUTCHours()).padStart(2,'0'); const mm=String(tw.getUTCMinutes()).padStart(2,'0'); const ss=String(tw.getUTCSeconds()).padStart(2,'0'); return `${hh}:${mm}:${ss}`;}
   return s;
 }
-function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
 const pad2 = n => String(n).padStart(2,'0');
 const splitHMS = v => { const s=String(v||'').trim(); const m=s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/); return m?[pad2(m[1]),m[2],m[3]?m[3]:'00']:['','','']; };
 const isValidHMS = (h,m,s) => (/^\d{2}$/.test(h)&&/^\d{2}$/.test(m)&&/^\d{2}$/.test(s) && +h<=23 && +m<=59 && +s<=59);
@@ -387,7 +506,7 @@ function hideLoading(){ const el=document.getElementById('loading'); if(!el) ret
 async function withLoading(fn,msg='處理中…'){ showLoading(msg); try{ return await fn(); } finally{ hideLoading(); } }
 function showNotif(msg,isErr){ const box=document.getElementById('notif'); box.textContent=msg; box.style.background=isErr?'rgba(248,113,113,.9)':'rgba(15,23,42,.85)'; box.classList.add('show'); setTimeout(()=>box.classList.remove('show'), 2500); }
 
-/* Modal：覆蓋頁（保留原寫法，稍微包裝 close） */
+/* Modal：覆蓋頁 */
 function closeAllModals(){ document.querySelectorAll('.modal, .modal-backdrop').forEach(el=>{ try{el.remove()}catch{} }); document.body.classList.remove('modal-open'); }
 function openModal(element){
   const layer=document.createElement('div');
@@ -412,7 +531,7 @@ async function loadSheetData(key){
 }
 function isCompletedValue(v){ if (v==null) return false; const s=String(v).trim(); return !!s && s!=='—' && s!=='-'; }
 
-/* ====== 打卡頁 renderVehicles（原樣，略去中間無關註解以縮短） ====== */
+/* ====== 打卡頁 renderVehicles（原樣） ====== */
 function renderVehicles(cfg, data) {
   const box = document.getElementById('vehList'); box.innerHTML = '';
   const canWrite = currentUser?.permission === '全功能';
@@ -594,7 +713,6 @@ function switchPane(targetId){
   }
 }
 
-  
 function isDashboardVisible() {
   return !document.getElementById('pane-dashboard').classList.contains('hide');
 }
@@ -602,7 +720,7 @@ function startDashboardAutoRefresh() {
   stopDashboardAutoRefresh();
   dashTimer = setInterval(() => {
     if (isDashboardVisible()) buildDashboard(true); // 靜默刷新
-  }, DASH_REFRESH_MS);
+  }, refreshMs);
 }
 function stopDashboardAutoRefresh() {
   if (dashTimer) { clearInterval(dashTimer); dashTimer = null; }
@@ -613,12 +731,11 @@ document.addEventListener('visibilitychange', () => {
   else if (isDashboardVisible()) startDashboardAutoRefresh();
 });
 
-  
 document.getElementById('mainTabs').addEventListener('click', (e)=>{
   const btn=e.target.closest('.main-tab'); if(!btn) return; switchPane(btn.dataset.target);
 });
 
-/* ======================= 新增：整體情報（全局儀表板） ======================= */
+/* ======================= 整體情報 ======================= */
 let ALL_SHEETS = {}; // { key: { cfg, headerIdx, header, rows } }
 
 // 支援靜默刷新：buildDashboard(true) 會不顯示 Loading
@@ -727,14 +844,13 @@ async function buildDashboard(silent = false){
     });
   };
 
- if (silent) { await work(); }           // 靜默
-  else { await withLoading(work, '整理整體情報…'); }  // 第一次顯示 Loading
+  if (silent) { await work(); }
+  else { await withLoading(work, '整理整體情報…'); }
 }
 
 
-/* 取得一台車目前「最新狀態」（最後一個已完成步驟或停車位置） */
+/* 取得一台車目前「最新狀態」 */
 function getLatestStatus(cfg, header, row){
-  // 依 steps 順序往後找最後一格有值的
   for (let i=cfg.steps.length-1; i>=0; i--){
     const st=cfg.steps[i]; const col=header.indexOf(st);
     if (col>=0 && isCompletedValue(row[col])) {

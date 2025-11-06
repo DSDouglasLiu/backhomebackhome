@@ -261,6 +261,50 @@ body.login #tabs,
 body.login #content,
 body.login #userInfo{ display: none !important; }
 
+/* ===== 登入畫面：真置中 + 不可捲動（貼在最後） ===== */
+body.login{
+  /* 讓整頁高度等於可見視窗，並鎖住捲動 */
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body.login .wrap{
+  /* 不用 min-height，改用「剛好等於視窗」避免多出幾 px */
+  height: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px;                 /* 移除原本 48px 底部 padding */
+  display: grid;
+  place-items: center;             /* 水平＋垂直置中 */
+}
+
+/* 你的 wrap 裡的第一個區塊（含 h1 / #signin / #userInfo）改成直向排列 */
+body.login .wrap > div:first-child{
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 5vh, 64px);     /* 標題與按鈕的彈性間距 */
+  width: 100%;
+  text-align: center;
+}
+
+/* 標題視覺 */
+body.login h1{
+  margin: 0;
+  text-align: center;
+  font-size: clamp(36px, 8vw, 64px);
+  line-height: 1.15;
+}
+
+/* 未登入時只顯示登入用區塊，避免閃動 */
+body.login #tabs,
+body.login #content,
+body.login #userInfo{ display: none !important; }
+
+/* 確保 Google 登入按鈕在置中容器可見 */
+body.login #signin{ display: block; }
+
   
 </style>
 </head>

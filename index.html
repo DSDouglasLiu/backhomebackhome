@@ -243,6 +243,14 @@ body.login .right-refresh{ display:none !important; }
   .topbar-grid .right-user,
   .topbar-grid .right-refresh{ justify-content:flex-start; }
 }
+/* 讓對話框不會超出可視高度，必要時內容自動滾動 */
+.modal{
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+}
+@supports not (height: 100dvh){
+  .modal{ max-height: 90vh; } /* 舊瀏覽器後備 */
+}
   
 </style>
 </head>
@@ -555,15 +563,70 @@ function showNotif(msg,isErr){ const box=document.getElementById('notif'); box.t
 /* Modal：覆蓋頁 */
 function closeAllModals(){ document.querySelectorAll('.modal, .modal-backdrop').forEach(el=>{ try{el.remove()}catch{} }); document.body.classList.remove('modal-open'); }
 function openModal(element){
-  const layer=document.createElement('div');
-  Object.assign(layer.style,{ position:'fixed', inset:'0', width:'100vw', height:'100dvh', background:'rgba(0,0,0,.45)', zIndex:'2147483200', display:'grid', placeItems:'center' });
+  const MAX_Z = 2147483647; // 最高層
+  const layer = document.createElement('div');
+
+  // 全螢幕覆蓋層：固定在可視區、置中顯示
+  Object.assign(layer.style, {
+    position:'fixed',
+    inset:'0',
+    width:'100vw',
+    height:'100vh',
+    background:'rgba(0,0,0,.45)',
+    zIndex: String(MAX_Z),
+    display:'grid',
+    placeItems:'center'
+  });
+
+  // 對話框本體：使用相對定位、限制最大尺寸
   element.classList.add('modal');
-  Object.assign(element.style,{ position:'relative', top:'auto', left:'auto', transform:'none', margin:'0', maxWidth:'min(1024px,95vw)' });
-  layer.appendChild(element); document.body.appendChild(layer); document.body.classList.add('modal-open');
-  const onEsc=e=>{ if(e.key==='Escape') cleanup(); }; document.addEventListener('keydown',onEsc);
-  function cleanup(){ document.body.classList.remove('modal-open'); document.removeEventListener('keydown',onEsc); try{layer.remove()}catch{} }
+  Object.assign(element.style, {
+    position:'relative',
+    top:'auto',
+    left:'auto',
+    transform:'none',
+    margin:'0',
+    maxWidth:'min(1024px,95vw)',
+    maxHeight:'min(86dvh, 640px)',
+    overflow:'auto'
+  });
+
+  // 插入 DOM
+  layer.appendChild(element);
+  document.body.appendChild(layer);
+  document.body.classList.add('modal-open');
+
+  // 針對行動裝置鍵盤/動態視口：跟隨 VisualViewport
+  function syncToVisualViewport(){
+    const vv = window.visualViewport;
+    if(!vv) return;
+    layer.style.width  = vv.width + 'px';
+    layer.style.height = vv.height + 'px';
+    layer.style.left   = vv.offsetLeft + 'px';
+    layer.style.top    = vv.offsetTop + 'px';
+  }
+  if (window.visualViewport){
+    syncToVisualViewport();
+    window.visualViewport.addEventListener('resize', syncToVisualViewport);
+    window.visualViewport.addEventListener('scroll', syncToVisualViewport);
+  }
+
+  // Esc 關閉
+  const onEsc = e => { if (e.key === 'Escape') cleanup(); };
+  document.addEventListener('keydown', onEsc);
+
+  function cleanup(){
+    document.body.classList.remove('modal-open');
+    document.removeEventListener('keydown', onEsc);
+    if (window.visualViewport){
+      window.visualViewport.removeEventListener('resize', syncToVisualViewport);
+      window.visualViewport.removeEventListener('scroll', syncToVisualViewport);
+    }
+    try{ layer.remove(); }catch{}
+  }
   return cleanup;
 }
+
 
 /* ---------------- 打卡頁：載入資料 & 渲染（原本） ---------------- */
 async function loadSheetData(key){
@@ -1029,6 +1092,8 @@ function openEditTimeDialog(initialHHMMSS, onOK){
   const close = openModal(box);
   const hh = box.querySelector('#hh'), mm = box.querySelector('#mm'), ss = box.querySelector('#ss');
   const [btnCancel, btnOK] = box.querySelectorAll('button');
+  setTimeout(()=>{ try{ hh.focus({ preventScroll:true }); }catch{} }, 80);
+
   [hh,mm,ss].forEach(inp=>inp.addEventListener('input', ()=>{ inp.value = inp.value.replace(/\D/g,'').slice(0,2); }));
   btnCancel.onclick = close;
   btnOK.onclick = ()=>{

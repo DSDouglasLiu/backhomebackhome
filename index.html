@@ -540,17 +540,32 @@ function finishLoginUI() {
   }
 }
 
-// ===== 登出功能 =====
+// ===== 登出功能（加強版）=====
 function logout() {
   localStorage.removeItem(TOKEN_STORAGE_KEY);
   idToken = null;
   currentUser = null;
-  google.accounts.id.disableAutoSelect(); // 重要！防止 Google 自動重新登入
+  
+  // 重要！把舊的 Google 按鈕整個清掉
+  const signinDiv = document.getElementById('signin');
+  signinDiv.innerHTML = '';                 // ← 這行是關鍵！
+  
+  // 重新初始化 Google 登入按鈕
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredential
+  });
+  google.accounts.id.renderButton(signinDiv, {
+    theme: 'outline',
+    size: 'large'
+  });
+
+  // 強制顯示登入畫面
   document.body.classList.add('login');
-  document.getElementById('signin').classList.remove('hide');
   document.getElementById('userInfo').classList.add('hide');
   document.getElementById('tabs').classList.add('hide');
   document.getElementById('content').classList.add('hide');
+
   showNotif('已登出', false);
 }
 

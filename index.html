@@ -191,33 +191,6 @@ body.loading-open{ overflow:hidden; touch-action:none; }
 @media (max-width:480px){
   .modal .time-input{ width:56px; }
 }
-/* 覆蓋：全螢幕遮罩，以 flex 置中 */
-.modal-backdrop{
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  background: rgba(0,0,0,.45);
-  display: flex;                 /* 置中關鍵 */
-  align-items: center;           /* 垂直置中 */
-  justify-content: center;       /* 水平置中 */
-}
-
-/* 對話框：改相對定位，不再用 top/left/transform */
-.modal{
-  position: relative;
-  top: auto; left: auto; transform: none;  /* 取消舊的定位 */
-  background:#fff; color:#111827;
-  padding:16px; border-radius:12px;
-  min-width:280px; max-width:90vw;
-  box-shadow:0 10px 30px rgba(0,0,0,.25);
-}
-body.dark .modal{ background:#0b1325; color:#e2e8f0 }
-
-@supports (height: 100dvh){
-  .modal-backdrop{ min-height: 100dvh; }
-}
-
-  
 </style>
 </head>
 <body>
@@ -519,36 +492,55 @@ function closeAllModals(){
 }
 
 
-<script>
 function openModal(element){
-  if (!element.classList.contains('modal')) element.classList.add('modal');
+  // 1) 建立全螢幕 overlay（固定在視窗、置中子元素）
+  const layer = document.createElement('div');
+  // 用 inline style 確保任何 CSS 都蓋不掉
+  Object.assign(layer.style, {
+    position: 'fixed',
+    inset: '0',
+    width: '100vw',
+    height: '100dvh',
+    background: 'rgba(0,0,0,.45)',
+    zIndex: '2147483000',       // 最高層，避免被其它東西蓋住
+    display: 'grid',
+    placeItems: 'center'
+  });
 
-  // 先移除殘留的遮罩（避免多個）
-  document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+  // 2) 確保對話框樣式正常：把 fixed/transform 拿掉改由 overlay 置中
+  element.classList.add('modal'); // 仍保留你原本的視覺樣式（底色/圓角/陰影等）
+  Object.assign(element.style, {
+    position: 'relative',
+    top: 'auto',
+    left: 'auto',
+    right: 'auto',
+    bottom: 'auto',
+    transform: 'none',
+    margin: '0'
+  });
 
-  // 建立遮罩並把 modal 當子元素（flex 置中）
-  const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop';
-  backdrop.appendChild(element);
-  document.body.appendChild(backdrop);
-  document.body.classList.add('modal-open');
+  // 3) 掛上去
+  layer.appendChild(element);
+  document.body.appendChild(layer);
+  document.body.classList.add('modal-open'); // 鎖捲動
 
-  // 關閉邏輯：ESC 與點擊空白處
+  // 4) ESC 關閉
   const onEsc = (e) => { if (e.key === 'Escape') cleanup(); };
-  const onBackdrop = (e) => { if (e.target === backdrop) cleanup(); };
   document.addEventListener('keydown', onEsc);
-  backdrop.addEventListener('click', onBackdrop);
+
+  // 5) 點遮罩不關閉（若要點遮罩關閉，解除註解下面兩行）
+  layer.addEventListener('click', (e) => {
+    // if (e.target === layer) cleanup();
+  });
+  element.addEventListener('click', (e) => e.stopPropagation());
 
   function cleanup(){
     document.body.classList.remove('modal-open');
     document.removeEventListener('keydown', onEsc);
-    backdrop.removeEventListener('click', onBackdrop);
-    try { backdrop.remove(); } catch {}
+    try { layer.remove(); } catch {}
   }
   return cleanup;
 }
-</script>
-
 
   
 function openConfirmDialog(msg, onOK){

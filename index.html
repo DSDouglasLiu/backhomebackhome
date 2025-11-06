@@ -649,81 +649,84 @@ function openEditTimeDialog(initialHHMMSS, onOK){
 }
 
 /* ---------------- 主渲染 ---------------- */
-function renderVehicles(cfg, data){
+function renderVehicles(cfg, data) {
   const box = document.getElementById('vehList');
   box.innerHTML = '';
 
-  const canWrite = (currentUser && currentUser.permission === '全功能');
+  const canWrite = currentUser?.permission === '全功能';
 
+  // 找表頭
   const headerRowIdx = data.findIndex(row =>
     Array.isArray(row) &&
     String(row[0] || '').trim() === '編號' &&
     String(row[1] || '').trim().startsWith('區域') &&
     String(row[2] || '').trim() === '車號'
   );
-  if (headerRowIdx === -1) { box.textContent = '❌ 找不到表頭'; return; }
+  if (headerRowIdx === -1) {
+    box.textContent = '找不到表頭';
+    return;
+  }
 
   const header = data[headerRowIdx].map(c => String(c || '').trim());
   const rows = data
     .slice(headerRowIdx + 1)
-    .filter(r => {
-      if (!Array.isArray(r)) return false;
-      const no   = String(r[0] || '').trim();
-      const area = String(r[1] || '').trim();
-      const car  = String(r[2] || '').trim();
-      return no && area && car;
-    });
+    .filter(r => Array.isArray(r) && String(r[0] || '').trim() && String(r[1] || '').trim() && String(r[2] || '').trim());
 
-  if (!rows.length){ box.textContent = '(這張表目前沒有車輛資料)'; return; }
+  if (!rows.length) {
+    box.textContent = '(這張表目前沒有車輛資料)';
+    return;
+  }
+
+  const cards = [];
 
   rows.forEach((row, idx) => {
     const area = String(row[1] || '').trim();
     const car  = String(row[2] || '').trim();
+    const baseRow = headerRowIdx + 2 + idx; // 1-based for Google Apps Script
 
+    // 計算完成度
+    const { completed, total } = computeCompletion(cfg, header, row);
+
+    // 建立卡片（原本所有邏輯不變）
     const card = document.createElement('div');
     card.className = 'veh-card';
 
-    const title = document.createElement('div');
-    title.innerHTML = `
-      <div class="veh-title-main">${area}</div>
-      <div class="veh-title-sub">${car}</div>
+    // title
+    card.innerHTML = `
+      <div>
+        <div class="veh-title-main">${area}</div>
+        <div class="veh-title-sub">${car}</div>
+      </div>
     `;
-    card.appendChild(title);
 
     const stepsBox = document.createElement('div');
-    const baseRow = headerRowIdx + 2 + idx;  // 1-based row for writes
-
     cfg.steps.forEach(st => {
       const colIdx = header.indexOf(st);
+      const rawVal = (colIdx !== -1 && row[colIdx] != null) ? String(row[colIdx]).trim() : '';
+      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
+
       const rowEl = document.createElement('div');
       rowEl.className = 'step-row';
-
-      const rawVal = (colIdx !== -1 && row[colIdx]) ? String(row[colIdx]).trim() : '';
-      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
 
       const labelEl = document.createElement('div');
       labelEl.className = 'step-label';
       labelEl.textContent = st;
       rowEl.appendChild(labelEl);
 
-      /* --- 車暫停位置（下拉） --- */
+      // 下拉：車暫停位置
       if (st === '車暫停位置') {
         const valueEl = document.createElement('div');
         const sel = document.createElement('select');
         sel.className = 'step-select select';
 
         const optEmpty = document.createElement('option');
-        optEmpty.value = '';
-        optEmpty.textContent = '— 請選擇 —';
+        optEmpty.value = ''; optEmpty.textContent = '— 請選擇 —';
         sel.appendChild(optEmpty);
-
         STOP_OPTIONS.forEach(opt => {
           const o = document.createElement('option');
-          o.value = opt;
-          o.textContent = opt;
+          o.value = opt; o.textContent = opt;
           sel.appendChild(o);
         });
-
         if (rawVal) sel.value = rawVal;
 
         const ghost = document.createElement('span');
@@ -750,7 +753,7 @@ function renderVehicles(cfg, data){
         return;
       }
 
-      /* --- 一般步驟：時間 + 三鍵 --- */
+      // 一般步驟
       const timeSpan = document.createElement('span');
       timeSpan.className = 'step-time';
       timeSpan.textContent = displayVal || '—';
@@ -764,11 +767,11 @@ function renderVehicles(cfg, data){
       btnPunch.textContent = '打卡';
 
       const btnEdit = document.createElement('button');
-      btnEdit.className  = 'btn btn--success btn--sm btn-edit';
+      btnEdit.className = 'btn btn--success btn--sm btn-edit';
       btnEdit.textContent = '修改';
 
       const btnDel = document.createElement('button');
-      btnDel.className   = 'btn btn--danger btn--sm btn-del';
+      btnDel.className = 'btn btn--danger btn--sm btn-del';
       btnDel.textContent = '刪除';
 
       btnG.appendChild(btnPunch);
@@ -777,28 +780,21 @@ function renderVehicles(cfg, data){
       rowEl.appendChild(btnG);
 
       if (!canWrite) {
-        btnPunch.disabled = true; btnEdit.disabled = true; btnDel.disabled = true;
+        btnPunch.disabled = btnEdit.disabled = btnDel.disabled = true;
         rowEl.classList.add('locked');
       } else {
         const prevOk = prevDone(cfg, header, row, st);
         const hasVal = !!rawVal;
 
         if (!prevOk && !hasVal) {
-          btnPunch.disabled = true; btnEdit.disabled = true; btnDel.disabled = true;
+          btnPunch.disabled = btnEdit.disabled = btnDel.disabled = true;
         } else {
           btnPunch.disabled = hasVal;
-          btnEdit.disabled  = !hasVal;
-          btnDel.disabled   = !hasVal;
+          btnEdit.disabled = btnDel.disabled = !hasVal;
 
-          btnPunch.onclick = () => onPunchClick(
-            cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl
-          );
-          btnEdit.onclick  = () => onEditTimeClick(
-            cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal
-          );
-          btnDel.onclick   = () => onDeleteTimeClick(
-            cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl
-          );
+          btnPunch.onclick = () => onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+          btnEdit.onclick  = () => onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
+          btnDel.onclick   = () => onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
         }
       }
 
@@ -807,14 +803,11 @@ function renderVehicles(cfg, data){
 
     card.appendChild(stepsBox);
 
-    /* --- 備註區 --- */
+    // 備註區（不變）
     const memoWrap = document.createElement('div');
     memoWrap.style.marginTop = '8px';
-
     const memoRow = document.createElement('div');
-    memoRow.style.display = 'flex';
-    memoRow.style.gap = '8px';
-    memoRow.style.alignItems = 'flex-start';
+    memoRow.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
 
     const memoTA = document.createElement('textarea');
     memoTA.className = 'textarea';
@@ -823,35 +816,31 @@ function renderVehicles(cfg, data){
 
     let memoColIdx = header.indexOf('備註');
     if (memoColIdx === -1) memoColIdx = header.length - 1;
-    const memoRaw = (memoColIdx !== -1 && row[memoColIdx]) ? String(row[memoColIdx]) : '';
-    memoTA.value = memoRaw;
+    memoTA.value = (memoColIdx !== -1 && row[memoColIdx]) ? String(row[memoColIdx]) : '';
 
     const memoBtn = document.createElement('button');
     memoBtn.className = 'btn btn--primary';
     memoBtn.textContent = '儲存';
-    if (!(currentUser && currentUser.permission === '全功能')) memoBtn.disabled = true;
+    memoBtn.disabled = !canWrite;
 
-    memoBtn.onclick = async ()=>{
-      if (!currentUser) return alert('請先登入');
-      if (currentUser.permission !== '全功能') return alert('權限不足');
-
+    memoBtn.onclick = async () => {
+      if (!canWrite) return;
       await withLoading(async () => {
         const body = {
           sheet: cfg.sheet,
           email: currentUser.email,
-          writes: [{ row: baseRow, col: memoColIdx+1, value: memoTA.value }]
+          writes: [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }]
         };
         const r = await fetch(API_BASE + '?action=update', {
-          method:'POST',
-          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(body)
         });
         const j = await r.json();
-        if (!j.ok) throw new Error(j.error||'unknown');
+        if (!j.ok) throw new Error(j.error || 'unknown');
         await sleep(250);
         await reloadSheet();
-      }, '儲存中…');
-
+      }, '儲存備註…');
       showNotif('備註已儲存', false);
     };
 
@@ -860,8 +849,23 @@ function renderVehicles(cfg, data){
     memoWrap.appendChild(memoRow);
     card.appendChild(memoWrap);
 
-    box.appendChild(card);
+    // 存入 cards 陣列
+    cards.push({
+      el: card,
+      completed,
+      total,
+      origOrder: idx   // 原始在 Google Sheet 的相對順序
+    });
   });
+
+  // 穩定排序：完成越少 → 越前面；同完成度 → 原始順序
+  cards.sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed - b.completed;
+    return a.origOrder - b.origOrder;
+  });
+
+  // 插入 DOM
+  cards.forEach(c => box.appendChild(c.el));
 }
 
 /* ---------------- 流程/寫入邏輯 ---------------- */
@@ -1028,6 +1032,30 @@ function lockFollowing(rowEl){
     it = it.nextElementSibling;
   }
 }
+
+/* ✅ 保險：統一判斷一個儲存格值是否算完成 */
+function isCompletedValue(v){
+  if (v == null) return false;
+  const s = String(v).trim();
+  if (!s) return false;
+  // 萬一有人真的把占位字元寫進去，也不算完成
+  if (s === '—' || s === '-') return false;
+  return true;
+}
+
+/* ① 計算完成度（替換你的 computeCompletion） */
+function computeCompletion(cfg, header, row) {
+  const usableSteps = cfg.steps.filter(st => header.indexOf(st) !== -1);
+  let completed = 0;
+  for (const st of usableSteps) {
+    const colIdx = header.indexOf(st);
+    const val = (colIdx !== -1 && colIdx < row.length) ? row[colIdx] : '';
+    if (isCompletedValue(val)) completed++;
+  }
+  return { completed, total: usableSteps.length };
+}
+
+  
 </script>
 
 </body>

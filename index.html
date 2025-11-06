@@ -1,343 +1,1292 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>車流人流退場情報</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>車流人流退場情報</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
 <style>
+/* =========== Design Tokens（Preferred 版） =========== */
 :root{
-  --radius-xs:6px; --radius-sm:8px; --radius-md:10px; --radius-lg:12px;
+  /* 半徑 */
+  --radius-xs:6px;  --radius-sm:8px;  --radius-md:10px; --radius-lg:12px;
+
+  /* 色票（light） */
   --primary-600:#1f6fe5; --primary-700:#165bd1; --primary-800:#1249ad;
   --success-600:#22c55e; --success-700:#16a34a; --success-800:#15803d;
-  --danger-600:#ef4444; --danger-700:#dc2626; --danger-800:#b91c1c;
-  --gray-50:#f8fafc; --gray-100:#f1f5f9; --gray-200:#e5e7eb; --gray-300:#cbd5e1;
-  --gray-400:#94a3b8; --gray-500:#64748b; --gray-600:#475569; --gray-700:#334155;
-  --gray-800:#1f2937; --gray-900:#0f172a;
-  --surface:rgba(255,255,255,.78);
-  --page-bg:linear-gradient(135deg,#eef2f3,#dfe9f3);
-  --text-strong:var(--gray-900); --text:var(--gray-800); --text-muted:var(--gray-600);
-  --border:rgba(148,163,184,.35);
+  --danger-600:#ef4444;  --danger-700:#dc2626;  --danger-800:#b91c1c;
+  --gray-50:#f8fafc;  --gray-100:#f1f5f9; --gray-200:#e5e7eb;
+  --gray-300:#cbd5e1; --gray-400:#94a3b8; --gray-500:#64748b;
+  --gray-600:#475569; --gray-700:#334155; --gray-800:#1f2937; --gray-900:#0f172a;
+
+  --surface: rgba(255,255,255,.78);
+  --page-bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
+  --text-strong: var(--gray-900);
+  --text: var(--gray-800);
+  --text-muted: var(--gray-600);
+  --border: rgba(148,163,184,0.35);
+  --focus:#93c5fd;
+
+  /* 字級（px/line-height, weight） */
+  --fz-display:28px; --lh-display:36px; --fw-display:700;  /* 頁面大標題 */
+  --fz-title:18px;   --lh-title:24px;   --fw-title:700;   /* 卡片主標 */
+  --fz-sub:14px;     --lh-sub:20px;     --fw-sub:600;     /* 車牌/副標 */
+  --fz-label:14px;   --lh-label:20px;   --fw-label:600;   /* 步驟/表頭 */
+  --fz-body:14px;    --lh-body:20px;    --fw-body:400;    /* 內文/按鈕 */
+  --fz-note:12px;    --lh-note:16px;    --fw-note:400;    /* 備註提示 */
+
   --shadow-card:0 8px 24px rgba(0,0,0,.08);
 }
-body{margin:0;min-height:100vh;background:var(--page-bg);color:var(--text);
-  backdrop-filter:blur(14px);font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;}
+body.dark{
+  --surface: rgba(15,23,42,.55);
+  --page-bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
+  --text-strong:#e5eaf3; --text:#e2e8f0; --text-muted:#93a3b5;
+  --border: rgba(148,163,184,0.25);
+  --shadow-card:0 8px 24px rgba(0,0,0,.35);
+}
+
+/* =========== Base =========== */
+body{
+  margin:0; min-height:100vh;
+  background:var(--page-bg); color:var(--text);
+  backdrop-filter: blur(14px);
+  font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
 .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
-h1{margin:0 0 12px;font-size:28px;line-height:36px;font-weight:700;color:var(--text-strong);}
+h1{margin:0 0 16px;font-size:var(--fz-display);line-height:var(--lh-display);font-weight:var(--fw-display);color:var(--text-strong);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
+.hide{display:none;}
 
-/* 三大 Tab */
-.main-tabs{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 8px;}
-.main-tab{background:var(--surface);color:var(--primary-600);border:2px solid transparent;
-  border-radius:12px;padding:10px 22px;font-weight:700;box-shadow:var(--shadow-card);
-  cursor:pointer;min-width:160px;text-align:center;transition:.2s;}
-.main-tab:hover{background:rgba(31,111,229,.08)}
-.main-tab.active{background:var(--primary-600);color:#fff;border-color:var(--primary-600);transform:translateY(-2px)}
+/* =========== Segmented Tabs（上方工作表） =========== */
+.sheet-tabs{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:center;       /* 垂直置中 */
+  justify-content:flex-start; /* 水平靠左 */
+}
+ 
+.tab,.btn-tab{
+  background:#fff;color:var(--primary-600);
+  border:1px solid var(--primary-600);border-radius:var(--radius-lg);
+  padding:6px 18px;font-size:var(--fz-body);font-weight:600;cursor:pointer;min-width:170px;text-align:center;
+}
+body.dark .tab, body.dark .btn-tab{background:transparent}
+.tab:hover,.btn-tab:hover{background:rgba(31,111,229,.06)}
+.tab.active,.btn-tab.active{background:var(--primary-600);color:#fff;border-color:var(--primary-600)}
+.tab:focus-visible,.btn-tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
-/* 共同卡片 */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow-card);}
-.grid{display:grid;gap:12px}
-.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:8px}
-.kpi .item{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
-.kpi .num{font-size:40px;font-weight:800;color:var(--primary-600);line-height:1}
-.kpi .lbl{margin-top:6px;color:var(--text-muted)}
+/* =========== 卡片與步驟列 =========== */
+.veh-list{display:grid;grid-template-columns:repeat(auto-fit, minmax(480px,1fr));gap:12px;margin-top:16px;}
+.veh-card{background:rgba(255,255,255,0.85);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px;}
+body.dark .veh-card{background:rgba(15,23,42,0.28);}
+.veh-title-main{font-weight:700;font-size:var(--fz-title);line-height:var(--lh-title);color:var(--text-strong);}
+.veh-title-sub{font-size:var(--fz-sub);line-height:var(--lh-sub);color:var(--text-muted);}
 
-.prog{margin-top:6px}
-.prog .head{display:flex;justify-content:space-between;margin-bottom:8px;font-weight:600}
-.bar{height:20px;background:#e5e7eb;border-radius:10px;overflow:hidden}
-.fill{height:100%;background:var(--primary-600);width:0%;transition:width .4s ease}
+.step-row{display:grid;grid-template-columns:180px 1fr auto;align-items:center;gap:10px;margin-bottom:6px;}
+.step-time{font-size:var(--fz-label);line-height:var(--lh-label);font-weight:600;color:rgba(15,23,42,.75);text-align:right;min-width:70px;font-feature-settings:"tnum" 1, "lnum" 1; font-variant-numeric:tabular-nums lining-nums;}
+body.dark .step-time{color:#cbd5e1}
 
-.stops{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
-.stop{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
-.stop .n{font-size:28px;font-weight:800;color:var(--primary-600);line-height:1}
+/* 下拉 */
+.step-select{min-width:170px;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;font-size:var(--fz-body);}
+.step-select:disabled{background:#e2e8f0;cursor:not-allowed;}
+/* 備註 */
+.textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;background:#fff;font-size:var(--fz-body);}
+.textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
-.area{display:grid;gap:10px}
-.area-row{display:grid;grid-template-columns:120px 1fr 60px;gap:10px;align-items:center}
-.area-name{font-weight:700}
-.area-bar{height:16px;background:#e5e7eb;border-radius:8px;overflow:hidden}
-.area-fill{height:100%;background:var(--success-600);width:0%}
+/* =========== Buttons 系列 =========== */
+.btn,.step-btn{
+  border:0;border-radius:var(--radius-md);padding:8px 14px;
+  background:#0f6efc;color:#fff;font-size:var(--fz-body);font-weight:600;cursor:pointer;
+  transition:background-color .12s ease,border-color .12s ease,filter .12s ease;
+  min-width:64px;text-align:center;
+}
+.btn--sm{padding:6px 12px}
+.btn--lg{padding:10px 18px;font-size:15px}
+.btn:focus-visible,.step-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+.btn[disabled],.step-btn[disabled]{background:var(--gray-300)!important;color:var(--gray-700)!important;cursor:not-allowed}
 
-.rank{display:grid;gap:8px}
-.rank-row{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px}
+/* 變體 */
+.btn--primary{background:var(--primary-600);} .btn--primary:hover{background:var(--primary-700);} .btn--primary:active{background:var(--primary-800);}
+.btn--success{background:var(--success-600);} .btn--success:hover{background:var(--success-700);} .btn--success:active{background:var(--success-800);}
+.btn--danger{background:var(--danger-600);}  .btn--danger:hover{background:var(--danger-700);}  .btn--danger:active{background:var(--danger-800);}
+.btn--secondary{background:#fff;color:var(--primary-600);border:1px solid var(--primary-600);} 
+body.dark .btn--secondary{background:transparent}
+.btn--secondary:hover{background:rgba(31,111,229,.06)}
 
-.hide{display:none}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
 
-/* 搜尋頁 */
-.searchbar{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
-.searchbar input{flex:1;min-width:240px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:15px}
-.btn{border:0;border-radius:10px;padding:10px 14px;background:var(--primary-600);color:#fff;font-weight:700;cursor:pointer}
-.btn:disabled{opacity:.6;cursor:not-allowed}
+/* 通知 */
+.notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;z-index:9990;}
+.notif.show{opacity:1;transform:translateY(0);}
 
-.result{display:grid;gap:12px}
-.scard{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px}
-.shead{font-size:18px;font-weight:800;margin-bottom:8px}
-.steps{display:grid;gap:6px}
-.step{display:grid;grid-template-columns:200px 1fr;gap:10px}
-.done{color:var(--success-700);font-weight:700}
-.muted{color:var(--gray-500)}
+/* ====== Modal（補上樣式） ====== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  display: block;
+}
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  min-width: 280px;
+  max-width: 90vw;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  z-index: 10001;
+  display: block;
+}
+body.dark .modal{ background:#0b1325; color:#e2e8f0 }
+.modal h3{ margin:0 0 10px; font-size:16px }
+.modal .row{ display:flex; gap:8px; align-items:center; margin:8px 0 }
+.modal input{ width:56px; padding:6px 8px; border:1px solid var(--border); border-radius:8px }
+.modal .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px }
+.modal .time-edit{
+  display:flex; align-items:center; justify-content:center; gap:10px; margin:8px 0 4px;
+}
+.modal .time-input{
+  width:64px; text-align:center; padding:6px 8px;
+  border:1px solid var(--border); border-radius:10px; font-weight:600;
+}
+.modal .colon{ font-size:20px; line-height:1; opacity:.5; margin:0 2px; user-select:none; }
+.modal .hint{ font-size:.9rem; line-height:1.6; opacity:.8; margin:2px 0; }
+body.modal-open{ overflow:hidden; touch-action:none; }
 
-.note{margin-top:18px;color:var(--gray-500);font-size:13px}
+/* ====== Loading Overlay（統一只用這個） ====== */
+#loading.loading{
+  position: fixed;
+  inset: 0;
+  display: none;              /* 由 .show 控制顯示 */
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.45);
+  z-index: 2147483000;        /* 超高層，壓過一切（含 modal） */
+}
+#loading.loading.show{ display: flex; }
+
+.loading-box{
+  display:flex; align-items:center; gap:10px;
+  background: var(--surface); color: var(--text);
+  border:1px solid var(--border); border-radius:12px;
+  padding:12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  backdrop-filter: blur(8px);
+}
+
+.spinner{
+  width:20px; height:20px; border-radius:50%;
+  border:2.5px solid #cbd5e1; border-top-color: var(--primary-600);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin{ to{ transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce){
+  .spinner{ animation: none; border-top-color:#cbd5e1; }
+}
+
+/* 顯示 overlay 時鎖住捲動（含手機） */
+body.loading-open{
+  overflow:hidden;
+  touch-action:none;
+  overscroll-behavior: contain;
+}
+
+/*（可保留）行動裝置 100dvh 修正：與 loading 無衝突 */
+@supports (height: 100dvh){
+  .modal-backdrop{ height: 100dvh; }
+}
+
+
+@media(max-width:768px){
+  .veh-list{ grid-template-columns:1fr; }
+  .sheet-tabs{ gap:10px; }
+}
+@media (max-width:480px){
+  .modal .time-input{ width:56px; }
+}
+/* ===== Overlay 全面修復（貼在檔案最後） ====================== */
+/* 1) 讓 .modal-backdrop 與 #loading 永遠覆蓋整個「視窗」 */
+.modal-backdrop,
+#loading.loading{
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;   /* 舊瀏覽器保險 */
+  height: 100dvh !important;  /* iOS Safari 真實可視高 */
+}
+
+/* 2) Loading 疊在最上層（高於任何 modal） */
+#loading.loading{ z-index: 2147483600 !important; }
+#loading.loading.show{ display: flex !important; }
+
+/* 3) 遮罩期間停用 body 的 backdrop-filter（修正 Safari fixed+filter bug） */
+body.loading-open,
+body.modal-open{
+  backdrop-filter: none !important;
+}
+
+/* 4) 讓等待訊息永遠在視窗中央；向下捲也不會跑掉（建議開啟） */
+.loading-box{
+  position: sticky;
+  top: 50%;
+  transform: translateY(-50%);
+}
+/* ===== 登入畫面置中（未登入時 body 會有 .login） ===== */
+body.login .wrap{
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;          /* 水平＋垂直置中 */
+  padding: 24px 16px;
+}
+
+/* 你的最上方那個包含 h1 / #signin / #userInfo 的容器是 wrap 裡的第一個 div */
+body.login .wrap > div:first-child{
+  display: grid !important;     /* 蓋過內聯的 display:flex */
+  grid-auto-flow: row;
+  gap: 16px;
+  justify-items: center;
+  text-align: center;
+  width: 100%;
+}
+
+/* 標題在登入畫面放大一點、置中 */
+body.login h1{
+  margin: 0;
+  text-align: center;
+  font-size: clamp(28px, 6vw, 56px);
+  line-height: 1.2;
+}
+
+/* 未登入時隱藏這些主內容區域（保險，避免閃動） */
+body.login #tabs,
+body.login #content,
+body.login #userInfo{ display: none !important; }
+
+/* ===== 登入畫面：真置中 + 不可捲動（貼在最後） ===== */
+body.login{
+  /* 讓整頁高度等於可見視窗，並鎖住捲動 */
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body.login .wrap{
+  /* 不用 min-height，改用「剛好等於視窗」避免多出幾 px */
+  height: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px;                 /* 移除原本 48px 底部 padding */
+  display: grid;
+  place-items: center;             /* 水平＋垂直置中 */
+}
+
+/* 你的 wrap 裡的第一個區塊（含 h1 / #signin / #userInfo）改成直向排列 */
+body.login .wrap > div:first-child{
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 5vh, 100px);     /* 標題與按鈕的彈性間距 */
+  width: 100%;
+  text-align: center;
+}
+
+/* 標題視覺 */
+body.login h1{
+  margin: 0;
+  text-align: center;
+  font-size: clamp(36px, 8vw, 64px);
+  line-height: 1.15;
+}
+
+/* 未登入時只顯示登入用區塊，避免閃動 */
+body.login #tabs,
+body.login #content,
+body.login #userInfo{ display: none !important; }
+
+/* 確保 Google 登入按鈕在置中容器可見 */
+body.login #signin{ display: block; }
+
+/* 加在 <style> 區塊最下面 */
+#logoutBtn {
+  white-space: nowrap;
+}
+#logoutBtn:hover { background:rgba(239,68,68,.1) !important; }  
+
+/* ===== 頂層三頁 Tab（比四顆 button 更高一層） ===== */
+.main-tabs{
+  display:flex; gap:12px; margin:6px 0 8px; flex-wrap:wrap;
+}
+.main-tab{
+  background:#fff; color:var(--primary-600);
+  border:1px solid var(--primary-600); border-radius:var(--radius-lg);
+  padding:8px 20px; font-size:15px; font-weight:700; cursor:pointer;
+  min-width:120px; text-align:center;
+}
+body.dark .main-tab{ background:transparent; }
+.main-tab:hover{ background:rgba(31,111,229,.06) }
+.main-tab.active{ background:var(--primary-600); color:#fff }
+
+/* 每個頁面容器 */
+.tab-pane{ margin-top:8px; }
+
+/* 未登入時隱藏頂層三頁籤（避免閃動） */
+body.login #mainTabs{ display:none !important; }
+  
+  
 </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>車流人流退場情報</h1>
-
-    <div class="main-tabs">
-      <button class="main-tab active" data-tab="punch">打卡作業</button>
-      <button class="main-tab" data-tab="dashboard">整體情報</button>
-      <button class="main-tab" data-tab="single">個別情報</button>
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+      <div>
+        <h1>車流人流退場情報</h1>
+      </div>
+      <div id="signin"></div>
+      <!-- 把你原本的 <div id="userInfo"> 這整段換成下面這段 -->
+<div id="userInfo" class="hide" style="display:flex; align-items:center; gap:12px; font-size:.875rem;">
+  <span id="userDisplay"></span>
+  <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">
+    登出
+  </button>
+</div>
     </div>
 
-    <!-- 打卡作業（預覽用占位） -->
-    <div id="punch" class="tab">
-      <div class="card">
-        <b>打卡作業</b><br/>這是預覽頁。等你要接回既有打卡 UI，我再把你原本的 renderVehicles(...) 串回來。
-      </div>
-    </div>
+<!-- ✅ 頂層 3 個 Tab（比四顆 button 更高一層） -->
+<div id="mainTabs" class="main-tabs">
+  <button class="main-tab active" data-target="pane-punch">登錄</button>
+  <button class="main-tab" data-target="pane-dashboard">整體情報</button>
+  <button class="main-tab" data-target="pane-single">個別情報</button>
+</div>
 
-    <!-- 整體情報 -->
-    <div id="dashboard" class="tab hide">
-      <div class="grid">
-        <div class="kpi">
-          <div class="item"><div class="num" id="kTotal">–</div><div class="lbl">總車次</div></div>
-          <div class="item"><div class="num" id="kDone">–</div><div class="lbl">已離場</div></div>
-          <div class="item"><div class="num" id="kOn">–</div><div class="lbl">在上平台</div></div>
-          <div class="item"><div class="num" id="kWait">–</div><div class="lbl">待 Call 上車</div></div>
-        </div>
+<!-- ✅ 第 1 頁：沿用你原本的畫面（四顆小 button + 車卡列表） -->
+<div id="pane-punch" class="tab-pane">
+  <!-- （原本）tabs：四顆小按鈕的容器 -->
+  <div id="tabs" class="card hide" style="padding-bottom:6px;">
+    <div class="sheet-tabs" id="sheetTabs"></div>
+  </div>
+  <!-- （原本）內容：車卡列表 -->
+  <div id="content" class="hide">
+    <div id="vehList" class="veh-list"></div>
+  </div>
+</div>
 
-        <div class="card prog">
-          <div class="head"><span>整體退場進度</span><span id="pTxt">0%</span></div>
-          <div class="bar"><div id="pFill" class="fill"></div></div>
-        </div>
+<!-- ✅ 第 2 頁：整體情報（暫空） -->
+<div id="pane-dashboard" class="tab-pane hide">
+  <div class="card" style="min-height:360px;display:flex;align-items:center;justify-content:center;">
+    （整體情報頁：先空白，之後再放內容）
+  </div>
+</div>
 
-        <div class="card">
-          <h3 style="margin:0 0 10px">車暫停位置分布</h3>
-          <div id="stopGrid" class="stops"></div>
-        </div>
+<!-- ✅ 第 3 頁：單台情報（暫空） -->
+<div id="pane-single" class="tab-pane hide">
+  <div class="card" style="min-height:360px;display:flex;align-items:center;justify-content:center;">
+    （個別情報頁：先空白，之後再放內容）
+  </div>
+</div>
 
-        <div class="card">
-          <h3 style="margin:0 0 10px">各區域進度</h3>
-          <div id="areaProg" class="area"></div>
-        </div>
 
-        <div class="card">
-          <h3 style="margin:0 0 10px">目前瓶頸步驟（未離場）</h3>
-          <div id="bottleneck" class="rank"></div>
-          <div class="note">依各車「最後完成的步驟」彙整，顯示人數最多的步驟。</div>
-        </div>
-      </div>
-    </div>
+  <div id="notif" class="notif"></div>
 
-    <!-- 個別情報 -->
-    <div id="single" class="tab hide">
-      <div class="card">
-        <div class="searchbar">
-          <input id="kw" placeholder="輸入車號（支援關鍵字，例如 6917 或 KAA-）" />
-          <button class="btn" id="btnSearch">搜尋</button>
-          <button class="btn" id="btnClear" style="background:#64748b">清除</button>
-        </div>
-        <div id="sinfo" class="muted" style="margin:4px 2px 10px">輸入關鍵字即時顯示結果</div>
-        <div id="sList" class="result"></div>
-      </div>
+  <!-- 全螢幕 Loading Overlay -->
+  <div id="loading" class="loading" role="status" aria-live="polite" aria-busy="true">
+    <div class="loading-box">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="loading-text">處理中…</div>
     </div>
   </div>
 
 <script>
-/* ==== 你環境可改這行連到 Apps Script：總表 ==== */
+const GOOGLE_CLIENT_ID = '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com';
 const API_BASE = 'https://script.google.com/macros/s/AKfycbxbeknXeJ2s2NnIqTwIwNdZnsbiI9UlGkQpSGfHq2TlmnITZ75Ub4ySwn6UGmJk3AXjNg/exec';
-const SUMMARY_SHEET = '總表';
 
-/* ==== 定義步驟欄位（名稱以你表頭為準） ==== */
-const STEP_ORDER = [
-  '車長通知行李到齊',
-  'Call 車上行李',
-  '車已上遊覽車平台',
-  '車前往排車隊',
-  '車暫停位置',          // 文字
-  '退場人員已到齊',
-  '已 Call 車上遊覽',
-  '人已前往平台',
-  '車第二次上遊覽車平台',
-  '車已離開遊覽車平台',
-  '車已離開禪堂平台'
+/* ✅ 三張你說要「車暫停位置」的表，共用同一組地點 */
+const STOP_OPTIONS = [
+  '禪堂平台',
+  '法大路（法大一橋到法心南路間）',
+  '法心南路',
+  '法鼓路靈山勝境石往外',
+  '法新北路'
 ];
-const FINAL_COLS = ['車已離開遊覽車平台','車已離開禪堂平台'];
-const ON_PLATFORM_COLS = ['車已上遊覽車平台'];
 
-/* ==== 狀態 ==== */
-let header=[], map={}, rows=[];
+const SHEET_CONFIGS = [
+  {
+    key: '地區專車退場（遊覽車平台）',
+    sheet: '地區專車退場（遊覽車平台）',
+    steps: [
+      '車長通知行李到齊',
+      'Call 車上行李',
+      '車已上遊覽車平台',
+      '車前往排車隊',
+      '車暫停位置',
+      '退場人員已到齊',
+      '已 Call 車上遊覽車平台',
+      '人已前往平台',
+      '車第二次上遊覽車平台',
+      '車已離開遊覽車平台'
+    ]
+  },
+  {
+    key: '地區專車退場（禪堂平台）',
+    sheet: '地區專車退場（禪堂平台）',
+    steps: [
+      '車長通知行李到齊',
+      'Call 車上行李',
+      '車已上遊覽車平台',
+      '車前往排車隊',
+      '車暫停位置',
+      '車已離開禪堂平台'
+    ]
+  },
+  {
+    key: '水陸專車退場',
+    sheet: '水陸專車退場',
+    steps: [
+      '已 Call 車排車隊',
+      '已排好車隊',
+      '退場人員已到齊',
+      '已 Call 車上遊覽車平台',
+      '車已上遊覽車平台',
+      '車暫停位置',
+      '車已離開遊覽車平台'
+    ]
+  },
+  {
+    key: '288法青退場',
+    sheet: '288法青退場',
+    steps: [
+      '退場人員已到齊',
+      '車已經上遊覽車平台',
+      '車已經離開遊覽車平台'
+    ]
+  }
+];
 
-/* ==== UI 切換 ==== */
-document.querySelectorAll('.main-tab').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('.main-tab').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    document.querySelectorAll('.tab').forEach(x=>x.classList.add('hide'));
-    document.getElementById(b.dataset.tab).classList.remove('hide');
-    if(b.dataset.tab==='dashboard') ensureDataThen(renderDashboard);
-    if(b.dataset.tab==='single') ensureDataThen(initSearchTab);
+let currentUser = null;
+let currentSheetKey = SHEET_CONFIGS[0].key;
+let sheetData = [];
+
+const TOKEN_STORAGE_KEY = 'ddcc_user_token';   // localStorage 儲存 key
+let idToken = null;                            // 目前有效的 idToken
+  
+/* ---------------- 初始登入與頁籤 ---------------- */
+// ===== 頁面載入時：自動恢復登入狀態 =====
+window.onload = function(){
+  // 1. 先檢查 localStorage 有沒有 token
+  const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
+  if (saved) {
+    idToken = saved;
+    // 用這顆 token 去後端驗證（可能過期）
+    fetch(API_BASE + '?action=verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ idToken })
+    })
+    .then(r=>r.json())
+    .then(j=>{
+      if (j.error) throw new Error(j.error);
+      currentUser = j;
+      finishLoginUI();
+      buildTabs();
+      loadSheetData(currentSheetKey);
+    })
+    .catch(()=>{
+      // token 無效或過期 → 清除並要求重新登入
+      logout();
+      initGoogleSignIn();
+    });
+  } else {
+    // 完全沒登入過 → 正常顯示登入按鈕
+    initGoogleSignIn();
+  }
+  document.getElementById('logoutBtn').addEventListener('click', logout);
+};
+
+function initGoogleSignIn() {
+  document.body.classList.add('login');
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredential
   });
+  google.accounts.id.renderButton(
+    document.getElementById('signin'),
+    { theme:'outline', size:'large' }
+  );
+  buildTabs();
+}  
+  
+function buildTabs(){
+  const box = document.getElementById('sheetTabs');
+  box.innerHTML = '';
+  if (!SHEET_CONFIGS.length) return;
+
+  const prevKey = currentSheetKey;
+  if (!SHEET_CONFIGS.some(s => s.key === currentSheetKey)) {
+    currentSheetKey = SHEET_CONFIGS[0].key;
+  }
+  const keyChanged = (prevKey !== currentSheetKey);
+
+  SHEET_CONFIGS.forEach(cfg => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-tab tab' + (cfg.key === currentSheetKey ? ' active' : '');
+    btn.textContent = cfg.key;
+    btn.onclick = () => {
+      currentSheetKey = cfg.key;
+      box.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      loadSheetData(currentSheetKey);
+    };
+    box.appendChild(btn);
+  });
+
+  const contentShown = !document.getElementById('content').classList.contains('hide');
+  if (keyChanged && contentShown) loadSheetData(currentSheetKey);
+}
+
+
+async function handleCredential(resp) {
+  idToken = resp.credential;                   // ← 先存起來
+  localStorage.setItem(TOKEN_STORAGE_KEY, idToken); // ← 永久保存
+
+  try {
+    const r = await fetch(API_BASE + '?action=verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ idToken })
+    });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+
+    // 成功 → 登入狀態 UI
+    currentUser = j;
+    finishLoginUI();
+    loadSheetData(currentSheetKey);
+  } catch (err) {
+    showNotif('登入失敗：' + err.message, true);
+    logout(); // 清除殘留 token
+  }
+}
+// ===== 登入成功後統一呼叫這個（包含 F5 恢復）=====
+function finishLoginUI() {
+  document.body.classList.remove('login');
+  document.getElementById('signin').classList.add('hide');
+  const ui = document.getElementById('userInfo');
+  ui.classList.remove('hide');
+  document.getElementById('userDisplay').innerHTML = 
+    `${currentUser.name||''} &lt;${currentUser.email}&gt; ｜ 權限：<b>${currentUser.permission}</b>`;
+  document.getElementById('tabs').classList.remove('hide');
+  document.getElementById('content').classList.remove('hide');
+  if (currentUser.permission === '檢視') {
+    showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
+  }
+}
+
+// ===== 登出功能（加強版）=====
+function logout() {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  idToken = null;
+  currentUser = null;
+  
+  // 重要！把舊的 Google 按鈕整個清掉
+  const signinDiv = document.getElementById('signin');
+  signinDiv.innerHTML = '';                 // ← 這行是關鍵！
+  
+  // 重新初始化 Google 登入按鈕
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredential
+  });
+  google.accounts.id.renderButton(signinDiv, {
+    theme: 'outline',
+    size: 'large'
+  });
+
+  // 強制顯示登入畫面
+  document.body.classList.add('login');
+  document.getElementById('userInfo').classList.add('hide');
+  document.getElementById('tabs').classList.add('hide');
+  document.getElementById('content').classList.add('hide');
+
+  showNotif('已登出', false);
+}
+
+async function loadSheetData(key){
+  const cfg = SHEET_CONFIGS.find(s=>s.key===key);
+  document.getElementById('vehList').textContent = '讀取中...';
+  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+  const j = await r.json();
+  if (j.error){ document.getElementById('vehList').textContent = '❌ '+j.error; return; }
+  sheetData = j.values || [];
+  renderVehicles(cfg, sheetData);
+}
+
+/* ---------------- 時間格式工具 ---------------- */
+function formatSheetTime(val){
+  if (!val) return '';
+  const s = String(val).trim();
+
+  if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) {
+    const parts = s.split(':');
+    return parts.map(p=>p.padStart(2,'0')).join(':');
+  }
+  if (/^\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}$/.test(s)) {
+    return s.split(' ')[1].split(':').map(p=>p.padStart(2,'0')).join(':');
+  }
+  const m = s.match(/^(上午|下午)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m){
+    let h = parseInt(m[2],10);
+    const mm = m[3];
+    const ss = m[4] || '00';
+    if (m[1] === '下午' && h < 12) h += 12;
+    if (m[1] === '上午' && h === 12) h = 0;
+    return `${String(h).padStart(2,'0')}:${mm}:${ss}`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(s)) {
+    const d = new Date(s);
+    const tw = new Date(d.getTime() + 8*60*60*1000);
+    const hh = String(tw.getUTCHours()).padStart(2,'0');
+    const mm = String(tw.getUTCMinutes()).padStart(2,'0');
+    const ss = String(tw.getUTCSeconds()).padStart(2,'0');
+    return `${hh}:${mm}:${ss}`;
+  }
+  return s;
+}
+function getTaipeiHHMMSS() {
+  const f = new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    hour12: false,
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+  return f.format(new Date());
+}
+const pad2 = n => String(n).padStart(2,'0');
+const splitHMS = (val) => {
+  const s = String(val||'').trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  return m ? [pad2(m[1]), m[2], m[3] ? m[3] : '00'] : ['','',''];
+};
+const isValidHMS = (h,m,s) => {
+  const hh = Number(h), mm = Number(m), ss = Number(s);
+  if (!/^\d{2}$/.test(h) || !/^\d{2}$/.test(m) || !/^\d{2}$/.test(s)) return false;
+  return hh>=0 && hh<=23 && mm>=0 && mm<=59 && ss>=0 && ss<=59;
+};
+const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------------- Loading Overlay ---------------- */
+function ensureLoadingOverlay(){
+  let el = document.getElementById('loadingOverlay');
+  if (!el){
+    el = document.createElement('div');
+    el.id = 'loadingOverlay';
+    el.style.cssText = `
+      position:fixed; inset:0; display:none; z-index:12000;
+      background:rgba(0,0,0,.45);
+      backdrop-filter:saturate(120%) blur(2px);
+      align-items:center; justify-content:center; color:#fff; font-weight:600;
+    `;
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+      background:rgba(15,23,42,.9); padding:14px 18px; border-radius:12px;
+      box-shadow:0 8px 30px rgba(0,0,0,.35); min-width:160px; text-align:center;
+      display:flex; gap:10px; align-items:center; justify-content:center;
+    `;
+    const spinner = document.createElement('div');
+    spinner.style.cssText = `
+      width:18px; height:18px; border:3px solid rgba(255,255,255,.35);
+      border-top-color:#fff; border-radius:50%; animation:spin 1s linear infinite;
+    `;
+    const label = document.createElement('span');
+    label.id = 'loadingLabel';
+    label.textContent = '處理中…';
+
+    panel.appendChild(spinner);
+    panel.appendChild(label);
+    el.appendChild(panel);
+    document.body.appendChild(el);
+
+    // 簡單 keyframes
+    const style = document.createElement('style');
+    style.textContent = `@keyframes spin{to{transform:rotate(360deg)}}`;
+    document.head.appendChild(style);
+  }
+  return el;
+}
+function showLoading(msg='處理中…'){
+  // 先把視窗移到頂端，確保即使遇到奇妙瀏覽器行為也看得到置中訊息
+  window.scrollTo(0, 0);
+
+  const el = document.getElementById('loading');
+  if (!el) return;
+  const label = el.querySelector('.loading-text');
+  if (label) label.textContent = msg;
+
+  el.setAttribute('aria-busy', 'true');
+  el.classList.add('show');
+  document.body.classList.add('loading-open');  // 鎖捲＋停用 body 濾鏡
+}
+
+function hideLoading(){
+  const el = document.getElementById('loading');
+  if (!el) return;
+  el.classList.remove('show');
+  el.setAttribute('aria-busy', 'false');
+  document.body.classList.remove('loading-open'); // ✅ 解鎖
+}
+async function withLoading(fn, msg='處理中…'){
+  showLoading(msg);
+  try { return await fn(); }
+  finally { hideLoading(); }
+}
+
+
+/* ---------------- Modal（修正版） ---------------- */
+function closeAllModals(){
+  document.querySelectorAll('.modal, .modal-backdrop').forEach(el=>{ try{ el.remove(); }catch{} });
+  document.body.classList.remove('modal-open');
+}
+
+
+function openModal(element){
+  // 1) 建立全螢幕 overlay（固定在視窗、置中子元素）
+  const layer = document.createElement('div');
+  // 用 inline style 確保任何 CSS 都蓋不掉
+  // openModal 裡
+Object.assign(layer.style, {
+  position: 'fixed',
+  inset: '0',
+  width: '100vw',
+  height: '100dvh',
+  background: 'rgba(0,0,0,.45)',
+  zIndex: '2147483200',      // ⬅ 建議這裡略低於 #loading 的 2147483600
+  display: 'grid',
+  placeItems: 'center'
 });
 
-/* ==== 先載資料（讀不到就用假資料） ==== */
-async function ensureDataThen(fn){
-  if(rows.length){ fn(); return; }
-  try{
-    const r = await fetch(API_BASE+'?action=get&sheet='+encodeURIComponent(SUMMARY_SHEET));
-    const j = await r.json();
-    if(!j.values || !j.values.length) throw new Error('no data');
-    header = j.values[0]; map = indexHeader(header);
-    rows = j.values.slice(1).filter(r=> (r[map['車號']]||'').toString().trim() ).map(r=> toRow(r));
-  }catch(e){
-    // 假資料（預覽）
-    header = ['編號','區域','車次編號','車號','最新狀態','車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','退場人員已到齊','已 Call 車上遊覽','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台','備註'];
-    map = indexHeader(header);
-    const demo = [
-      ['1','安和1車','1','KAA-9033','','18:52:55','21:54:13','','','法心南路','','','','','',''],
-      ['2','安和7車','9','KAA-6917','','21:54:22','','21:55:40','','禪堂平台','','','','','',''],
-      ['3','台中5車','5','KAA-5857','','','','21:40:10','','法鼓路靈山勝境石往外','','','','','',''],
-      ['4','高雄1車','9','492-RR','','','','','','','','','','','21:58:02',''],
-      ['5','台南2車','8','KAC-1857','','20:10:00','20:30:00','20:45:00','','禪堂平台','','','','','','']
-    ];
-    rows = demo.map(r=>toRow(r));
+
+  // 2) 確保對話框樣式正常：把 fixed/transform 拿掉改由 overlay 置中
+  element.classList.add('modal'); // 仍保留你原本的視覺樣式（底色/圓角/陰影等）
+  Object.assign(element.style, {
+    position: 'relative',
+    top: 'auto',
+    left: 'auto',
+    right: 'auto',
+    bottom: 'auto',
+    transform: 'none',
+    margin: '0'
+  });
+
+  // 3) 掛上去
+  layer.appendChild(element);
+  document.body.appendChild(layer);
+  document.body.classList.add('modal-open'); // 鎖捲動
+
+  // 4) ESC 關閉
+  const onEsc = (e) => { if (e.key === 'Escape') cleanup(); };
+  document.addEventListener('keydown', onEsc);
+
+  // 5) 點遮罩不關閉（若要點遮罩關閉，解除註解下面兩行）
+  layer.addEventListener('click', (e) => {
+    // if (e.target === layer) cleanup();
+  });
+  element.addEventListener('click', (e) => e.stopPropagation());
+
+  function cleanup(){
+    document.body.classList.remove('modal-open');
+    document.removeEventListener('keydown', onEsc);
+    try { layer.remove(); } catch {}
   }
-  fn();
+  return cleanup;
 }
 
-/* ==== 解析工具 ==== */
-function indexHeader(h){ const m={}; h.forEach((t,i)=>{ m[String(t||'').trim()] = i; }); return m; }
-function get(r, name){ const i = map[name]; return (i==null)?'': String(r[i]??'').trim(); }
-function toRow(r){
-  return {
-    raw:r,
-    區域:get(r,'區域'),
-    車號:get(r,'車號'),
-    暫停:get(r,'車暫停位置') || '',
-    steps: STEP_ORDER.map(n=> ({ name:n, val:get(r,n) }) )
+  
+function openConfirmDialog(msg, onOK){
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3>確認刪除</h3>
+    <div class="modal-msg" style="font-size:15px;line-height:1.6;margin:4px 0 8px;">${msg}</div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-del">確定</button>
+    </div>`;
+  const close = openModal(box);
+  const [btnCancel, btnOK] = box.querySelectorAll('button');
+  btnCancel.onclick = close;
+  btnOK.onclick = ()=>{ try{ onOK && onOK(); } finally{ close(); } };
+}
+function openEditTimeDialog(initialHHMMSS, onOK){
+  const [h0,m0,s0] = splitHMS(initialHHMMSS);
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3>修改時間</h3>
+    <div class="time-edit" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0 4px;">
+      <input id="hh" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${h0}" aria-label="小時" style="width:64px;text-align:center;padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-weight:600;">
+      <span class="colon" style="font-size:20px;line-height:1;opacity:.5;margin:0 2px;user-select:none;">:</span>
+      <input id="mm" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${m0}" aria-label="分鐘" style="width:64px;text-align:center;padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-weight:600;">
+      <span class="colon" style="font-size:20px;line-height:1;opacity:.5;margin:0 2px;user-select:none;">:</span>
+      <input id="ss" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${s0}" aria-label="秒" style="width:64px;text-align:center;padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-weight:600;">
+    </div>
+    <div class="hint" style="opacity:.8;">請輸入 2 位數！下午兩點請輸入 14。</div>
+    <div class="actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-edit">確定</button>
+    </div>`;
+
+  const close = openModal(box);
+  const hh = box.querySelector('#hh'), mm = box.querySelector('#mm'), ss = box.querySelector('#ss');
+  const [btnCancel, btnOK] = box.querySelectorAll('button');
+
+  [hh,mm,ss].forEach(inp=>{
+    inp.addEventListener('input', ()=>{ inp.value = inp.value.replace(/\D/g,'').slice(0,2); });
+  });
+
+  btnCancel.onclick = close;
+  btnOK.onclick = ()=>{
+    const H = pad2(hh.value||''), M = pad2(mm.value||''), S = pad2(ss.value||'');
+    if (!isValidHMS(H,M,S)){ showNotif('格式需為 HH(00–23) / MM(00–59) / SS(00–59)', true); return; }
+    try{ onOK(`${H}:${M}:${S}`); } finally{ close(); }
   };
 }
-function hasVal(v){ return v!=null && String(v).trim()!==''; }
-function rowFinished(row){ return FINAL_COLS.some(c => hasVal(get(row.raw,c))); }
-function rowOnPlatform(row){ return ON_PLATFORM_COLS.some(c => hasVal(get(row.raw,c))) && !rowFinished(row); }
-function lastDoneStep(row){
-  // 文字欄「車暫停位置」若有值也視為到達該步
-  let idx=-1, t='';
-  row.steps.forEach((s,i)=>{ if(hasVal(s.val)){ idx=i; t=s.val; } });
-  return {idx, name: idx>=0? row.steps[idx].name : '尚未開始', time:t};
-}
-function pct(a,b){ return b? Math.round(a*1000/b)/10 : 0; }
 
-/* ==== 儀表板 ==== */
-function renderDashboard(){
-  const total = rows.length;
-  const finished = rows.filter(rowFinished).length;
-  const onPlat = rows.filter(rowOnPlatform).length;
-  // 待 Call: 「車長通知行李到齊」有值且「Call 車上行李」還沒
-  const waitCall = rows.filter(r => hasVal(get(r.raw,'車長通知行李到齊')) && !hasVal(get(r.raw,'Call 車上行李')) && !rowFinished(r)).length;
+/* ---------------- 主渲染 ---------------- */
+function renderVehicles(cfg, data) {
+  const box = document.getElementById('vehList');
+  box.innerHTML = '';
 
-  document.getElementById('kTotal').textContent = total;
-  document.getElementById('kDone').textContent = finished;
-  document.getElementById('kOn').textContent   = onPlat;
-  document.getElementById('kWait').textContent = waitCall;
+  const canWrite = currentUser?.permission === '全功能';
 
-  const prog = pct(finished,total);
-  document.getElementById('pTxt').textContent = prog+'%';
-  document.getElementById('pFill').style.width = prog+'%';
-
-  // 停等分布
-  const stopCnt = {};
-  rows.forEach(r=>{
-    const k = r.暫停 || '未設定';
-    stopCnt[k] = (stopCnt[k]||0)+1;
-  });
-  const stopGrid = document.getElementById('stopGrid');
-  stopGrid.innerHTML = Object.keys(stopCnt).sort().map(k=>(
-    `<div class="stop"><div class="n">${stopCnt[k]}</div><div class="muted">${k}</div></div>`
-  )).join('') || '<div class="muted">目前沒有停等資料</div>';
-
-  // 區域進度
-  const areaMap = {};
-  rows.forEach(r=>{
-    const key=r.區域||'未分區';
-    if(!areaMap[key]) areaMap[key]={total:0,done:0};
-    areaMap[key].total++;
-    if(rowFinished(r)) areaMap[key].done++;
-  });
-  const areaProg = document.getElementById('areaProg');
-  areaProg.innerHTML = Object.entries(areaMap).sort((a,b)=>a[0].localeCompare(b[0])).map(([name,v])=>{
-    const p = pct(v.done, v.total);
-    return `<div class="area-row">
-      <div class="area-name">${name}</div>
-      <div class="area-bar"><div class="area-fill" style="width:${p}%"></div></div>
-      <div class="muted">${v.done}/${v.total}</div>
-    </div>`;
-  }).join('');
-
-  // 瓶頸：未離場，取 last step 名稱，群組排序
-  const pend = rows.filter(r=>!rowFinished(r));
-  const bmap = {};
-  pend.forEach(r=>{
-    const s = lastDoneStep(r).name;
-    bmap[s] = (bmap[s]||0)+1;
-  });
-  const bottleneck = document.getElementById('bottleneck');
-  const list = Object.entries(bmap).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  bottleneck.innerHTML = list.length
-    ? list.map(([k,v])=>`<div class="rank-row"><div>${k}</div><b>${v}</b></div>`).join('')
-    : '<div class="muted">全數已離場或尚未開始</div>';
-}
-
-/* ==== 個別情報 ==== */
-function initSearchTab(){
-  // 一次渲染即可；即時搜尋
-  const $kw = document.getElementById('kw');
-  const $list = document.getElementById('sList');
-  const $info = document.getElementById('sinfo');
-
-  function render(q){
-    const kw = q.trim().toUpperCase();
-    const filtered = kw ? rows.filter(r => (r.車號||'').toUpperCase().includes(kw)) : [];
-    $info.textContent = kw ? `找到 ${filtered.length} 筆` : '輸入關鍵字即時顯示結果';
-    if(!filtered.length){ $list.innerHTML=''; return; }
-
-    // 排序：未離場優先；再依最後時間早→晚
-    filtered.sort((a,b)=>{
-      const da = rowFinished(a)?1:0, db=rowFinished(b)?1:0;
-      if(da!==db) return da-db;
-      const ta = lastDoneStep(a).time||'', tb=lastDoneStep(b).time||'';
-      return ta.localeCompare(tb);
-    });
-
-    $list.innerHTML = filtered.map(r=>{
-      const last = lastDoneStep(r);
-      const state = rowFinished(r) ? '✅ 已離場' :
-        (last.idx<0 ? '尚未開始' :
-          (last.name==='車已上遊覽車平台' ? '已到平台，等待離場' : `已完成「${last.name}」`));
-      const stepsHtml = STEP_ORDER
-        .filter(n=> n!=='車已離開禪堂平台') // 同終點只顯示一種
-        .map(n=>{
-          const val = (r.steps.find(s=>s.name===n)||{}).val || '';
-          const ok = hasVal(val);
-          const valTxt = n==='車暫停位置' ? (ok? val : '—') : (ok? val : '—');
-          return `<div class="step"><div class="${ok?'done':''}">${ok?'✓':''} ${n}</div><div>${valTxt}</div></div>`;
-        }).join('');
-      return `<div class="scard">
-        <div class="shead">${r.區域||'未分區'} ｜ ${r.車號}</div>
-        <div class="muted" style="margin-bottom:8px">${state}</div>
-        <div class="steps">${stepsHtml}</div>
-      </div>`;
-    }).join('');
+  // 找表頭
+  const headerRowIdx = data.findIndex(row =>
+    Array.isArray(row) &&
+    String(row[0] || '').trim() === '編號' &&
+    String(row[1] || '').trim().startsWith('區域') &&
+    String(row[2] || '').trim() === '車號'
+  );
+  if (headerRowIdx === -1) {
+    box.textContent = '找不到表頭';
+    return;
   }
 
-  $kw.addEventListener('input',()=>render($kw.value));
-  document.getElementById('btnSearch').onclick=()=>render($kw.value);
-  document.getElementById('btnClear').onclick=()=>{ $kw.value=''; render(''); }
-  // 若上次已輸入，保留
-  render($kw.value||'');
+  const header = data[headerRowIdx].map(c => String(c || '').trim());
+  const rows = data
+    .slice(headerRowIdx + 1)
+    .filter(r => Array.isArray(r) && String(r[0] || '').trim() && String(r[1] || '').trim() && String(r[2] || '').trim());
+
+  if (!rows.length) {
+    box.textContent = '(這張表目前沒有車輛資料)';
+    return;
+  }
+
+  const cards = [];
+
+  rows.forEach((row, idx) => {
+    const area = String(row[1] || '').trim();
+    const car  = String(row[2] || '').trim();
+    const baseRow = headerRowIdx + 2 + idx; // 1-based for Google Apps Script
+
+    // 計算完成度
+    const { completed, total } = computeCompletion(cfg, header, row);
+
+    // 建立卡片（原本所有邏輯不變）
+    const card = document.createElement('div');
+    card.className = 'veh-card';
+
+    // title
+    card.innerHTML = `
+      <div>
+        <div class="veh-title-main">${area}</div>
+        <div class="veh-title-sub">${car}</div>
+      </div>
+    `;
+
+    const stepsBox = document.createElement('div');
+    cfg.steps.forEach(st => {
+      const colIdx = header.indexOf(st);
+      const rawVal = (colIdx !== -1 && row[colIdx] != null) ? String(row[colIdx]).trim() : '';
+      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
+
+      const rowEl = document.createElement('div');
+      rowEl.className = 'step-row';
+
+      const labelEl = document.createElement('div');
+      labelEl.className = 'step-label';
+      labelEl.textContent = st;
+      rowEl.appendChild(labelEl);
+
+      // 下拉：車暫停位置
+      if (st === '車暫停位置') {
+        const valueEl = document.createElement('div');
+        const sel = document.createElement('select');
+        sel.className = 'step-select select';
+
+        const optEmpty = document.createElement('option');
+        optEmpty.value = ''; optEmpty.textContent = '— 請選擇 —';
+        sel.appendChild(optEmpty);
+        STOP_OPTIONS.forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt; o.textContent = opt;
+          sel.appendChild(o);
+        });
+        if (rawVal) sel.value = rawVal;
+
+        const ghost = document.createElement('span');
+        ghost.style.display = 'none';
+
+        valueEl.appendChild(sel);
+        valueEl.appendChild(ghost);
+        rowEl.appendChild(valueEl);
+
+        const btnG = document.createElement('div');
+        btnG.className = 'btn-group';
+        rowEl.appendChild(btnG);
+
+        if (!canWrite) {
+          sel.disabled = true;
+          rowEl.classList.add('locked');
+        } else {
+          const prevOk = prevDone(cfg, header, row, st);
+          if (!prevOk && !rawVal) sel.disabled = true;
+          sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value, ghost);
+        }
+
+        stepsBox.appendChild(rowEl);
+        return;
+      }
+
+      // 一般步驟
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'step-time';
+      timeSpan.textContent = displayVal || '—';
+      rowEl.appendChild(timeSpan);
+
+      const btnG = document.createElement('div');
+      btnG.className = 'btn-group';
+
+      const btnPunch = document.createElement('button');
+      btnPunch.className = 'btn btn--primary btn--sm btn-punch';
+      btnPunch.textContent = '打卡';
+
+      const btnEdit = document.createElement('button');
+      btnEdit.className = 'btn btn--success btn--sm btn-edit';
+      btnEdit.textContent = '修改';
+
+      const btnDel = document.createElement('button');
+      btnDel.className = 'btn btn--danger btn--sm btn-del';
+      btnDel.textContent = '刪除';
+
+      btnG.appendChild(btnPunch);
+      btnG.appendChild(btnEdit);
+      btnG.appendChild(btnDel);
+      rowEl.appendChild(btnG);
+
+      if (!canWrite) {
+        btnPunch.disabled = btnEdit.disabled = btnDel.disabled = true;
+        rowEl.classList.add('locked');
+      } else {
+        const prevOk = prevDone(cfg, header, row, st);
+        const hasVal = !!rawVal;
+
+        if (!prevOk && !hasVal) {
+          btnPunch.disabled = btnEdit.disabled = btnDel.disabled = true;
+        } else {
+          btnPunch.disabled = hasVal;
+          btnEdit.disabled = btnDel.disabled = !hasVal;
+
+          btnPunch.onclick = () => onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+          btnEdit.onclick  = () => onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
+          btnDel.onclick   = () => onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+        }
+      }
+
+      stepsBox.appendChild(rowEl);
+    });
+
+    card.appendChild(stepsBox);
+
+    // 備註區（不變）
+    const memoWrap = document.createElement('div');
+    memoWrap.style.marginTop = '8px';
+    const memoRow = document.createElement('div');
+    memoRow.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
+
+    const memoTA = document.createElement('textarea');
+    memoTA.className = 'textarea';
+    memoTA.placeholder = '備註';
+    memoTA.style.flex = '1';
+
+    let memoColIdx = header.indexOf('備註');
+    if (memoColIdx === -1) memoColIdx = header.length - 1;
+    memoTA.value = (memoColIdx !== -1 && row[memoColIdx]) ? String(row[memoColIdx]) : '';
+
+    const memoBtn = document.createElement('button');
+    memoBtn.className = 'btn btn--primary';
+    memoBtn.textContent = '儲存';
+    memoBtn.disabled = !canWrite;
+
+    memoBtn.onclick = async () => {
+      if (!canWrite) return;
+      await withLoading(async () => {
+        const body = {
+          sheet: cfg.sheet,
+          email: currentUser.email,
+          writes: [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }]
+        };
+        const r = await fetch(API_BASE + '?action=update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(body)
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || 'unknown');
+        await sleep(250);
+        await reloadSheet();
+      }, '儲存備註…');
+      showNotif('備註已儲存', false);
+    };
+
+    memoRow.appendChild(memoTA);
+    memoRow.appendChild(memoBtn);
+    memoWrap.appendChild(memoRow);
+    card.appendChild(memoWrap);
+
+    // 存入 cards 陣列
+    cards.push({
+      el: card,
+      completed,
+      total,
+      origOrder: idx   // 原始在 Google Sheet 的相對順序
+    });
+  });
+
+  // 穩定排序：完成越少 → 越前面；同完成度 → 原始順序
+  cards.sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed - b.completed;
+    return a.origOrder - b.origOrder;
+  });
+
+  // 插入 DOM
+  cards.forEach(c => box.appendChild(c.el));
 }
 
-/* 預設先展示整體情報以便你檢視畫面 */
-ensureDataThen(renderDashboard);
-document.querySelector('[data-tab="dashboard"]').click();
+/* ---------------- 流程/寫入邏輯 ---------------- */
+function prevDone(cfg, header, row, st){
+  const idx = cfg.steps.indexOf(st);
+  if (idx === 0) return true;
+  const prevName = cfg.steps[idx-1];
+  const colIdx = header.indexOf(prevName);
+  if (colIdx === -1) return true;
+  return !!row[colIdx];
+}
+
+async function onStopSelect(cfg, rowNumber, header, st, value, span){
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission !== '全功能') return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
+
+  await withLoading(async () => {
+    const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value }] };
+    const r = await fetch(API_BASE + '?action=update', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error||'unknown');
+    await sleep(200);
+    await reloadSheet();
+  }, '更新中…');
+
+  span.textContent = value || '';
+  showNotif(value ? '已更新車暫停位置' : '已清除車暫停位置', false);
+}
+
+async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl){
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission !== '全功能') return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
+
+  if (timeSpan.textContent && timeSpan.textContent.trim() && timeSpan.textContent.trim() !== '—'){
+    showNotif('此步驟已有時間，請用「修改」或「刪除」', true);
+    return;
+  }
+
+  const now = getTaipeiHHMMSS();
+
+  await withLoading(async () => {
+    const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: now }] };
+    const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error||'unknown');
+    await sleep(200);
+    await reloadSheet();
+  }, '打卡中…');
+
+  timeSpan.textContent = formatSheetTime(now);
+  btnPunch.disabled = true; btnEdit.disabled = false; btnDel.disabled = false;
+  unlockNext(rowEl);
+  showNotif('已打卡', false);
+}
+
+async function onEditTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, currentVal){
+  console.debug('[EDIT] open dialog for', {rowNumber, st});
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission !== '全功能') return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
+
+  openEditTimeDialog(currentVal || timeSpan.textContent || getTaipeiHHMMSS(), async (newHHMMSS)=>{
+    await withLoading(async () => {
+      const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: newHHMMSS }] };
+      const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'unknown');
+      await sleep(250);
+      await reloadSheet();
+    }, '儲存中…');
+
+    const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim()==='—';
+    timeSpan.textContent = formatSheetTime(newHHMMSS);
+    if (wasEmpty) unlockNext(rowEl);
+    btnPunch.disabled = true; btnEdit.disabled = false; btnDel.disabled = false;
+    showNotif('已修改時間', false);
+  });
+}
+
+async function onDeleteTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl){
+  console.debug('[DELETE] open confirm for', {rowNumber, st});
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission !== '全功能') return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
+
+  openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
+    await withLoading(async () => {
+      const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: '' }] };
+      const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'unknown');
+      await sleep(250);
+      await reloadSheet();
+    }, '刪除中…');
+
+    timeSpan.textContent = '';
+    btnPunch.disabled = false; btnEdit.disabled = true; btnDel.disabled = true;
+    lockFollowing(rowEl);
+    showNotif('已刪除', false);
+  });
+}
+
+/* ---------------- 其它輔助 ---------------- */
+function reloadSheet(){ loadSheetData(currentSheetKey); }
+function showNotif(msg, isErr){
+  const box = document.getElementById('notif');
+  box.textContent = msg;
+  box.style.background = isErr ? 'rgba(248,113,113,.9)' : 'rgba(15,23,42,.85)';
+  box.classList.add('show');
+  setTimeout(()=>box.classList.remove('show'), 2500);
+}
+function unlockNext(rowEl){
+  const nextRow = rowEl?.nextElementSibling;
+  if (!nextRow) return;
+
+  const sel = nextRow.querySelector('.step-select');
+  const timeSpan = nextRow.querySelector('.step-time');
+  const btnPunch = nextRow.querySelector('.btn-punch');
+  const btnEdit  = nextRow.querySelector('.btn-edit');
+  const btnDel   = nextRow.querySelector('.btn-del');
+
+  if (currentUser?.permission !== '全功能') return;
+
+  if (sel){
+    sel.disabled = false;
+    return;
+  }
+  if (btnPunch){
+    const hasVal = !!(timeSpan && timeSpan.textContent.trim() && timeSpan.textContent.trim() !== '—');
+    btnPunch.disabled = hasVal;
+    if (btnEdit) btnEdit.disabled = !hasVal;
+    if (btnDel)  btnDel.disabled  = !hasVal;
+  }
+}
+function lockFollowing(rowEl){
+  let it = rowEl?.nextElementSibling;
+  while (it){
+    const sel = it.querySelector('.step-select');
+    const timeSpan = it.querySelector('.step-time');
+    const btnPunch = it.querySelector('.btn-punch');
+    const btnEdit  = it.querySelector('.btn-edit');
+    const btnDel   = it.querySelector('.btn-del');
+
+    if (sel && !sel.value) sel.disabled = true;
+
+    if (btnPunch){
+      const hasVal = !!(timeSpan && timeSpan.textContent.trim() && timeSpan.textContent.trim() !== '—');
+      if (!hasVal){
+        btnPunch.disabled = true;
+        if (btnEdit) btnEdit.disabled = true;
+        if (btnDel)  btnDel.disabled  = true;
+      }
+    }
+    it = it.nextElementSibling;
+  }
+}
+
+/* ✅ 保險：統一判斷一個儲存格值是否算完成 */
+function isCompletedValue(v){
+  if (v == null) return false;
+  const s = String(v).trim();
+  if (!s) return false;
+  // 萬一有人真的把占位字元寫進去，也不算完成
+  if (s === '—' || s === '-') return false;
+  return true;
+}
+
+/* ① 計算完成度（替換你的 computeCompletion） */
+function computeCompletion(cfg, header, row) {
+  const usableSteps = cfg.steps.filter(st => header.indexOf(st) !== -1);
+  let completed = 0;
+  for (const st of usableSteps) {
+    const colIdx = header.indexOf(st);
+    const val = (colIdx !== -1 && colIdx < row.length) ? row[colIdx] : '';
+    if (isCompletedValue(val)) completed++;
+  }
+  return { completed, total: usableSteps.length };
+}
+/* ===== 頂層三頁切換 ===== */
+const PANE_IDS = ['pane-punch','pane-dashboard','pane-single'];
+
+function switchPane(targetId){
+  // 頁籤外觀
+  document.querySelectorAll('#mainTabs .main-tab').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.target === targetId);
+  });
+  // 顯示/隱藏各頁
+  PANE_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hide', id !== targetId);
+  });
+}
+
+// 監聽點擊頂層三個 Tab
+document.getElementById('mainTabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.main-tab');
+  if (!btn) return;
+  switchPane(btn.dataset.target);
+});
+
+// ✅ 登入成功後預設切到「登錄」那頁
+// 在你原本的 finishLoginUI() 最後面，加上這一行：
+// switchPane('pane-punch');
+
+  
 </script>
+
 </body>
 </html>

@@ -196,17 +196,6 @@ body.dark .loc-pill{ background:rgba(15,23,42,.28); }
 @media (max-width:480px){
   .modal .time-input{ width:56px; }
 }
-/* 變動時輕微跳動（可關） */
-@keyframes dash-bump { 0%{transform:scale(1)} 45%{transform:scale(1.16)} 100%{transform:scale(1)} }
-.stat-num.bump, .loc-num.bump { animation: dash-bump .28s ease; }
-
-/* （可選）變動閃一下底色 */
-.stat-num.flash-update, .loc-num.flash-update {
-  background-color: rgba(255, 230, 100, 0.7);
-  transition: background-color .2s ease;
-}
-
-  
 </style>
 </head>
 <body>
@@ -293,38 +282,6 @@ let currentSheetKey = SHEET_CONFIGS[0].key;
 let sheetData = []; // 打卡頁使用
 const TOKEN_STORAGE_KEY = 'ddcc_user_token';
 let idToken = null;
-/* ===== 整體情報：差異更新所需 ===== */
-const DASH_REFRESH_MS = 10000;   // ← 自動刷新間隔（毫秒）
-let dashTimer = null;
-
-let DASH_BUILT = false;                  // 是否已畫過骨架
-const DASH_NODES = Object.create(null);  // key -> { el }（數字節點快取）
-let ALL_SHEETS = {};                     // 開清單/明細會用到
-
-const metricKey = (sheetKey, kind, name, type='') =>
-  `${sheetKey}|${kind}|${encodeURIComponent(name)}|${type}`;
-
-function setNumIfChanged(el, newVal){
-  if (!el) return;
-  const cur = Number(el.textContent) || 0;
-  if (cur !== newVal){
-    el.textContent = String(newVal);
-    el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); // 小動畫
-    el.classList.add('flash-update'); setTimeout(()=>el.classList.remove('flash-update'), 300);
-  }
-}
-
-/* —— 亦提供 ID 方案（方便外部調用/除錯） —— */
-const sanitizeForId = (s)=>String(s).replace(/[\s()（）]/g,'');
-const getStatId = (key, step, type)=>`stat-${sanitizeForId(key)}-${sanitizeForId(step)}-${type}`;
-const getLocId  = (key, name)=>`loc-${sanitizeForId(key)}-${sanitizeForId(name)}`;
-
-function isDashboardVisible(){ return !document.getElementById('pane-dashboard').classList.contains('hide'); }
-function startDashboardAutoRefresh(){
-  stopDashboardAutoRefresh();
-  dashTimer = setInterval(()=>{ if (isDashboardVisible()) updateDashboardData(true); }, DASH_REFRESH_MS);
-}
-function stopDashboardAutoRefresh(){ if (dashTimer){ clearInterval(dashTimer); dashTimer=null; } }
 
 /* ---------------- 初始登入與頁籤 ---------------- */
 window.onload = function(){
@@ -619,29 +576,23 @@ function computeCompletion(cfg, header, row) {
 }
 
 /* ===== 頂層三頁切換 ===== */
-const PANE_IDS = ['pane-punch','pane-dashboard','pane-single'];
+const PANE_IDS=['pane-punch','pane-dashboard','pane-single'];
 function switchPane(targetId){
-  document.querySelectorAll('#mainTabs .main-tab').forEach(btn=>{
-    btn.classList.toggle('active', btn.dataset.target === targetId);
-  });
-  PANE_IDS.forEach(id=>{
+  document.querySelectorAll('#mainTabs .main-tab')
+    .forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
+  PANE_IDS.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hide', id !== targetId);
   });
 
-  if (targetId === 'pane-dashboard'){
-    // 沒畫過 → 首次建骨架；已畫過 → 只更新數據
-    if (!DASH_BUILT || !document.getElementById('dashboard').children.length){
-      buildDashboard(false);
-    }else{
-      updateDashboardData(true);
-    }
+  // 進出整體情報時控制自動刷新
+  if (targetId === 'pane-dashboard') {
+    buildDashboard(false);      // 首次切入：帶 Loading
     startDashboardAutoRefresh();
-  }else{
+  } else {
     stopDashboardAutoRefresh();
   }
 }
-
 
   
 function isDashboardVisible() {
@@ -670,82 +621,115 @@ document.getElementById('mainTabs').addEventListener('click', (e)=>{
 /* ======================= 新增：整體情報（全局儀表板） ======================= */
 let ALL_SHEETS = {}; // { key: { cfg, headerIdx, header, rows } }
 
-async function buildDashboard(silent=false){
-  const dash=document.getElementById('dashboard');
-  if (!DASH_BUILT) dash.innerHTML='';   // 只在首次清空
+// 支援靜默刷新：buildDashboard(true) 會不顯示 Loading
+async function buildDashboard(silent = false){
+  const dash = document.getElementById('dashboard');
+  dash.innerHTML = '';
 
-  const work = async ()=>{
-    const results = await fetchAllSheets();
+  const work = async () => {
+    // 取回四張表
+    const results = await Promise.all(
+      SHEET_CONFIGS.map(async cfg => {
+        const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+        const j = await r.json();
+        const values = j.values || [];
+        const headerIdx = values.findIndex(
+          r => Array.isArray(r) &&
+               String(r[0]||'').trim() === '編號' &&
+               String(r[1]||'').trim().startsWith('區域') &&
+               String(r[2]||'').trim() === '車號'
+        );
+        const header = headerIdx >= 0 ? values[headerIdx].map(c => String(c||'').trim()) : [];
+        const rows   = headerIdx >= 0 ? values.slice(headerIdx+1)
+                          .filter(r => String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim())
+                          : [];
+        return { key: cfg.key, cfg, headerIdx, header, rows };
+      })
+    );
 
-    if (!DASH_BUILT){
-      results.forEach(({cfg, header, rows, key:sheetKey})=>{
-        const sec = document.createElement('section'); sec.className='dash-section card';
-        const title = document.createElement('div'); title.className='dash-title'; title.textContent = cfg.key;
-        sec.appendChild(title);
+    // 給清單/明細用
+    ALL_SHEETS = {};
+    results.forEach(x => ALL_SHEETS[x.key] = x);
 
-        /* 1) 步驟完成/未完成卡 */
-        const statWrap=document.createElement('div'); statWrap.className='stat-grid';
-        const stepsForCount = cfg.steps.filter(st=>st!=='車暫停位置');
-        stepsForCount.forEach(st=>{
-          const card=document.createElement('div'); card.className='stat-card';
-          const doneId = getStatId(sheetKey, st, 'done');
-          const todoId = getStatId(sheetKey, st, 'todo');
-          card.innerHTML = `
-            <div class="stat-head">${st}</div>
-            <div class="stat-row">
-              <div class="stat-pill" data-type="done">
-                <div id="${doneId}" class="stat-num done">0</div>
-                <div class="stat-label">完成</div>
-              </div>
-              <div class="stat-pill" data-type="todo">
-                <div id="${todoId}" class="stat-num todo">0</div>
-                <div class="stat-label">未完成</div>
-              </div>
-            </div>`;
-          const [pillDone,pillTodo] = card.querySelectorAll('.stat-pill');
-          pillDone.addEventListener('click', ()=>openListModal(sheetKey, st, 'done'));
-          pillTodo.addEventListener('click', ()=>openListModal(sheetKey, st, 'todo'));
-          // 快取數字節點
-          DASH_NODES[metricKey(sheetKey,'step',st,'done')] = { el: card.querySelector('#'+doneId) };
-          DASH_NODES[metricKey(sheetKey,'step',st,'todo')] = { el: card.querySelector('#'+todoId) };
-          statWrap.appendChild(card);
+    // 逐張表生成區塊
+    results.forEach(({ cfg, header, rows }) => {
+      const sec   = document.createElement('section'); sec.className = 'dash-section card';
+      const title = document.createElement('div');     title.className = 'dash-title'; title.textContent = cfg.key;
+      sec.appendChild(title);
+
+      // 1) 步驟完成/未完成統計（「車暫停位置」不在此統計）
+      const statWrap = document.createElement('div'); statWrap.className = 'stat-grid';
+      const stepsForCount = cfg.steps.filter(st => st !== '車暫停位置');
+      stepsForCount.forEach(st => {
+        const col = header.indexOf(st);
+        let done = 0, todo = 0;
+        rows.forEach(r => {
+          const v = col >= 0 ? r[col] : '';
+          isCompletedValue(v) ? done++ : todo++;
         });
-        sec.appendChild(statWrap);
 
-        /* 2) 停車位置分佈（有此欄位才渲染） */
-        const stopCol = header.indexOf('車暫停位置');
-        if (stopCol>=0){
-          const locTitle=document.createElement('div'); locTitle.className='dash-title'; locTitle.style.marginTop='12px'; locTitle.textContent='停車位置';
-          sec.appendChild(locTitle);
-
-          const locWrap=document.createElement('div'); locWrap.className='loc-grid';
-          STOP_OPTIONS.forEach(name=>{
-            const pill=document.createElement('div'); pill.className='loc-pill';
-            const locId = getLocId(sheetKey, name);
-            pill.innerHTML = `
-              <div class="loc-name">${name}</div>
-              <div id="${locId}" class="loc-num">0</div>
-              <div class="stat-label">台</div>`;
-            pill.addEventListener('click', ()=>openListModal(sheetKey,'車暫停位置','loc',name));
-            DASH_NODES[metricKey(sheetKey,'loc',name,'loc')] = { el: pill.querySelector('#'+locId) };
-            locWrap.appendChild(pill);
-          });
-          sec.appendChild(locWrap);
-        }
-
-        dash.appendChild(sec);
+        const card = document.createElement('div'); card.className = 'stat-card';
+        card.innerHTML = `
+          <div class="stat-head">${st}</div>
+          <div class="stat-row">
+            <div class="stat-pill" data-type="done">
+              <div class="stat-num done">${done}</div>
+              <div class="stat-label">完成</div>
+            </div>
+            <div class="stat-pill" data-type="todo">
+              <div class="stat-num todo">${todo}</div>
+              <div class="stat-label">未完成</div>
+            </div>
+          </div>`;
+        // 點完成/未完成 → 開清單
+        card.querySelectorAll('.stat-pill').forEach(pill => {
+          pill.addEventListener('click', () => openListModal(cfg.key, st, pill.dataset.type));
+        });
+        statWrap.appendChild(card);
       });
+      sec.appendChild(statWrap);
 
-      DASH_BUILT = true;
-    }
+      // 2) 停車位置分佈（只有表頭含「車暫停位置」才顯示）
+      const stopCol = header.indexOf('車暫停位置');
+      if (stopCol >= 0) {
+        const locTitle = document.createElement('div');
+        locTitle.className = 'dash-title';
+        locTitle.style.marginTop = '12px';
+        locTitle.textContent = '停車位置';
+        sec.appendChild(locTitle);
 
-    // 首次畫好後立即更新一次數字
-    await updateDashboardData(true);
+        const locWrap = document.createElement('div'); locWrap.className = 'loc-grid';
+
+        const counter = new Map();
+        STOP_OPTIONS.forEach(n => counter.set(n, 0));
+
+        rows.forEach(r => {
+          const v = String(r[stopCol] || '').trim();
+          if (counter.has(v)) counter.set(v, counter.get(v) + 1);
+        });
+
+        STOP_OPTIONS.forEach(name => {
+          const n = counter.get(name) || 0;
+          const pill = document.createElement('div'); pill.className = 'loc-pill';
+          pill.innerHTML = `
+            <div class="loc-name">${name}</div>
+            <div class="loc-num">${n}</div>
+            <div class="stat-label">台</div>`;
+          pill.addEventListener('click', () =>
+            openListModal(cfg.key, '車暫停位置', 'loc', name)
+          );
+          locWrap.appendChild(pill);
+        });
+        sec.appendChild(locWrap);
+      }
+
+      dash.appendChild(sec);
+    });
   };
 
-  if (silent) await work(); else await withLoading(work,'整理整體情報…');
+ if (silent) { await work(); }           // 靜默
+  else { await withLoading(work, '整理整體情報…'); }  // 第一次顯示 Loading
 }
-
 
 
 /* 取得一台車目前「最新狀態」（最後一個已完成步驟或停車位置） */
@@ -891,85 +875,6 @@ function openEditTimeDialog(initialHHMMSS, onOK){
     try{ onOK(`${H}:${M}:${S}`); } finally{ close(); }
   };
 }
-async function updateDashboardData(silent=true){
-  try{
-    const results = await fetchAllSheets();
-
-    results.forEach(({cfg, header, rows, key:sheetKey})=>{
-      const stats = computeStatsForSheet(cfg, header, rows);
-
-      // 步驟
-      Object.entries(stats.steps).forEach(([st, {done, todo}])=>{
-        const kDone = metricKey(sheetKey,'step',st,'done');
-        const kTodo = metricKey(sheetKey,'step',st,'todo');
-        // 先走快取；若取不到，用 ID fallback（相容 Gemini/Grok 思路）
-        setNumIfChanged(DASH_NODES[kDone]?.el || document.getElementById(getStatId(sheetKey, st, 'done')), done);
-        setNumIfChanged(DASH_NODES[kTodo]?.el || document.getElementById(getStatId(sheetKey, st, 'todo')), todo);
-      });
-
-      // 停車位置
-      if (stats.hasStop){
-        STOP_OPTIONS.forEach(name=>{
-          const n = stats.locs[name] || 0;
-          const k = metricKey(sheetKey,'loc',name,'loc');
-          setNumIfChanged(DASH_NODES[k]?.el || document.getElementById(getLocId(sheetKey, name)), n);
-        });
-      }
-    });
-  }catch(err){
-    if (!silent) showNotif('整體情報更新失敗：'+err.message, true);
-    console.error('Dashboard update failed:', err);
-  }
-}
-async function fetchAllSheets(){
-  const results = await Promise.all(
-    SHEET_CONFIGS.map(async cfg=>{
-      const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
-      const j = await r.json();
-      const values = j.values || [];
-      const headerIdx = values.findIndex(row =>
-        Array.isArray(row) &&
-        String(row[0]||'').trim()==='編號' &&
-        String(row[1]||'').trim().startsWith('區域') &&
-        String(row[2]||'').trim()==='車號'
-      );
-      const header = headerIdx>=0 ? values[headerIdx].map(c=>String(c||'').trim()) : [];
-      const rows   = headerIdx>=0 ? values.slice(headerIdx+1)
-                      .filter(r => String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim())
-                      : [];
-      return { key: cfg.key, cfg, header, rows };
-    })
-  );
-  ALL_SHEETS = {}; results.forEach(x=>ALL_SHEETS[x.key]=x);
-  return results;
-}
-
-/* 依表計算統計（步驟完成/未完成 + 停車位置分佈） */
-function computeStatsForSheet(cfg, header, rows){
-  const stepsForCount = cfg.steps.filter(st=>st!=='車暫停位置');
-  const steps = {};
-  stepsForCount.forEach(st=>{
-    const col = header.indexOf(st);
-    let done=0, todo=0;
-    rows.forEach(r=>{
-      const v = col>=0 ? r[col] : '';
-      isCompletedValue(v) ? done++ : todo++;
-    });
-    steps[st] = { done, todo };
-  });
-
-  const stopCol = header.indexOf('車暫停位置');
-  const locs = {}; STOP_OPTIONS.forEach(n=>locs[n]=0);
-  if (stopCol>=0){
-    rows.forEach(r=>{
-      const v = String(r[stopCol]||'').trim();
-      if (v in locs) locs[v] += 1;
-    });
-  }
-  return { steps, locs, hasStop: stopCol>=0 };
-}
-
-  
 </script>
 </body>
 </html>

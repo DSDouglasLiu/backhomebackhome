@@ -230,6 +230,36 @@ body.modal-open{
   top: 50%;
   transform: translateY(-50%);
 }
+/* ===== 登入畫面置中（未登入時 body 會有 .login） ===== */
+body.login .wrap{
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;          /* 水平＋垂直置中 */
+  padding: 24px 16px;
+}
+
+/* 你的最上方那個包含 h1 / #signin / #userInfo 的容器是 wrap 裡的第一個 div */
+body.login .wrap > div:first-child{
+  display: grid !important;     /* 蓋過內聯的 display:flex */
+  grid-auto-flow: row;
+  gap: 16px;
+  justify-items: center;
+  text-align: center;
+  width: 100%;
+}
+
+/* 標題在登入畫面放大一點、置中 */
+body.login h1{
+  margin: 0;
+  text-align: center;
+  font-size: clamp(28px, 6vw, 56px);
+  line-height: 1.2;
+}
+
+/* 未登入時隱藏這些主內容區域（保險，避免閃動） */
+body.login #tabs,
+body.login #content,
+body.login #userInfo{ display: none !important; }
 
   
 </style>
@@ -336,6 +366,7 @@ let sheetData = [];
 
 /* ---------------- 初始登入與頁籤 ---------------- */
 window.onload = function(){
+  document.body.classList.add('login');
   google.accounts.id.initialize({
     client_id: GOOGLE_CLIENT_ID,
     callback: handleCredential
@@ -389,25 +420,49 @@ async function handleCredential(resp){
       body: JSON.stringify({ idToken: resp.credential })
     });
     const j = await r.json();
-    if (j.error) { showNotif('登入失敗：' + j.error, true); return; }
 
+    if (j.error) {
+      showNotif('登入失敗：' + j.error, true);
+
+      // 回到置中登入畫面
+      document.body.classList.add('login');
+      document.getElementById('signin').classList.remove('hide');
+      document.getElementById('userInfo').classList.add('hide');
+      document.getElementById('tabs').classList.add('hide');
+      document.getElementById('content').classList.add('hide');
+      return;
+    }
+
+    // 登入成功 → 解除置中狀態，顯示內容
     currentUser = j;
 
+    document.body.classList.remove('login');
     document.getElementById('signin').classList.add('hide');
+
     const ui = document.getElementById('userInfo');
     ui.classList.remove('hide');
     ui.innerHTML = `${j.name||''} &lt;${j.email}&gt; ｜ 權限：<b>${j.permission}</b>`;
+
     document.getElementById('tabs').classList.remove('hide');
     document.getElementById('content').classList.remove('hide');
 
     if (j.permission === '檢視') {
       showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
     }
+
     loadSheetData(currentSheetKey);
   } catch (err) {
     showNotif('登入錯誤：' + err.message, true);
+
+    // 發生例外也回到置中登入畫面
+    document.body.classList.add('login');
+    document.getElementById('signin').classList.remove('hide');
+    document.getElementById('userInfo').classList.add('hide');
+    document.getElementById('tabs').classList.add('hide');
+    document.getElementById('content').classList.add('hide');
   }
 }
+
 
 async function loadSheetData(key){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);

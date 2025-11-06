@@ -10,7 +10,7 @@
 /* =========== Design Tokens（Preferred 版） =========== */
 :root{
   /* 半徑 */
-  --radius-xs:6px;  --radius-sm:8px;  --radius-md:10px; --radius-lg:12px; --field-xpad: 8px;
+  --radius-xs:6px;  --radius-sm:8px;  --radius-md:10px; --radius-lg:12px;
 
   /* 色票（light） */
   --primary-600:#1f6fe5; --primary-700:#165bd1; --primary-800:#1249ad;
@@ -85,22 +85,11 @@ body.dark .veh-card{background:rgba(15,23,42,0.28);}
 .veh-title-sub{font-size:var(--fz-sub);line-height:var(--lh-sub);color:var(--text-muted);}
 
 .step-row{display:grid;grid-template-columns:180px 1fr auto;align-items:center;gap:10px;margin-bottom:6px;}
-.step-time{
-  text-align:left; 
-  min-width:170px;             /* 與 .step-select 一樣的最小寬 */
-  padding-left:var(--field-xpad);
-  height:32px;                 /* 讓視覺高度跟 select 接近 */
-  display:inline-flex; align-items:center;
-
-  /* 保持等寬數字，對齊冒號 */
-  font-variant-numeric: tabular-nums;
-  font-feature-settings:"tnum" 1,"lnum" 1;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-}  
+.step-time{font-size:var(--fz-label);line-height:var(--lh-label);font-weight:600;color:rgba(15,23,42,.75);text-align:right;min-width:70px;font-feature-settings:"tnum" 1, "lnum" 1; font-variant-numeric:tabular-nums lining-nums;}
 body.dark .step-time{color:#cbd5e1}
 
 /* 下拉 */
-.step-select{min-width:170px;padding:6px var(--field-xpad);;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;font-size:var(--fz-body);}
+.step-select{min-width:170px;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;font-size:var(--fz-body);}
 .step-select:disabled{background:#e2e8f0;cursor:not-allowed;}
 /* 備註 */
 .textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;background:#fff;font-size:var(--fz-body);}
@@ -189,9 +178,7 @@ body.modal-open{ overflow:hidden; touch-action:none; }
   padding:12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
   backdrop-filter: blur(8px);
 }
-.step-time.empty{ 
-  padding-left: calc(var(--field-xpad) + 3ch);
-}
+
 .spinner{
   width:20px; height:20px; border-radius:50%;
   border:2.5px solid #cbd5e1; border-top-color: var(--primary-600);
@@ -929,9 +916,8 @@ function renderVehicles(cfg, data) {
 
       // 一般步驟
       const timeSpan = document.createElement('span');
-     timeSpan.className = 'step-time' + (displayVal ? '' : ' empty');
-timeSpan.textContent = displayVal || '-';
-
+      timeSpan.className = 'step-time';
+      timeSpan.textContent = displayVal || '—';
       rowEl.appendChild(timeSpan);
 
       const btnG = document.createElement('div');
@@ -1078,11 +1064,9 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
   if (currentUser.permission !== '全功能') return alert('權限不足');
 
   const colIdx = header.indexOf(st);
-  if (colIdx === -1) return alert('此欄位不存在：' + st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  // 只有真有時間時才擋；'-' / '—' 或空字串都視為尚未填
-  const t = (timeSpan.textContent || '').trim();
-  if (t && t !== '—' && t !== '-') {
+  if (timeSpan.textContent && timeSpan.textContent.trim() && timeSpan.textContent.trim() !== '—'){
     showNotif('此步驟已有時間，請用「修改」或「刪除」', true);
     return;
   }
@@ -1090,16 +1074,15 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
   const now = getTaipeiHHMMSS();
 
   await withLoading(async () => {
-    const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx + 1, value: now }] };
+    const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: now }] };
     const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
     const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'unknown');
+    if (!j.ok) throw new Error(j.error||'unknown');
     await sleep(200);
     await reloadSheet();
   }, '打卡中…');
 
   timeSpan.textContent = formatSheetTime(now);
-  timeSpan.classList.remove('empty');            // ✅ 取消「空欄」樣式
   btnPunch.disabled = true; btnEdit.disabled = false; btnDel.disabled = false;
   unlockNext(rowEl);
   showNotif('已打卡', false);
@@ -1111,15 +1094,11 @@ async function onEditTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, b
   if (currentUser.permission !== '全功能') return alert('權限不足');
 
   const colIdx = header.indexOf(st);
-  if (colIdx === -1) return alert('此欄位不存在：' + st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
 
-  // 對話框預設值：若是空白 / '-' / '—'，就帶現在時間
-  const _cur = (currentVal || timeSpan.textContent || '').trim();
-  const initial = (!_cur || _cur === '-' || _cur === '—') ? getTaipeiHHMMSS() : _cur;
-
-  openEditTimeDialog(initial, async (newHHMMSS)=>{
+  openEditTimeDialog(currentVal || timeSpan.textContent || getTaipeiHHMMSS(), async (newHHMMSS)=>{
     await withLoading(async () => {
-      const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx + 1, value: newHHMMSS }] };
+      const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: newHHMMSS }] };
       const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || 'unknown');
@@ -1127,11 +1106,8 @@ async function onEditTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, b
       await reloadSheet();
     }, '儲存中…');
 
-    const prev = (timeSpan.textContent || '').trim();
-    const wasEmpty = !prev || prev === '—' || prev === '-';
-
+    const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim()==='—';
     timeSpan.textContent = formatSheetTime(newHHMMSS);
-    timeSpan.classList.remove('empty');          // ✅ 取消「空欄」樣式
     if (wasEmpty) unlockNext(rowEl);
     btnPunch.disabled = true; btnEdit.disabled = false; btnDel.disabled = false;
     showNotif('已修改時間', false);
@@ -1144,11 +1120,11 @@ async function onDeleteTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch,
   if (currentUser.permission !== '全功能') return alert('權限不足');
 
   const colIdx = header.indexOf(st);
-  if (colIdx === -1) return alert('此欄位不存在：' + st);
+  if (colIdx === -1) return alert('此欄位不存在：'+st);
 
   openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
     await withLoading(async () => {
-      const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx + 1, value: '' }] };
+      const body = { sheet: cfg.sheet, email: currentUser.email, writes: [{ row: rowNumber, col: colIdx+1, value: '' }] };
       const r = await fetch(API_BASE + '?action=update', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || 'unknown');
@@ -1156,14 +1132,12 @@ async function onDeleteTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch,
       await reloadSheet();
     }, '刪除中…');
 
-    timeSpan.textContent = '-';                  // ✅ 顯示 dash 並保持 mm 對齊
-    timeSpan.classList.add('empty');             // ✅ 套用「空欄」樣式（把 dash 推到 mm 位置）
+    timeSpan.textContent = '';
     btnPunch.disabled = false; btnEdit.disabled = true; btnDel.disabled = true;
     lockFollowing(rowEl);
     showNotif('已刪除', false);
   });
 }
-
 
 /* ---------------- 其它輔助 ---------------- */
 function reloadSheet(){ loadSheetData(currentSheetKey); }

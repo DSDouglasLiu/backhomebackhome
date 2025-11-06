@@ -203,6 +203,35 @@ body.loading-open{
 @media (max-width:480px){
   .modal .time-input{ width:56px; }
 }
+/* ===== Overlay 全面修復（貼在檔案最後） ====================== */
+/* 1) 讓 .modal-backdrop 與 #loading 永遠覆蓋整個「視窗」 */
+.modal-backdrop,
+#loading.loading{
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;   /* 舊瀏覽器保險 */
+  height: 100dvh !important;  /* iOS Safari 真實可視高 */
+}
+
+/* 2) Loading 疊在最上層（高於任何 modal） */
+#loading.loading{ z-index: 2147483600 !important; }
+#loading.loading.show{ display: flex !important; }
+
+/* 3) 遮罩期間停用 body 的 backdrop-filter（修正 Safari fixed+filter bug） */
+body.loading-open,
+body.modal-open{
+  backdrop-filter: none !important;
+}
+
+/* 4) 讓等待訊息永遠在視窗中央；向下捲也不會跑掉（建議開啟） */
+.loading-box{
+  position: sticky;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+  
 </style>
 </head>
 <body>
@@ -482,14 +511,19 @@ function ensureLoadingOverlay(){
   return el;
 }
 function showLoading(msg='處理中…'){
+  // 先把視窗移到頂端，確保即使遇到奇妙瀏覽器行為也看得到置中訊息
+  window.scrollTo(0, 0);
+
   const el = document.getElementById('loading');
   if (!el) return;
   const label = el.querySelector('.loading-text');
   if (label) label.textContent = msg;
+
   el.setAttribute('aria-busy', 'true');
   el.classList.add('show');
-  document.body.classList.add('loading-open');   // ✅ 鎖捲動
+  document.body.classList.add('loading-open');  // 鎖捲＋停用 body 濾鏡
 }
+
 function hideLoading(){
   const el = document.getElementById('loading');
   if (!el) return;
@@ -515,16 +549,18 @@ function openModal(element){
   // 1) 建立全螢幕 overlay（固定在視窗、置中子元素）
   const layer = document.createElement('div');
   // 用 inline style 確保任何 CSS 都蓋不掉
-  Object.assign(layer.style, {
-    position: 'fixed',
-    inset: '0',
-    width: '100vw',
-    height: '100dvh',
-    background: 'rgba(0,0,0,.45)',
-    zIndex: '2147483000',       // 最高層，避免被其它東西蓋住
-    display: 'grid',
-    placeItems: 'center'
-  });
+  // openModal 裡
+Object.assign(layer.style, {
+  position: 'fixed',
+  inset: '0',
+  width: '100vw',
+  height: '100dvh',
+  background: 'rgba(0,0,0,.45)',
+  zIndex: '2147483200',      // ⬅ 建議這裡略低於 #loading 的 2147483600
+  display: 'grid',
+  placeItems: 'center'
+});
+
 
   // 2) 確保對話框樣式正常：把 fixed/transform 拿掉改由 overlay 置中
   element.classList.add('modal'); // 仍保留你原本的視覺樣式（底色/圓角/陰影等）

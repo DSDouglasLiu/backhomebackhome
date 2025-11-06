@@ -153,14 +153,18 @@ body.dark .modal{ background:#0b1325; color:#e2e8f0 }
 .modal .hint{ font-size:.9rem; line-height:1.6; opacity:.8; margin:2px 0; }
 body.modal-open{ overflow:hidden; touch-action:none; }
 
-/* ====== Loading Overlay ====== */
+/* ====== Loading Overlay（統一只用這個） ====== */
 #loading.loading{
-  position: fixed; inset: 0; display: none;
-  align-items: center; justify-content: center;
-  background: rgba(0,0,0,.35);
-  z-index: 12000; /* 高於 modal */
+  position: fixed;
+  inset: 0;
+  display: none;              /* 由 .show 控制顯示 */
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.45);
+  z-index: 2147483000;        /* 超高層，壓過一切（含 modal） */
 }
 #loading.loading.show{ display: flex; }
+
 .loading-box{
   display:flex; align-items:center; gap:10px;
   background: var(--surface); color: var(--text);
@@ -168,6 +172,7 @@ body.modal-open{ overflow:hidden; touch-action:none; }
   padding:12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
   backdrop-filter: blur(8px);
 }
+
 .spinner{
   width:20px; height:20px; border-radius:50%;
   border:2.5px solid #cbd5e1; border-top-color: var(--primary-600);
@@ -177,12 +182,19 @@ body.modal-open{ overflow:hidden; touch-action:none; }
 @media (prefers-reduced-motion: reduce){
   .spinner{ animation: none; border-top-color:#cbd5e1; }
 }
-body.loading-open{ overflow:hidden; touch-action:none; }
 
-/* 行動裝置 100dvh 修正 */
+/* 顯示 overlay 時鎖住捲動（含手機） */
+body.loading-open{
+  overflow:hidden;
+  touch-action:none;
+  overscroll-behavior: contain;
+}
+
+/*（可保留）行動裝置 100dvh 修正：與 loading 無衝突 */
 @supports (height: 100dvh){
   .modal-backdrop{ height: 100dvh; }
 }
+
 
 @media(max-width:768px){
   .veh-list{ grid-template-columns:1fr; }
@@ -470,20 +482,27 @@ function ensureLoadingOverlay(){
   return el;
 }
 function showLoading(msg='處理中…'){
-  const el = ensureLoadingOverlay();
-  const label = el.querySelector('#loadingLabel');
+  const el = document.getElementById('loading');
+  if (!el) return;
+  const label = el.querySelector('.loading-text');
   if (label) label.textContent = msg;
-  el.style.display = 'flex';
+  el.setAttribute('aria-busy', 'true');
+  el.classList.add('show');
+  document.body.classList.add('loading-open');   // ✅ 鎖捲動
 }
 function hideLoading(){
-  const el = ensureLoadingOverlay();
-  el.style.display = 'none';
+  const el = document.getElementById('loading');
+  if (!el) return;
+  el.classList.remove('show');
+  el.setAttribute('aria-busy', 'false');
+  document.body.classList.remove('loading-open'); // ✅ 解鎖
 }
 async function withLoading(fn, msg='處理中…'){
   showLoading(msg);
   try { return await fn(); }
   finally { hideLoading(); }
 }
+
 
 /* ---------------- Modal（修正版） ---------------- */
 function closeAllModals(){

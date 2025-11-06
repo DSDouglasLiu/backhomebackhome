@@ -305,6 +305,12 @@ body.login #userInfo{ display: none !important; }
 /* 確保 Google 登入按鈕在置中容器可見 */
 body.login #signin{ display: block; }
 
+/* 加在 <style> 區塊最下面 */
+#logoutBtn {
+  white-space: nowrap;
+}
+#logoutBtn:hover { background:rgba(239,68,68,.1) !important; }  
+  
   
 </style>
 </head>
@@ -315,7 +321,13 @@ body.login #signin{ display: block; }
         <h1>車流人流退場情報</h1>
       </div>
       <div id="signin"></div>
-      <div id="userInfo" class="hide" style="font-size:.75rem;"></div>
+      <!-- 把你原本的 <div id="userInfo"> 這整段換成下面這段 -->
+<div id="userInfo" class="hide" style="display:flex; align-items:center; gap:12px; font-size:.875rem;">
+  <span id="userDisplay"></span>
+  <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">
+    登出
+  </button>
+</div>
     </div>
 
     <!-- tabs + 重新載入 -->
@@ -408,8 +420,43 @@ let currentUser = null;
 let currentSheetKey = SHEET_CONFIGS[0].key;
 let sheetData = [];
 
+const TOKEN_STORAGE_KEY = 'ddcc_user_token';   // localStorage 儲存 key
+let idToken = null;                            // 目前有效的 idToken
+  
 /* ---------------- 初始登入與頁籤 ---------------- */
+// ===== 頁面載入時：自動恢復登入狀態 =====
 window.onload = function(){
+  // 1. 先檢查 localStorage 有沒有 token
+  const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
+  if (saved) {
+    idToken = saved;
+    // 用這顆 token 去後端驗證（可能過期）
+    fetch(API_BASE + '?action=verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ idToken })
+    })
+    .then(r=>r.json())
+    .then(j=>{
+      if (j.error) throw new Error(j.error);
+      currentUser = j;
+      finishLoginUI();
+      buildTabs();
+      loadSheetData(currentSheetKey);
+    })
+    .catch(()=>{
+      // token 無效或過期 → 清除並要求重新登入
+      logout();
+      initGoogleSignIn();
+    });
+  } else {
+    // 完全沒登入過 → 正常顯示登入按鈕
+    initGoogleSignIn();
+  }
+  document.getElementById('logoutBtn').addEventListener('click', logout);
+};
+
+function initGoogleSignIn() {
   document.body.classList.add('login');
   google.accounts.id.initialize({
     client_id: GOOGLE_CLIENT_ID,
@@ -420,8 +467,8 @@ window.onload = function(){
     { theme:'outline', size:'large' }
   );
   buildTabs();
-};
-
+}  
+  
 function buildTabs(){
   const box = document.getElementById('sheetTabs');
   box.innerHTML = '';
@@ -456,57 +503,56 @@ function buildTabs(){
   if (keyChanged && contentShown) loadSheetData(currentSheetKey);
 }
 
-async function handleCredential(resp){
+async function handleCredential(resp) {
+  idToken = resp.credential;                   // ← 先存起來
+  localStorage.setItem(TOKEN_STORAGE_KEY, idToken); // ← 永久保存
+
   try {
     const r = await fetch(API_BASE + '?action=verify', {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ idToken: resp.credential })
+      body: JSON.stringify({ idToken })
     });
     const j = await r.json();
+    if (j.error) throw new Error(j.error);
 
-    if (j.error) {
-      showNotif('登入失敗：' + j.error, true);
-
-      // 回到置中登入畫面
-      document.body.classList.add('login');
-      document.getElementById('signin').classList.remove('hide');
-      document.getElementById('userInfo').classList.add('hide');
-      document.getElementById('tabs').classList.add('hide');
-      document.getElementById('content').classList.add('hide');
-      return;
-    }
-
-    // 登入成功 → 解除置中狀態，顯示內容
+    // 成功 → 登入狀態 UI
     currentUser = j;
-
-    document.body.classList.remove('login');
-    document.getElementById('signin').classList.add('hide');
-
-    const ui = document.getElementById('userInfo');
-    ui.classList.remove('hide');
-    ui.innerHTML = `${j.name||''} &lt;${j.email}&gt; ｜ 權限：<b>${j.permission}</b>`;
-
-    document.getElementById('tabs').classList.remove('hide');
-    document.getElementById('content').classList.remove('hide');
-
-    if (j.permission === '檢視') {
-      showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
-    }
-
+    finishLoginUI();
     loadSheetData(currentSheetKey);
   } catch (err) {
-    showNotif('登入錯誤：' + err.message, true);
-
-    // 發生例外也回到置中登入畫面
-    document.body.classList.add('login');
-    document.getElementById('signin').classList.remove('hide');
-    document.getElementById('userInfo').classList.add('hide');
-    document.getElementById('tabs').classList.add('hide');
-    document.getElementById('content').classList.add('hide');
+    showNotif('登入失敗：' + err.message, true);
+    logout(); // 清除殘留 token
+  }
+}
+// ===== 登入成功後統一呼叫這個（包含 F5 恢復）=====
+function finishLoginUI() {
+  document.body.classList.remove('login');
+  document.getElementById('signin').classList.add('hide');
+  const ui = document.getElementById('userInfo');
+  ui.classList.remove('hide');
+  document.getElementById('userDisplay').innerHTML = 
+    `${currentUser.name||''} &lt;${currentUser.email}&gt; ｜ 權限：<b>${currentUser.permission}</b>`;
+  document.getElementById('tabs').classList.remove('hide');
+  document.getElementById('content').classList.remove('hide');
+  if (currentUser.permission === '檢視') {
+    showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
   }
 }
 
+// ===== 登出功能 =====
+function logout() {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  idToken = null;
+  currentUser = null;
+  google.accounts.id.disableAutoSelect(); // 重要！防止 Google 自動重新登入
+  document.body.classList.add('login');
+  document.getElementById('signin').classList.remove('hide');
+  document.getElementById('userInfo').classList.add('hide');
+  document.getElementById('tabs').classList.add('hide');
+  document.getElementById('content').classList.add('hide');
+  showNotif('已登出', false);
+}
 
 async function loadSheetData(key){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);

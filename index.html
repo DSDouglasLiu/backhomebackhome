@@ -250,6 +250,14 @@ body.login .right-refresh{ display:none !important; }
 @supports not (height: 100dvh){
   .modal{ max-height: 90vh; } /* 舊瀏覽器後備 */
 }
+/* 讓對話框不會超出可視高度，必要時內容自動滾動 */
+.modal{
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+}
+@supports not (height: 100dvh){
+  .modal{ max-height: 90vh; } /* 舊瀏覽器後備 */
+}
   
 </style>
 </head>
@@ -625,6 +633,7 @@ function openModal(element){
   }
   return cleanup;
 }
+
 
 
 /* ---------------- 打卡頁：載入資料 & 渲染（原本） ---------------- */
@@ -1067,6 +1076,7 @@ function openConfirmDialog(msg, onOK){
     </div>`;
   const close = openModal(box);
   const [btnCancel, btnOK] = box.querySelectorAll('button');
+  setTimeout(()=>{ try{ hh.focus({ preventScroll:true }); }catch{} }, 80);
   btnCancel.onclick = close;
   btnOK.onclick = ()=>{ try{ onOK && onOK(); } finally{ close(); } };
 }

@@ -55,7 +55,7 @@ body{
 .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
 h1{margin:0 0 16px;font-size:var(--fz-display);line-height:var(--lh-display);font-weight:var(--fw-display);color:var(--text-strong);}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
-.hide{display:none;}
+.hide{ display:none !important; }
 
 /* =========== Segmented Tabs（上方工作表） =========== */
 .sheet-tabs{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:flex-start; }
@@ -253,6 +253,7 @@ body.login #content,
 body.login .tab-pane {
   display: none !important;
 }
+.user-info{ display:flex; align-items:center; gap:12px; font-size:.875rem; }
 
 
 </style>
@@ -269,8 +270,8 @@ body.login .tab-pane {
     <!-- 右上：登入資訊 -->
     <div class="right-user">
       <div id="signin"></div>
-      <div id="userInfo" class="hide" style="display:flex; align-items:center; gap:12px; font-size:.875rem;">
-        <span id="userDisplay"></span>
+      <div id="userInfo" class="hide user-info">
+      <span id="userDisplay"></span>
         <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
       </div>
     </div>
@@ -529,6 +530,7 @@ function finishLoginUI() {
   document.body.classList.remove('login');
   document.getElementById('signin').classList.add('hide');
   const ui = document.getElementById('userInfo'); ui.classList.remove('hide');
+  ui.style.display = ''; // 還原由 CSS 控制
   document.getElementById('userDisplay').innerHTML = `${currentUser.name||''} &lt;${currentUser.email}&gt; ｜ 權限：<b>${currentUser.permission}</b>`;
   document.getElementById('tabs').classList.remove('hide');
   document.getElementById('content').classList.remove('hide');
@@ -545,15 +547,19 @@ function logout() {
   idToken = null;
   currentUser = null;
 
+  enterLoginView();           // 先切回登入版面，統一隱藏所有 pane
+  stopDashboardAutoRefresh(); // 關掉儀表板自動刷新
+
   const signinDiv = document.getElementById('signin');
+  signinDiv.classList.remove('hide');
   signinDiv.innerHTML = '';
+
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
   google.accounts.id.renderButton(signinDiv, { theme:'outline', size:'large' });
 
-  enterLoginView();           // ★ 回到登入版面（所有 pane 收起來）
-  stopDashboardAutoRefresh(); // ★ 關閉自動刷新
   showNotif('已登出', false);
 }
+
 
 
 /* ---------------- 工具 ---------------- */
@@ -593,12 +599,16 @@ function enterLoginView(){
   const signinDiv = document.getElementById('signin');
   if (signinDiv) signinDiv.classList.remove('hide');
   const ui = document.getElementById('userInfo');
-  if (ui) ui.classList.add('hide');
+  if (ui) {
+    ui.classList.add('hide');
+    ui.style.display = 'none'; // 確保隱藏該區塊
+  }
 
   // （可選）避免鍵盤 Tab 到隱藏的頁籤
   document.querySelectorAll('#mainTabs .main-tab')
     .forEach(b => { b.tabIndex = -1; b.setAttribute('aria-disabled','true'); });
 }
+
 
 /* Modal：覆蓋頁 */
 function closeAllModals(){ document.querySelectorAll('.modal, .modal-backdrop').forEach(el=>{ try{el.remove()}catch{} }); document.body.classList.remove('modal-open'); }
@@ -897,10 +907,7 @@ async function buildDashboard(silent = false){
 
   const dash = document.getElementById('dashboard');
   dash.innerHTML = '';
-  const dash = document.getElementById('dashboard');
-  dash.innerHTML = '';
-
-  const work = async () => {
+    const work = async () => {
     // 取回四張表
     const results = await Promise.all(
       SHEET_CONFIGS.map(async cfg => {

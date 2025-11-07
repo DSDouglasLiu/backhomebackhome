@@ -778,6 +778,17 @@ function renderVehicles(cfg, data) {
     const {completed,total} = computeCompletion(cfg, header, row);
     const card = document.createElement('div'); card.className='veh-card';
     card.innerHTML = `<div><div class="veh-title-main">${area}</div><div class="veh-title-sub">${car}</div></div>`;
+    // 讓名片上方標題區可點擊看詳情（採用整體情報樣式）
+const headWrap = card.querySelector(':scope > div:first-child');
+if (headWrap){
+  headWrap.style.cursor = 'pointer';
+  headWrap.setAttribute('title','點我看詳情');
+  headWrap.addEventListener('click', (e)=>{
+    // 用「cfg + header + row」直接呼叫新的 openDetailModal
+    openDetailModal(cfg, row, header);
+  });
+}
+
     const stepsBox=document.createElement('div');
 
     cfg.steps.forEach(st=>{
@@ -1156,43 +1167,66 @@ function openListModal(sheetKey, step, type, locValue){
 }
 
 /* --------------- Overlay 2：單車詳情 --------------- */
-function openDetailModal(sheetKey, row){
-  const {cfg, header} = ALL_SHEETS[sheetKey];
-  const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim();
+// 取代原本的 openDetailModal，支援兩種呼叫方式：
+// - openDetailModal(sheetKey, row)       // 供整體情報（用 ALL_SHEETS）
+// - openDetailModal(cfgObject, row, headerArray) // 供名片（打卡頁）直接帶 cfg 與 header
+function openDetailModal(sheetOrKey, row, headerOverride){
+  // 取得 cfg / header
+  let cfg, header;
+  if (typeof sheetOrKey === 'string') {
+    const pack = ALL_SHEETS[sheetOrKey] || {};
+    cfg    = pack.cfg;
+    header = pack.header;
+    if (!cfg || !header) return;
+  } else {
+    cfg    = sheetOrKey;
+    header = headerOverride;
+  }
 
-  // 進 / 退 場分段：以「車暫停位置」為界，如果沒有就全部當一段
+  const area = String(row[1]||'').trim();
+  const car  = String(row[2]||'').trim();
+
+  // 依「車暫停位置」切成進/退場兩段（若無此欄就全部一段）
   const cutIdx = cfg.steps.indexOf('車暫停位置');
   const groups = [];
-  if (cutIdx>=0){
+  if (cutIdx >= 0){
     groups.push({ title:'進場', cols: cfg.steps.slice(0, cutIdx+1) });
     if (cutIdx+1 < cfg.steps.length) groups.push({ title:'退場', cols: cfg.steps.slice(cutIdx+1) });
   } else {
     groups.push({ title:'狀態', cols: cfg.steps });
   }
 
-  const box=document.createElement('div'); box.className='modal';
-  const head = `<div class="dash-close">✕</div>
-    <div style="font-weight:900;margin-bottom:8px;">${sheetKey}</div>
-    <div style="margin-bottom:10px;"><b>${area}</b>　<span style="font-weight:900">${car}</span></div>`;
-  let html = head;
+  // 組畫面（沿用整體情報用的表格樣式）
+  const box = document.createElement('div');
+  box.className = 'modal';
+  let html = `
+    <div class="dash-close">✕</div>
+    <div style="font-weight:900;margin-bottom:8px;">${cfg.key}</div>
+    <div style="margin-bottom:10px;"><b>${area}</b>　<span style="font-weight:900">${car}</span></div>
+  `;
 
   groups.forEach(g=>{
     html += `<div style="font-weight:800;margin:6px 0 4px;">${g.title}</div>
-      <table class="detail-table"><thead><tr>
-      ${g.cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody><tr>
-      ${g.cols.map(c=>{
-        const idx=header.indexOf(c);
-        const v = idx>=0 ? String(row[idx]||'').trim() : '';
-        if (c==='車暫停位置') return `<td>${v||''}</td>`;
-        return `<td>${v?formatSheetTime(v):''}</td>`;
-      }).join('')}
-      </tr></tbody></table>`;
+      <table class="detail-table">
+        <thead><tr>${g.cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+        <tbody><tr>${
+          g.cols.map(c=>{
+            const idx = header.indexOf(c);
+            const v   = idx>=0 ? String(row[idx]||'').trim() : '';
+            // 停車位置顯示文字，其餘欄位顯示時間（自動格式化）
+            return c==='車暫停位置'
+              ? `<td>${v||''}</td>`
+              : `<td>${v?formatSheetTime(v):''}</td>`;
+          }).join('')
+        }</tr></tbody>
+      </table>`;
   });
 
   box.innerHTML = html;
   const close = openModal(box);
   box.querySelector('.dash-close').onclick = close;
 }
+
 
 /* ====== 其餘舊有的「確認/修改時間」小視窗 ====== */
 function openConfirmDialog(msg, onOK){

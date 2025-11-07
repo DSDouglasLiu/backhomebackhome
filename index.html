@@ -244,6 +244,17 @@ body.dark .detail-table th{ background: var(--primary-600) !important; }
 .detail-table, .detail-table th, .detail-table td{ border-color: var(--border); }
 .detail-table thead th:first-child{ border-top-left-radius:10px; }
 .detail-table thead th:last-child{  border-top-right-radius:10px; }
+/* 登入模式：只留 Google 登入按鈕與大標題，其他一律隱藏 */
+body.login #mainTabs,
+body.login .right-refresh,
+body.login #userInfo,
+body.login #tabs,
+body.login #content,
+body.login .tab-pane {
+  display: none !important;
+}
+
+
 </style>
 </head>
 <body>
@@ -472,11 +483,14 @@ function updateRefreshButtonsUI(){
 
 /* ---------------- Google Sign-In（原） ---------------- */
 function initGoogleSignIn() {
-  document.body.classList.add('login');
+  enterLoginView(); // 確保所有面板都關掉
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
   google.accounts.id.renderButton(document.getElementById('signin'), { theme:'outline', size:'large' });
+
+  // 只是建立按鈕 DOM，登入模式下會被 CSS 隱藏
   buildTabs();
 }
+
 function buildTabs(){
   const box = document.getElementById('sheetTabs');
   box.innerHTML = '';
@@ -519,18 +533,28 @@ function finishLoginUI() {
   document.getElementById('tabs').classList.remove('hide');
   document.getElementById('content').classList.remove('hide');
   if (currentUser.permission === '檢視') showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
+  // ★ 進入後統一切回「登錄」頁，避免上次停在整體情報
+  switchPane('pane-punch');
+
+  // （可選）恢復頁籤可聚焦
+  document.querySelectorAll('#mainTabs .main-tab')
+    .forEach(b => { b.tabIndex = 0; b.removeAttribute('aria-disabled'); });
 }
 function logout() {
-  localStorage.removeItem(TOKEN_STORAGE_KEY); idToken = null; currentUser = null;
-  const signinDiv = document.getElementById('signin'); signinDiv.innerHTML = '';
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  idToken = null;
+  currentUser = null;
+
+  const signinDiv = document.getElementById('signin');
+  signinDiv.innerHTML = '';
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
   google.accounts.id.renderButton(signinDiv, { theme:'outline', size:'large' });
-  document.body.classList.add('login');
-  document.getElementById('userInfo').classList.add('hide');
-  document.getElementById('tabs').classList.add('hide');
-  document.getElementById('content').classList.add('hide');
+
+  enterLoginView();           // ★ 回到登入版面（所有 pane 收起來）
+  stopDashboardAutoRefresh(); // ★ 關閉自動刷新
   showNotif('已登出', false);
 }
+
 
 /* ---------------- 工具 ---------------- */
 function formatSheetTime(val){
@@ -551,6 +575,30 @@ function showLoading(msg='處理中…'){ const el=document.getElementById('load
 function hideLoading(){ const el=document.getElementById('loading'); if(!el) return; el.classList.remove('show'); document.body.classList.remove('loading-open'); }
 async function withLoading(fn,msg='處理中…'){ showLoading(msg); try{ return await fn(); } finally{ hideLoading(); } }
 function showNotif(msg,isErr){ const box=document.getElementById('notif'); box.textContent=msg; box.style.background=isErr?'rgba(248,113,113,.9)':'rgba(15,23,42,.85)'; box.classList.add('show'); setTimeout(()=>box.classList.remove('show'), 2500); }
+function enterLoginView(){
+  // 標記為登入畫面
+  document.body.classList.add('login');
+
+  // 停止任何自動刷新，並清空儀表板
+  stopDashboardAutoRefresh?.();
+  try { document.getElementById('dashboard').innerHTML = ''; } catch {}
+
+  // 關掉所有工作頁
+  ['pane-punch','pane-dashboard','pane-single'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hide');
+  });
+
+  // 顯示登入按鈕、隱藏使用者資訊
+  const signinDiv = document.getElementById('signin');
+  if (signinDiv) signinDiv.classList.remove('hide');
+  const ui = document.getElementById('userInfo');
+  if (ui) ui.classList.add('hide');
+
+  // （可選）避免鍵盤 Tab 到隱藏的頁籤
+  document.querySelectorAll('#mainTabs .main-tab')
+    .forEach(b => { b.tabIndex = -1; b.setAttribute('aria-disabled','true'); });
+}
 
 /* Modal：覆蓋頁 */
 function closeAllModals(){ document.querySelectorAll('.modal, .modal-backdrop').forEach(el=>{ try{el.remove()}catch{} }); document.body.classList.remove('modal-open'); }
@@ -797,6 +845,10 @@ function computeCompletion(cfg, header, row) {
 /* ===== 頂層三頁切換 ===== */
 const PANE_IDS=['pane-punch','pane-dashboard','pane-single'];
 function switchPane(targetId){
+  if (!currentUser) {                 // ★ 未登入就不要切換
+    showNotif('請先登入', true);
+    return;
+  }
   document.querySelectorAll('#mainTabs .main-tab')
     .forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
   PANE_IDS.forEach(id => {
@@ -840,6 +892,11 @@ let ALL_SHEETS = {}; // { key: { cfg, headerIdx, header, rows } }
 
 // 支援靜默刷新：buildDashboard(true) 會不顯示 Loading
 async function buildDashboard(silent = false){
+  if (!currentUser) return;                              // ★ 未登入直接退出
+  if (document.body.classList.contains('login')) return; // ★ 保險
+
+  const dash = document.getElementById('dashboard');
+  dash.innerHTML = '';
   const dash = document.getElementById('dashboard');
   dash.innerHTML = '';
 

@@ -271,7 +271,7 @@ body.login .tab-pane {
     <div class="right-user">
       <div id="signin"></div>
       <div id="userInfo" class="hide user-info">
-        <span id="userDisplay"></span>
+      <span id="userDisplay"></span>
         <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
       </div>
     </div>
@@ -279,11 +279,9 @@ body.login .tab-pane {
     <!-- 左下：三個主頁籤 -->
     <div class="left-tabs">
       <div id="mainTabs" class="main-tabs">
-        <button class="main-tab active" data-target="pane-all">所有車輛</button>
-        <button class="main-tab" data-target="pane-regional">地區專車退場</button>
-        <button class="main-tab" data-target="pane-chanta">地區專車退場（禪堂平台）</button>
-        <button class="main-tab" data-target="pane-waterland">水陸專車退場</button>
-        <button class="main-tab" data-target="pane-288">288法青退場</button>
+        <button class="main-tab active" data-target="pane-punch">登錄</button>
+        <button class="main-tab" data-target="pane-dashboard">整體情報</button>
+        <button class="main-tab" data-target="pane-single">個別情報</button>
       </div>
     </div>
 
@@ -296,8 +294,8 @@ body.login .tab-pane {
     </div>
   </div>
 
-  <!-- 所有車輛頁面 -->
-  <div id="pane-all" class="tab-pane">
+  <!-- 第 1 頁：沿用（打卡 + 車卡） -->
+  <div id="pane-punch" class="tab-pane">
     <div id="tabs" class="card hide" style="padding-bottom:6px;">
       <div class="sheet-tabs" id="sheetTabs"></div>
     </div>
@@ -306,24 +304,16 @@ body.login .tab-pane {
     </div>
   </div>
 
-  <!-- 地區專車退場頁面 -->
-  <div id="pane-regional" class="tab-pane hide">
-    <div id="dashboard-regional"></div>
+  <!-- 第 2 頁：整體情報 -->
+  <div id="pane-dashboard" class="tab-pane hide">
+    <div id="dashboard"></div>
   </div>
 
-  <!-- 地區專車退場（禪堂平台）頁面 -->
-  <div id="pane-chanta" class="tab-pane hide">
-    <div id="dashboard-chanta"></div>
-  </div>
-
-  <!-- 水陸專車退場頁面 -->
-  <div id="pane-waterland" class="tab-pane hide">
-    <div id="dashboard-waterland"></div>
-  </div>
-
-  <!-- 288法青退場頁面 -->
-  <div id="pane-288" class="tab-pane hide">
-    <div id="dashboard-288"></div>
+  <!-- 第 3 頁：個別情報 -->
+  <div id="pane-single" class="tab-pane hide">
+    <div class="card" style="min-height:360px;display:flex;align-items:center;justify-content:center;">
+      （個別情報頁：之後再補）
+    </div>
   </div>
 </div>
 
@@ -336,7 +326,6 @@ body.login .tab-pane {
     <div class="loading-text">處理中…</div>
   </div>
 </div>
-
   
 
 <script>
@@ -531,73 +520,46 @@ function buildTabs(){
 async function handleCredential(resp) {
   idToken = resp.credential;
   localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
-
   try {
-    // 發送請求驗證 ID Token
-    const r = await fetch(API_BASE + '?action=verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ idToken })
-    });
-
-    const j = await r.json();
-    if (j.error) throw new Error(j.error); // 如果驗證失敗，拋出錯誤
-
-    // 設定當前用戶資料
-    currentUser = j;
-
-    // 成功後執行 UI 更新與資料加載
-    finishLoginUI(); // 更新 UI 顯示
-    buildTabs(); // 顯示選項卡（頁籤）
-    loadSheetData(currentSheetKey); // 加載資料
-
-  } catch (err) {
-    // 如果登入過程中出錯，顯示錯誤通知並登出
-    showNotif('登入失敗：' + err.message, true);
-    logout(); // 登出並返回登入畫面
-  }
+    const r = await fetch(API_BASE + '?action=verify', { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken }) });
+    const j = await r.json(); if (j.error) throw new Error(j.error);
+    currentUser = j; finishLoginUI(); loadSheetData(currentSheetKey);
+  } catch (err) { showNotif('登入失敗：' + err.message, true); logout(); }
 }
-
-  
 function finishLoginUI() {
-  document.body.classList.remove('login');  // 移除登入模式的類別，顯示正常內容
-  document.getElementById('signin').classList.add('hide');  // 隱藏登入按鈕
+  document.body.classList.remove('login');
+  document.getElementById('signin').classList.add('hide');
+  const ui = document.getElementById('userInfo'); ui.classList.remove('hide');
+  ui.style.display = ''; // 還原由 CSS 控制
+  document.getElementById('userDisplay').innerHTML = `${currentUser.name||''} &lt;${currentUser.email}&gt; ｜ 權限：<b>${currentUser.permission}</b>`;
+  document.getElementById('tabs').classList.remove('hide');
+  document.getElementById('content').classList.remove('hide');
+  if (currentUser.permission === '檢視') showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
+  // ★ 進入後統一切回「登錄」頁，避免上次停在整體情報
+  switchPane('pane-punch');
 
-  // 顯示用戶資訊
-  const ui = document.getElementById('userInfo');
-  ui.classList.remove('hide');
-  document.getElementById('userDisplay').innerHTML = `${currentUser.name || ''} <${currentUser.email}> | 權限：<b>${currentUser.permission}</b>`;
-
-  // 顯示主頁籤並且激活 "所有車輛"
-  const tabs = document.getElementById('mainTabs');
-  tabs.classList.remove('hide');
-  // 預設顯示 "所有車輛" 頁面
-  switchPane('pane-all');
-  
-  // 加載資料
-  loadDataForCategory('pane-all');
+  // （可選）恢復頁籤可聚焦
+  document.querySelectorAll('#mainTabs .main-tab')
+    .forEach(b => { b.tabIndex = 0; b.removeAttribute('aria-disabled'); });
 }
 function logout() {
   localStorage.removeItem(TOKEN_STORAGE_KEY);
   idToken = null;
   currentUser = null;
 
-  // 清空頁面並顯示登入畫面
-  enterLoginView();
-  stopDashboardAutoRefresh();
+  enterLoginView();           // 先切回登入版面，統一隱藏所有 pane
+  stopDashboardAutoRefresh(); // 關掉儀表板自動刷新
+
+  const signinDiv = document.getElementById('signin');
+  signinDiv.classList.remove('hide');
+  signinDiv.innerHTML = '';
+
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
+  google.accounts.id.renderButton(signinDiv, { theme:'outline', size:'large' });
+
   showNotif('已登出', false);
 }
 
-// 登入頁面顯示控制
-function enterLoginView() {
-  document.body.classList.add('login'); // 設置為登入模式
-  document.getElementById('signin').classList.remove('hide');
-  const ui = document.getElementById('userInfo');
-  if (ui) ui.classList.add('hide'); // 隱藏用戶資訊
-
-  document.querySelectorAll('#mainTabs .main-tab')
-    .forEach(b => { b.tabIndex = -1; b.setAttribute('aria-disabled', 'true'); }); // 禁用 Tab
-}
 
 
 /* ---------------- 工具 ---------------- */
@@ -892,27 +854,19 @@ function computeCompletion(cfg, header, row) {
 
 /* ===== 頂層三頁切換 ===== */
 const PANE_IDS=['pane-punch','pane-dashboard','pane-single'];
-function switchPane(targetId) {
-  if (!currentUser) { // 未登入時阻止切換
+function switchPane(targetId){
+  if (!currentUser) {                 // ★ 未登入就不要切換
     showNotif('請先登入', true);
     return;
   }
-
-  // 更新 Tab 按鈕樣式
   document.querySelectorAll('#mainTabs .main-tab')
     .forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
-
-  // 顯示對應 Tab 的內容，並隱藏其他內容
-  const panes = ['pane-all', 'pane-regional', 'pane-chanta', 'pane-waterland', 'pane-288'];
-  panes.forEach(id => {
+  PANE_IDS.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hide', id !== targetId);
   });
 
-  // 根據選擇的 Tab 加載資料
-  loadDataForCategory(targetId);
-
-  // 控制自動刷新（針對整體情報頁面）
+  // 進出整體情報時控制自動刷新
   if (targetId === 'pane-dashboard') {
     buildDashboard(false);      // 首次切入：帶 Loading
     startDashboardAutoRefresh();
@@ -920,33 +874,6 @@ function switchPane(targetId) {
     stopDashboardAutoRefresh();
   }
 }
-
-// 根據選擇的 Tab 加載對應的資料
-function loadDataForCategory(category) {
-  switch (category) {
-    case 'pane-all':
-      // 加載所有車輛的資料
-      console.log('Loading 所有車輛資料...');
-      break;
-    case 'pane-regional':
-      // 加載地區專車退場的資料
-      console.log('Loading 地區專車退場資料...');
-      break;
-    case 'pane-chanta':
-      // 加載地區專車退場（禪堂平台）的資料
-      console.log('Loading 地區專車退場（禪堂平台）資料...');
-      break;
-    case 'pane-waterland':
-      // 加載水陸專車退場的資料
-      console.log('Loading 水陸專車退場資料...');
-      break;
-    case 'pane-288':
-      // 加載288法青退場的資料
-      console.log('Loading 288法青退場資料...');
-      break;
-  }
-}
-
 
 function isDashboardVisible() {
   return !document.getElementById('pane-dashboard').classList.contains('hide');

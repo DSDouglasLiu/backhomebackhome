@@ -306,8 +306,14 @@ body.login .tab-pane {
 
   <!-- 第 2 頁：整體情報 -->
   <div id="pane-dashboard" class="tab-pane hide">
-    <div id="dashboard"></div>
+  <!-- 整體情報的 5 個子分頁 -->
+  <div class="card" id="dashTabsBar" style="padding-bottom:6px;">
+    <div class="sheet-tabs" id="dashboardTabs"></div>
   </div>
+  <!-- 內容容器 -->
+  <div id="dashboard"></div>
+</div>
+
 
   <!-- 第 3 頁：個別情報 -->
   <div id="pane-single" class="tab-pane hide">
@@ -367,6 +373,7 @@ if (!Number.isFinite(refreshMs) || refreshMs <= 0) refreshMs = 30*1000; // 預�
 
 /* 原本的 dashboard 計時器 */
 let dashTimer = null;
+let currentDashFilter = 'ALL'; // 'ALL' 或某一個 SHEET_CONFIGS[i].key
 
 let currentUser = null;
 let currentSheetKey = SHEET_CONFIGS[0].key;
@@ -517,6 +524,38 @@ function buildTabs(){
   const contentShown = !document.getElementById('content').classList.contains('hide');
   if (keyChanged && contentShown) loadSheetData(currentSheetKey);
 }
+function buildDashboardTabs(){
+  const box = document.getElementById('dashboardTabs');
+  if (!box) return;
+  box.innerHTML = '';
+
+  const makeBtn = (label, key) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-tab' + (currentDashFilter === key ? ' active' : '');
+    btn.textContent = label;
+    btn.dataset.key = key;              // 用 data-key 來辨識
+    btn.onclick = () => {
+      if (currentDashFilter === key) return;
+      currentDashFilter = key;
+      updateDashTabActive();
+      buildDashboard(false);            // 依新篩選重繪
+    };
+    box.appendChild(btn);
+  };
+
+  makeBtn('所有車輛', 'ALL');
+  SHEET_CONFIGS.forEach(cfg => makeBtn(cfg.key, cfg.key));
+}
+
+function updateDashTabActive(){
+  const box = document.getElementById('dashboardTabs');
+  if (!box) return;
+  box.querySelectorAll('.btn-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.key === String(currentDashFilter));
+  });
+}
+
+  
 async function handleCredential(resp) {
   idToken = resp.credential;
   localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
@@ -866,13 +905,14 @@ function switchPane(targetId){
     if (el) el.classList.toggle('hide', id !== targetId);
   });
 
-  // 進出整體情報時控制自動刷新
   if (targetId === 'pane-dashboard') {
-    buildDashboard(false);      // 首次切入：帶 Loading
-    startDashboardAutoRefresh();
-  } else {
-    stopDashboardAutoRefresh();
-  }
+  buildDashboardTabs();        // ← 新增：先畫子分頁
+  buildDashboard(false);       // 首次切入：帶 Loading
+  startDashboardAutoRefresh(); // 保持原行為
+} else {
+  stopDashboardAutoRefresh();
+}
+
 }
 
 function isDashboardVisible() {
@@ -933,7 +973,13 @@ async function buildDashboard(silent = false){
     results.forEach(x => ALL_SHEETS[x.key] = x);
 
     // 逐張表生成區塊
-    results.forEach(({ cfg, header, rows }) => {
+results.forEach(({ cfg, header, rows }) => {
+  // ★ 依子分頁篩選；ALL 顯示全部
+  const filterKey = (typeof currentDashFilter === 'undefined' || !currentDashFilter)
+    ? 'ALL'
+    : String(currentDashFilter);
+  if (filterKey !== 'ALL' && String(cfg.key) !== filterKey) return;
+
       const sec   = document.createElement('section'); sec.className = 'dash-section card';
       const title = document.createElement('div');     title.className = 'dash-title'; title.textContent = cfg.key;
       sec.appendChild(title);

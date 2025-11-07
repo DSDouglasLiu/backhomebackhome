@@ -287,36 +287,6 @@ body.dark .detail-table th{
 }
 .detail-table thead th:first-child{ border-top-left-radius:10px; }
 .detail-table thead th:last-child{  border-top-right-radius:10px; }
-/* 確保 JS 開的 modal 使用相對定位，不吃舊的 fixed 置中規則 */
-.modal[style]{
-  position: relative !important;
-  top: auto !important;
-  left: auto !important;
-  transform: none !important;
-}
-
-/* 統一 modal 最大尺寸與捲動行為（避免被早前重複規則覆蓋） */
-.modal{
-  max-width: 96vw !important;
-  max-height: calc(100dvh - 48px) !important;
-  overflow: auto !important;
-  padding-right: 44px !important; /* 避免標題被 X 吃到 */
-}
-@supports not (height: 100dvh){
-  .modal{ max-height: 90vh !important; }
-}
-
-/* X 的位置微調 */
-.modal .dash-close{ right:12px; top:10px; }
-
-/* 詳細資料表格 header 用站內主色，與整體一致 */
-.detail-table th{
-  background: var(--primary-700) !important;
-  color: #fff;
-}
-body.dark .detail-table th{
-  background: var(--primary-600) !important;
-}
   
 </style>
 </head>
@@ -629,22 +599,22 @@ function showNotif(msg,isErr){ const box=document.getElementById('notif'); box.t
 /* Modal：覆蓋頁 */
 function closeAllModals(){ document.querySelectorAll('.modal, .modal-backdrop').forEach(el=>{ try{el.remove()}catch{} }); document.body.classList.remove('modal-open'); }
 function openModal(element){
-  const MAX_Z = 2147483647;
+  const MAX_Z = 2147483647; // 最高層
   const layer = document.createElement('div');
 
-  // 背景層：固定於可視區置中
+  // 全螢幕覆蓋層：固定在可視區、置中顯示
   Object.assign(layer.style, {
     position:'fixed',
     inset:'0',
-    width:'100dvw',
-    height:'100dvh',
+    width:'100vw',
+    height:'100vh',
     background:'rgba(0,0,0,.45)',
     zIndex: String(MAX_Z),
     display:'grid',
     placeItems:'center'
   });
 
-  // 對話框本體：相對定位＋尺寸限制＋可滾動
+  // 對話框本體：使用相對定位、限制最大尺寸
   element.classList.add('modal');
   Object.assign(element.style, {
     position:'relative',
@@ -652,47 +622,15 @@ function openModal(element){
     left:'auto',
     transform:'none',
     margin:'0',
-    maxWidth:'min(1300px,96vw)',   // ← 這裡一定要有逗號
+    maxWidth:'min(1300px,96vw)'
     maxHeight:'min(86dvh, 640px)',
-    overflow:'auto',
-    paddingRight:'44px'            // 預留右上角關閉鈕空間
+    overflow:'auto'
   });
 
   // 插入 DOM
   layer.appendChild(element);
   document.body.appendChild(layer);
   document.body.classList.add('modal-open');
-
-  // 跟隨 VisualViewport（行動版鍵盤 / 工具列）
-  function syncToVisualViewport(){
-    const vv = window.visualViewport;
-    if(!vv) return;
-    layer.style.width  = vv.width + 'px';
-    layer.style.height = vv.height + 'px';
-    layer.style.left   = vv.offsetLeft + 'px';
-    layer.style.top    = vv.offsetTop + 'px';
-  }
-  if (window.visualViewport){
-    syncToVisualViewport();
-    window.visualViewport.addEventListener('resize', syncToVisualViewport);
-    window.visualViewport.addEventListener('scroll', syncToVisualViewport);
-  }
-
-  // ESC 關閉
-  const onEsc = e => { if (e.key === 'Escape') cleanup(); };
-  document.addEventListener('keydown', onEsc);
-
-  function cleanup(){
-    document.body.classList.remove('modal-open');
-    document.removeEventListener('keydown', onEsc);
-    if (window.visualViewport){
-      window.visualViewport.removeEventListener('resize', syncToVisualViewport);
-      window.visualViewport.removeEventListener('scroll', syncToVisualViewport);
-    }
-    try{ layer.remove(); }catch{}
-  }
-  return cleanup;
-}
 
   // 針對行動裝置鍵盤/動態視口：跟隨 VisualViewport
   function syncToVisualViewport(){
@@ -1167,6 +1105,7 @@ function openConfirmDialog(msg, onOK){
     </div>`;
   const close = openModal(box);
   const [btnCancel, btnOK] = box.querySelectorAll('button');
+  setTimeout(()=>{ try{ hh.focus({ preventScroll:true }); }catch{} }, 80);
   btnCancel.onclick = close;
   btnOK.onclick = ()=>{ try{ onOK && onOK(); } finally{ close(); } };
 }

@@ -255,7 +255,22 @@ body.login .tab-pane {
 }
 .user-info{ display:flex; align-items:center; gap:12px; font-size:.875rem; }
 
-
+/* ===== 個別情報樣式 ===== */
+.indiv-row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+.indiv-row select{ min-width:240px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+.indiv-row select[disabled]{ opacity:.6; cursor:not-allowed; }
+.indiv-actions .btn{ min-width:96px; }
+.indiv-cards-grid{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-top:8px; }
+.indiv-card{ border:1px solid var(--border); background:#fff; border-radius:12px; padding:12px; box-shadow:var(--shadow-card); cursor:pointer; }
+body.dark .indiv-card{ background:rgba(15,23,42,.30); }
+.indiv-card .top{ font-weight:600; margin-bottom:6px; }
+.mini-badge{ display:inline-block; font-size:12px; padding:2px 6px; border-radius:999px; background:#eef2ff; color:#3730a3; }
+.indiv-card .mid{ font-size:20px; font-weight:800; letter-spacing:.5px; margin-bottom:6px; }
+.indiv-card .bot{ color:#334155; font-size:14px; }
+.step-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.step-cell{ background:#1d4ed8; color:#fff; padding:8px; border-radius:8px; text-align:center; font-size:14px; }
+@media (max-width: 1200px){ .indiv-cards-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width: 680px){ .indiv-cards-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } .indiv-row select{ min-width:180px; } }
 </style>
 </head>
 <body>
@@ -317,8 +332,27 @@ body.login .tab-pane {
 
   <!-- 第 3 頁：個別情報 -->
   <div id="pane-single" class="tab-pane hide">
-    <div class="card" style="min-height:360px;display:flex;align-items:center;justify-content:center;">
-      （個別情報頁：之後再補）
+    <div class="card">
+      <!-- 第一列：三個下拉 -->
+      <div class="indiv-row">
+        <select id="indiv-sel-tab">
+          <option value="">全部（四個Tab）</option>
+        </select>
+        <select id="indiv-sel-area">
+          <option value="">全部區域車次編號</option>
+        </select>
+        <select id="indiv-sel-plate">
+          <option value="">全部車號</option>
+        </select>
+      </div>
+      <!-- 第二列：查詢／全部重設 -->
+      <div class="indiv-row indiv-actions">
+        <button id="indiv-btn-query" class="btn btn--primary">查詢</button>
+        <button id="indiv-btn-reset" class="btn btn--secondary">全部重設</button>
+      </div>
+
+      <!-- 結果卡片 -->
+      <div id="indiv-cards" class="indiv-cards-grid"></div>
     </div>
   </div>
 </div>
@@ -913,6 +947,10 @@ function switchPane(targetId){
   stopDashboardAutoRefresh();
 }
 
+/* 進入「個別情報」時，如未初始化則載入 */
+  if (targetId === 'pane-single') {
+    if (!window.__indivInited__) initIndividual();
+  }
 }
 
 function isDashboardVisible() {
@@ -1103,7 +1141,7 @@ function openListModal(sheetKey, step, type, locValue){
   const scroller = box.querySelector('div[style*="overflow:auto"]');
   list.forEach(r=>{
     const area=String(r[1]||'').trim(); const car=String(r[2]||'').trim();
-    const latest = getLatestStatus(cfg, header, r);
+    const latest = getLatestStatus(ALL_SHEETS[sheetKey].cfg, ALL_SHEETS[sheetKey].header, r);
     const row = document.createElement('div'); row.className='list-item';
     row.innerHTML = `
       <div class="list-left">
@@ -1202,6 +1240,216 @@ function openEditTimeDialog(initialHHMMSS, onOK){
     if (!isValidHMS(H,M,S)){ showNotif('格式需為 HH(00–23) / MM(00–59) / SS(00–59)', true); return; }
     try{ onOK(`${H}:${M}:${S}`); } finally{ close(); }
   };
+}
+
+/* ================= 個別情報 ================= */
+let __indivInited__ = false;
+let INDIV_ROWS = []; // {tabKey, sheetOrder, areaSeq, plate, latest, stepsIn[], stepsOut[]}
+
+function indivNorm(v){ return String(v ?? '').trim(); }
+
+function initIndividual(){
+  // 首次掛 UI
+  indivMountUI();
+  // 載入四表資料
+  withLoading(indivLoadAllSheets, '讀取資料…').then(()=>{
+    indivFillTabOptions();
+    indivApplyFilter(); // 依目前選項（都是空）回填候選
+    __indivInited__ = true;
+  });
+  // 綁事件
+  ['indiv-sel-tab','indiv-sel-area','indiv-sel-plate'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', indivApplyFilter);
+  });
+  document.getElementById('indiv-btn-query').addEventListener('click', indivDoQuery);
+  document.getElementById('indiv-btn-reset').addEventListener('click', indivReset);
+}
+
+function indivMountUI(){
+  // 把四個 Tab 名稱先放到第一個下拉（其餘兩個等載入資料後回填）
+  const selTab = document.getElementById('indiv-sel-tab');
+  selTab.innerHTML = '<option value="">全部（四個Tab）</option>';
+  SHEET_CONFIGS.forEach(cfg=>{
+    const opt=document.createElement('option'); opt.value=cfg.key; opt.textContent=cfg.key; selTab.appendChild(opt);
+  });
+}
+
+async function indivLoadAllSheets(){
+  const results = await Promise.all(SHEET_CONFIGS.map(async (cfg, idx)=>{
+    const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+    const j = await r.json();
+    const values = j.values || [];
+    // 找表頭（只要有「編號 / 區域* / 車號」）
+    const headIdx = values.findIndex(row =>
+      Array.isArray(row) &&
+      indivNorm(row[0])==='編號' &&
+      indivNorm(row[1]).startsWith('區域') &&
+      indivNorm(row[2])==='車號'
+    );
+    if (headIdx < 0) return [];
+    const header = values[headIdx].map(indivNorm);
+    const rows = values.slice(headIdx+1).filter(r => indivNorm(r[0]) && indivNorm(r[1]) && indivNorm(r[2]));
+    const pack = [];
+    rows.forEach(row=>{
+      const area = indivNorm(row[1]);
+      const plate = indivNorm(row[2]);
+      // 最新狀態（用你原本的步驟順序回推）
+      let latest = '';
+      for (let i=cfg.steps.length-1;i>=0;i--){
+        const st = cfg.steps[i];
+        const ci = header.indexOf(st);
+        if (ci>=0 && indivNorm(row[ci])) { latest = (st==='車暫停位置') ? `車暫停位置：${indivNorm(row[ci])}` : st; break; }
+      }
+      // 進/退場步驟值（彈窗用）
+      const cut = cfg.steps.indexOf('車暫停位置');
+      const stepsIn = cfg.steps.slice(0, cut>=0 ? cut+1 : cfg.steps.length).map(name=>{
+        const i=header.indexOf(name); const val = i>=0 ? indivNorm(row[i]) : '';
+        return {name, val};
+      });
+      const stepsOut = (cut>=0 ? cfg.steps.slice(cut+1) : []).map(name=>{
+        const i=header.indexOf(name); const val = i>=0 ? indivNorm(row[i]) : '';
+        return {name, val};
+      });
+
+      pack.push({
+        tabKey: cfg.key,
+        sheetOrder: idx,
+        areaSeq: area,
+        plate,
+        latest,
+        stepsIn,
+        stepsOut
+      });
+    });
+    return pack;
+  }));
+
+  INDIV_ROWS = results.flat();
+}
+
+function indivCurrentFilter(){
+  const tab   = indivNorm(document.getElementById('indiv-sel-tab').value);
+  const area  = indivNorm(document.getElementById('indiv-sel-area').value);
+  const plate = indivNorm(document.getElementById('indiv-sel-plate').value);
+  return {tab, area, plate};
+}
+function indivFillTabOptions(){
+  // 已在 mount 放入，這裡預留如需動態更新
+}
+
+function indivApplyFilter(){
+  const selTab   = document.getElementById('indiv-sel-tab');
+  const selArea  = document.getElementById('indiv-sel-area');
+  const selPlate = document.getElementById('indiv-sel-plate');
+  const {tab, area, plate} = indivCurrentFilter();
+
+  // 依目前選擇做交集
+  const filtered = INDIV_ROWS.filter(r =>
+    (!tab   || r.tabKey  === tab) &&
+    (!area  || r.areaSeq === area) &&
+    (!plate || r.plate   === plate)
+  );
+
+  // 候選集合（自然排序，中文/數字友善）
+  const sortNat = (a,b)=> a.localeCompare(b,'zh-Hant-u-kn-true');
+  const areas  = [...new Set(filtered.map(r=>r.areaSeq))].sort(sortNat);
+  const plates = [...new Set(filtered.map(r=>r.plate))].sort(sortNat);
+
+  // 回填下拉（保留已選值）
+  const fill = (sel, items, ph, keep)=>{
+    const cur = keep || '';
+    sel.innerHTML = '';
+    const op0 = document.createElement('option'); op0.value=''; op0.textContent=ph; sel.appendChild(op0);
+    items.forEach(v=>{
+      const op=document.createElement('option'); op.value=v; op.textContent=v; if (v===cur) op.selected=true; sel.appendChild(op);
+    });
+  };
+  fill(selArea , areas , '全部區域車次編號', area );
+  fill(selPlate, plates, '全部車號'      , plate);
+
+  // 鎖定規則：選了「車號」或「區域車次編號」任一者 → 其他兩個鎖定
+  const lockByPlate = !!plate;
+  const lockByArea  = !!area;
+  selTab.disabled   = lockByPlate || lockByArea;
+  selArea.disabled  = lockByPlate || (lockByArea && !plate);
+  selPlate.disabled = lockByArea  || (lockByPlate && !area);
+}
+
+function indivDoQuery(){
+  const {tab, area, plate} = indivCurrentFilter();
+  const data = INDIV_ROWS
+    .filter(r =>
+      (!tab   || r.tabKey  === tab) &&
+      (!area  || r.areaSeq === area) &&
+      (!plate || r.plate   === plate)
+    )
+    .sort((a,b)=>{
+      if (a.sheetOrder !== b.sheetOrder) return a.sheetOrder - b.sheetOrder;
+      if (a.areaSeq !== b.areaSeq) return a.areaSeq.localeCompare(b.areaSeq,'zh-Hant-u-kn-true');
+      return a.plate.localeCompare(b.plate,'zh-Hant-u-kn-true');
+    });
+  indivRenderCards(data);
+}
+
+function indivRenderCards(list){
+  const box = document.getElementById('indiv-cards');
+  box.innerHTML = '';
+  if (!list.length){
+    box.innerHTML = `<div style="color:#64748b;padding:8px 2px;">（沒有符合的資料）</div>`;
+    return;
+  }
+  list.forEach(item=>{
+    const el = document.createElement('div');
+    el.className = 'indiv-card';
+    el.innerHTML = `
+      <div class="top"><span class="mini-badge">${item.tabKey}</span> <span style="margin-left:6px;">${item.areaSeq}</span></div>
+      <div class="mid">${item.plate}</div>
+      <div class="bot">${item.latest || '—'}</div>
+    `;
+    el.addEventListener('click', ()=> indivOpenDetail(item));
+    box.appendChild(el);
+  });
+}
+
+function indivOpenDetail(item){
+  // 以步驟切兩組：進場 / 退場
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3 style="margin:0 0 6px;">${item.tabKey}</h3>
+    <div style="margin-bottom:10px;"><b>${item.areaSeq}</b>　<span style="font-weight:900">${item.plate}</span></div>
+
+    <h4 style="margin:12px 0 6px;font-weight:800;">進場</h4>
+    <div class="step-grid" id="__in"></div>
+
+    <h4 style="margin:12px 0 6px;font-weight:800;">退場</h4>
+    <div class="step-grid" id="__out"></div>
+  `;
+  const close = openModal(box);
+
+  const fill = (wrapId, arr)=>{
+    const w = box.querySelector(wrapId);
+    arr.forEach(s=>{
+      const cell = document.createElement('div');
+      cell.className = 'step-cell';
+      const v = s.name==='車暫停位置' ? (s.val||'—') : (s.val ? formatSheetTime(s.val) : '—');
+      cell.innerHTML = `<div style="font-weight:700;margin-bottom:4px;">${s.name}</div><div>${v}</div>`;
+      w.appendChild(cell);
+    });
+  };
+  fill('#__in',  item.stepsIn  || []);
+  fill('#__out', item.stepsOut || []);
+}
+
+function indivReset(){
+  document.getElementById('indiv-sel-tab').value   = '';
+  document.getElementById('indiv-sel-area').value  = '';
+  document.getElementById('indiv-sel-plate').value = '';
+  document.getElementById('indiv-sel-tab').disabled   = false;
+  document.getElementById('indiv-sel-area').disabled  = false;
+  document.getElementById('indiv-sel-plate').disabled = false;
+  indivApplyFilter();
+  document.getElementById('indiv-cards').innerHTML = '';
 }
 </script>
 </body>

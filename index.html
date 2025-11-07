@@ -271,7 +271,7 @@ body.login .tab-pane {
     <div class="right-user">
       <div id="signin"></div>
       <div id="userInfo" class="hide user-info">
-      <span id="userDisplay"></span>
+        <span id="userDisplay"></span>
         <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
       </div>
     </div>
@@ -279,9 +279,11 @@ body.login .tab-pane {
     <!-- 左下：三個主頁籤 -->
     <div class="left-tabs">
       <div id="mainTabs" class="main-tabs">
-        <button class="main-tab active" data-target="pane-punch">登錄</button>
-        <button class="main-tab" data-target="pane-dashboard">整體情報</button>
-        <button class="main-tab" data-target="pane-single">個別情報</button>
+        <button class="main-tab active" data-target="pane-all">所有車輛</button>
+        <button class="main-tab" data-target="pane-regional">地區專車退場</button>
+        <button class="main-tab" data-target="pane-chanta">地區專車退場（禪堂平台）</button>
+        <button class="main-tab" data-target="pane-waterland">水陸專車退場</button>
+        <button class="main-tab" data-target="pane-288">288法青退場</button>
       </div>
     </div>
 
@@ -294,8 +296,8 @@ body.login .tab-pane {
     </div>
   </div>
 
-  <!-- 第 1 頁：沿用（打卡 + 車卡） -->
-  <div id="pane-punch" class="tab-pane">
+  <!-- 所有車輛頁面 -->
+  <div id="pane-all" class="tab-pane">
     <div id="tabs" class="card hide" style="padding-bottom:6px;">
       <div class="sheet-tabs" id="sheetTabs"></div>
     </div>
@@ -304,16 +306,24 @@ body.login .tab-pane {
     </div>
   </div>
 
-  <!-- 第 2 頁：整體情報 -->
-  <div id="pane-dashboard" class="tab-pane hide">
-    <div id="dashboard"></div>
+  <!-- 地區專車退場頁面 -->
+  <div id="pane-regional" class="tab-pane hide">
+    <div id="dashboard-regional"></div>
   </div>
 
-  <!-- 第 3 頁：個別情報 -->
-  <div id="pane-single" class="tab-pane hide">
-    <div class="card" style="min-height:360px;display:flex;align-items:center;justify-content:center;">
-      （個別情報頁：之後再補）
-    </div>
+  <!-- 地區專車退場（禪堂平台）頁面 -->
+  <div id="pane-chanta" class="tab-pane hide">
+    <div id="dashboard-chanta"></div>
+  </div>
+
+  <!-- 水陸專車退場頁面 -->
+  <div id="pane-waterland" class="tab-pane hide">
+    <div id="dashboard-waterland"></div>
+  </div>
+
+  <!-- 288法青退場頁面 -->
+  <div id="pane-288" class="tab-pane hide">
+    <div id="dashboard-288"></div>
   </div>
 </div>
 
@@ -326,6 +336,7 @@ body.login .tab-pane {
     <div class="loading-text">處理中…</div>
   </div>
 </div>
+
   
 
 <script>
@@ -854,17 +865,25 @@ function computeCompletion(cfg, header, row) {
 
 /* ===== 頂層三頁切換 ===== */
 const PANE_IDS=['pane-punch','pane-dashboard','pane-single'];
-function switchPane(targetId){
+function switchPane(targetId) {
   if (!currentUser) {                 // ★ 未登入就不要切換
     showNotif('請先登入', true);
     return;
   }
+
+  // 更新 Tab 顏色，讓選中的 Tab 變為 active，其他 Tab 取消 active
   document.querySelectorAll('#mainTabs .main-tab')
     .forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
-  PANE_IDS.forEach(id => {
+
+  // 根據選擇的 Tab 顯示對應的內容，隱藏其他內容
+  const panes = ['pane-all', 'pane-regional', 'pane-chanta', 'pane-waterland', 'pane-288'];
+  panes.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.classList.toggle('hide', id !== targetId);
+    if (el) el.classList.toggle('hide', id !== targetId); // 顯示選中的 Tab，隱藏其他
   });
+
+  // 根據 Tab 顯示內容
+  loadDataForCategory(targetId);
 
   // 進出整體情報時控制自動刷新
   if (targetId === 'pane-dashboard') {
@@ -874,6 +893,33 @@ function switchPane(targetId){
     stopDashboardAutoRefresh();
   }
 }
+
+// 根據選擇的 Tab 加載對應的資料
+function loadDataForCategory(category) {
+  switch (category) {
+    case 'pane-all':
+      // 加載所有車輛的資料
+      console.log('Loading 所有車輛資料...');
+      break;
+    case 'pane-regional':
+      // 加載地區專車退場的資料
+      console.log('Loading 地區專車退場資料...');
+      break;
+    case 'pane-chanta':
+      // 加載地區專車退場（禪堂平台）的資料
+      console.log('Loading 地區專車退場（禪堂平台）資料...');
+      break;
+    case 'pane-waterland':
+      // 加載水陸專車退場的資料
+      console.log('Loading 水陸專車退場資料...');
+      break;
+    case 'pane-288':
+      // 加載288法青退場的資料
+      console.log('Loading 288法青退場資料...');
+      break;
+  }
+}
+
 
 function isDashboardVisible() {
   return !document.getElementById('pane-dashboard').classList.contains('hide');

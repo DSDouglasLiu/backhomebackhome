@@ -258,6 +258,35 @@ body.login .right-refresh{ display:none !important; }
 @supports not (height: 100dvh){
   .modal{ max-height: 90vh; } /* 舊瀏覽器後備 */
 }
+/* ── 對話框加寬 + 預留關閉鈕空間 ── */
+.modal{
+  /* 原本就有 padding:16px; 這裡多預留右側空間避免文字被 ✕ 蓋住 */
+  padding-right: 44px !important;
+  max-width: 96vw !important;           /* 90vw -> 96vw 再寬一些 */
+  border-radius: 12px;
+}
+
+/* 標題元素本身也預留右側空間（避免個別 h3 超過） */
+.modal h3{ padding-right: 28px; }
+
+/* 關閉鈕位置微調，與邊緣留點呼吸 */
+.modal .dash-close{ right: 12px; top: 10px; }
+
+/* 詳細資料表格的標題列改成站內主色系 */
+.detail-table th{
+  background: var(--primary-700) !important;  /* #165bd1 */
+  color:#fff;
+}
+body.dark .detail-table th{
+  background: var(--primary-600) !important;  /* #1f6fe5 在深色背景看更清楚 */
+}
+
+/* 表格邊線使用站內邊框色，整體更一致 */
+.detail-table, .detail-table th, .detail-table td{
+  border-color: var(--border);
+}
+.detail-table thead th:first-child{ border-top-left-radius:10px; }
+.detail-table thead th:last-child{  border-top-right-radius:10px; }
   
 </style>
 </head>
@@ -593,7 +622,7 @@ function openModal(element){
     left:'auto',
     transform:'none',
     margin:'0',
-    maxWidth:'min(1024px,95vw)',
+    maxWidth:'min(1280px,96vw)'
     maxHeight:'min(86dvh, 640px)',
     overflow:'auto'
   });

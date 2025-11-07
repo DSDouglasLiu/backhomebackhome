@@ -959,10 +959,13 @@ function computeCompletion(cfg, header, row) {
 /* ===== 頂層三頁切換 ===== */
 const PANE_IDS=['pane-punch','pane-dashboard','pane-single'];
 function switchPane(targetId){
-  if (!currentUser) {                 // ★ 未登入就不要切換
+  // 未登入就不要切換
+  if (!currentUser) {
     showNotif('請先登入', true);
     return;
   }
+
+  // 切換 tab 樣式與顯示對應面板
   document.querySelectorAll('#mainTabs .main-tab')
     .forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
   PANE_IDS.forEach(id => {
@@ -970,18 +973,21 @@ function switchPane(targetId){
     if (el) el.classList.toggle('hide', id !== targetId);
   });
 
+  // 整體情報：啟動自動刷新；其他頁停掉
   if (targetId === 'pane-dashboard') {
-    buildDashboardTabs();        // ← 先畫子分頁
-    buildDashboard(false);       // 首次切入：帶 Loading
-    startDashboardAutoRefresh(); // 保持原行為
+    buildDashboardTabs();
+    buildDashboard(false);
+    startDashboardAutoRefresh();
   } else {
     stopDashboardAutoRefresh();
   }
 
+  // 個別情報：初始化（內部有 singleInitialized 防重複）
   if (targetId === 'pane-single') {
-    initSinglePage();            // ← 新增：第一次切到個別情報就初始化與載入資料
+    initSinglePage();
   }
 }
+
 
 
 function isDashboardVisible() {
@@ -1127,6 +1133,263 @@ results.forEach(({ cfg, header, rows }) => {
   else { await withLoading(work, '整理整體情報…'); }
 }
 
+/* =================== 個別情報：下拉/過濾/鎖定 =================== */
+/* 需求：
+   - 三個下拉：分頁(Tab) / 區域車次編號 / 車號
+   - 選了「區域」→ 車號只顯示該區域的車；鎖住「分頁」
+   - 選了「車號」→ 反向約束到對應的區域與分頁，且「區域＋分頁」被鎖住
+   - 「區域」與「車號」都定案後，想更改必須點「全部重設」
+   - Tab 未選也可挑其它兩個（跨表查詢）
+*/
+
+const SINGLE_IDS = {
+  sheet:  'selSheet',
+  area:   'selArea',
+  car:    'selCar',
+  search: 'btnSingleSearch',
+  reset:  'btnSingleReset',
+  result: 'singleResult',
+};
+
+let SINGLE_STORE = {};        // {key: {cfg, header, rows, byArea:Map, byCar:Map}}
+let singleInitialized = false;
+let singleLockedBy = null;    // 'area' | 'car' | null
+
+async function initSinglePage(){
+  if (singleInitialized) return;
+  singleInitialized = true;
+  buildSingleSkeleton();
+  await loadSingleData();
+  fillSheetOptions();
+  bindSingleEvents();
+}
+
+function buildSingleSkeleton(){
+  const pane = document.getElementById('pane-single');
+  pane.innerHTML = `
+    <div class="card" style="padding-bottom:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <select id="${SINGLE_IDS.sheet}" class="step-select">
+          <option value="">— 全部分頁 —</option>
+        </select>
+        <select id="${SINGLE_IDS.area}" class="step-select">
+          <option value="">— 區域車次編號 —</option>
+        </select>
+        <select id="${SINGLE_IDS.car}" class="step-select">
+          <option value="">— 全部 車號 —</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px;">
+        <button id="${SINGLE_IDS.search}" class="btn btn--primary">查詢</button>
+        <button id="${SINGLE_IDS.reset}"  class="btn btn--secondary">全部重設</button>
+      </div>
+    </div>
+    <div id="${SINGLE_IDS.result}" class="veh-list" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));"></div>
+  `;
+}
+
+async function loadSingleData(){
+  const results = await Promise.all(
+    SHEET_CONFIGS.map(async cfg => {
+      const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+      const j = await r.json();
+      const values = j.values || [];
+      const headerIdx = values.findIndex(
+        r => Array.isArray(r) &&
+             String(r[0]||'').trim() === '編號' &&
+             String(r[1]||'').trim().startsWith('區域') &&
+             String(r[2]||'').trim() === '車號'
+      );
+      const header = headerIdx >= 0 ? values[headerIdx].map(c => String(c||'').trim()) : [];
+      const rows   = headerIdx >= 0 ? values.slice(headerIdx+1)
+                        .filter(r => String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim())
+                        : [];
+      const byArea = new Map(), byCar = new Map();
+      rows.forEach(r=>{
+        const area = String(r[1]||'').trim();
+        const car  = String(r[2]||'').trim();
+        if (!byArea.has(area)) byArea.set(area, []);
+        byArea.get(area).push(car);
+        if (!byCar.has(car)) byCar.set(car, []);
+        byCar.get(car).push(area);
+      });
+      return { key: cfg.key, cfg, header, rows, byArea, byCar };
+    })
+  );
+  SINGLE_STORE = {};
+  results.forEach(x => SINGLE_STORE[x.key] = x);
+}
+
+function fillSheetOptions(){
+  const selSheet = document.getElementById(SINGLE_IDS.sheet);
+  selSheet.innerHTML = `<option value="">— 全部分頁 —</option>` +
+    SHEET_CONFIGS.map(s=>`<option value="${s.key}">${s.key}</option>`).join('');
+  refreshAreaOptions();
+  refreshCarOptions();
+}
+
+function getActiveScope(){
+  const k = document.getElementById(SINGLE_IDS.sheet).value;
+  return k ? [k] : SHEET_CONFIGS.map(s=>s.key);
+}
+
+function refreshAreaOptions(keep=false){
+  const selArea = document.getElementById(SINGLE_IDS.area);
+  const selCar  = document.getElementById(SINGLE_IDS.car);
+  const chosenCar = selCar.value;
+  const keys = getActiveScope();
+  const items = [];
+  const seen = new Set();
+  keys.forEach(k=>{
+    const st = SINGLE_STORE[k]; if (!st) return;
+    const list = chosenCar ? (st.byCar.get(chosenCar)||[]) : Array.from(st.byArea.keys());
+    list.forEach(a=>{
+      const id = `${k}:::${a}`;
+      if (!seen.has(id)){ seen.add(id); items.push({k,a}); }
+    });
+  });
+  const prev = selArea.value;
+  selArea.innerHTML = `<option value="">— 區域車次編號 —</option>` +
+    items.sort((x,y)=>x.a.localeCompare(y.a,'zh-Hant')).map(({k,a})=>`<option data-sheet="${k}" value="${a}">${a}</option>`).join('');
+  if (keep && prev) selArea.value = prev;
+}
+
+function refreshCarOptions(keep=false){
+  const selArea = document.getElementById(SINGLE_IDS.area);
+  const selCar  = document.getElementById(SINGLE_IDS.car);
+  const chosenArea = selArea.value;
+  const chosenSheet = selArea.options[selArea.selectedIndex]?.dataset?.sheet || '';
+  const keys = chosenArea ? [chosenSheet] : getActiveScope();
+  const cars = new Set();
+  keys.forEach(k=>{
+    const st = SINGLE_STORE[k]; if (!st) return;
+    if (chosenArea) (st.byArea.get(chosenArea)||[]).forEach(c=>cars.add(c));
+    else st.byCar.forEach((_areas,c)=>cars.add(c));
+  });
+  const prev = selCar.value;
+  selCar.innerHTML = `<option value="">— 全部 車號 —</option>` +
+    [...cars].sort((a,b)=>a.localeCompare(b,'zh-Hant')).map(c=>`<option value="${c}">${c}</option>`).join('');
+  if (keep && prev) selCar.value = prev;
+}
+
+function bindSingleEvents(){
+  const selSheet = document.getElementById(SINGLE_IDS.sheet);
+  const selArea  = document.getElementById(SINGLE_IDS.area);
+  const selCar   = document.getElementById(SINGLE_IDS.car);
+  const btnSearch= document.getElementById(SINGLE_IDS.search);
+  const btnReset = document.getElementById(SINGLE_IDS.reset);
+
+  selSheet.onchange = ()=>{
+    if (singleLockedBy){
+      showNotif('已選定區域/車號，請先點「全部重設」再更改分頁', true);
+      selSheet.value = selSheet.dataset.prev || '';
+      return;
+    }
+    selSheet.dataset.prev = selSheet.value;
+    selArea.disabled = false;
+    selArea.value = '';
+    selCar.disabled = false;
+    selCar.value = '';
+    refreshAreaOptions();
+    refreshCarOptions();
+  };
+
+  selArea.onchange = ()=>{
+    if (singleLockedBy === 'car'){
+      showNotif('已選定車號；要更換請點「全部重設」', true);
+      return;
+    }
+    // 選了區域 → 車號收斂；且鎖住「分頁」
+    refreshCarOptions();
+    selSheet.disabled = !!selArea.value;
+    if (!selArea.value){
+      selSheet.disabled = false;
+      singleLockedBy = null;
+    }
+  };
+
+  selCar.onchange = ()=>{
+    if (!selCar.value){
+      // 清掉車 → 解除鎖定
+      selArea.disabled = false;
+      selSheet.disabled = !!selArea.value;
+      singleLockedBy = null;
+      refreshAreaOptions();
+      return;
+    }
+    // 選了車 → 反向收斂到該車所屬的唯一區域與分頁並鎖定
+    const keys = getActiveScope();
+    let firstArea='', firstSheet='';
+    keys.forEach(k=>{
+      (SINGLE_STORE[k]?.byCar.get(selCar.value)||[]).forEach(a=>{
+        if (!firstArea){ firstArea=a; firstSheet=k; }
+      });
+    });
+    // 套用收斂結果
+    if (firstArea){
+      selArea.disabled = true;
+      selArea.value = firstArea;
+      refreshAreaOptions(true);
+    }
+    selSheet.value   = firstSheet;
+    selSheet.disabled= true;
+    singleLockedBy = 'car';
+  };
+
+  btnSearch.onclick = ()=> runSingleQuery();
+  btnReset.onclick  = ()=> resetSingleUI();
+}
+
+function runSingleQuery(){
+  const resBox  = document.getElementById(SINGLE_IDS.result);
+  const selSheet= document.getElementById(SINGLE_IDS.sheet).value;
+  const selArea = document.getElementById(SINGLE_IDS.area).value;
+  const selCar  = document.getElementById(SINGLE_IDS.car).value;
+
+  resBox.innerHTML = '';
+  const keys = selSheet ? [selSheet] : SHEET_CONFIGS.map(s=>s.key);
+  const items = [];
+
+  keys.forEach(k=>{
+    const st = SINGLE_STORE[k]; if (!st) return;
+    st.rows.forEach(r=>{
+      const area=String(r[1]||'').trim();
+      const car =String(r[2]||'').trim();
+      if ((selArea && area!==selArea) || (selCar && car!==selCar)) return;
+      const latest = getLatestStatus(st.cfg, st.header, r);
+      const card = document.createElement('div');
+      card.className = 'veh-card';
+      Object.assign(card.style,{display:'flex',alignItems:'center',justifyContent:'center',textAlign:'center'});
+      card.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="veh-title-sub" style="font-weight:700;">${area}</div>
+          <div class="veh-title-sub" style="font-weight:700;">${car}</div>
+          <div class="veh-title-sub" style="font-weight:700;">${latest}</div>
+        </div>`;
+      card.onclick = ()=> openDetailModal(k, r);
+      items.push({k, idx: Number(r[0]||0), el:card});
+    });
+  });
+
+  // 依「sheet順序 → 編號」排序
+  items.sort((a,b)=>{
+    const si = SHEET_CONFIGS.findIndex(s=>s.key===a.k) - SHEET_CONFIGS.findIndex(s=>s.key===b.k);
+    return si!==0 ? si : (a.idx - b.idx);
+  });
+  items.forEach(x=>resBox.appendChild(x.el));
+}
+
+function resetSingleUI(){
+  const selSheet = document.getElementById(SINGLE_IDS.sheet);
+  const selArea  = document.getElementById(SINGLE_IDS.area);
+  const selCar   = document.getElementById(SINGLE_IDS.car);
+  singleLockedBy = null;
+  selSheet.disabled = selArea.disabled = selCar.disabled = false;
+  selSheet.value = ''; selArea.value=''; selCar.value='';
+  refreshAreaOptions(); refreshCarOptions();
+  document.getElementById(SINGLE_IDS.result).innerHTML = '';
+}
+  
 
 /* 取得一台車目前「最新狀態」 */
 function getLatestStatus(cfg, header, row){

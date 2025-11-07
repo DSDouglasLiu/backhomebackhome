@@ -117,13 +117,26 @@ body.dark .btn--secondary{background:transparent}
 .btn--secondary:hover{background:rgba(31,111,229,.06)}
 .btn-group{display:flex;gap:8px;flex-wrap:wrap}
 
-/* 通知 & Modal & Loading（原本） */
+/* 通知 & Modal & Loading（精簡整合版） */
 .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;z-index:9990;}
 .notif.show{opacity:1;transform:translateY(0);}
+
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: block; }
-.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 16px; border-radius: 12px; min-width: 280px; max-width: 90vw; box-shadow: 0 10px 30px rgba(0,0,0,0.25); z-index: 10001; display: block; }
+
+/* 單一權威的 .modal 規則（避免重複打架） */
+.modal {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: #fff; color: var(--text); padding: 16px; border-radius: 12px;
+  min-width: 280px; max-width: 96vw; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  z-index: 10001; display: block;
+  /* 上限高度與卷軸 */
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  /* 預留右側空間給關閉鈕 */
+  padding-right: 44px;
+}
 body.dark .modal{ background:#0b1325; color:#e2e8f0 }
-.modal h3{ margin:0 0 10px; font-size:16px }
+.modal h3{ margin:0 0 10px; font-size:16px; padding-right: 28px; }
 .modal .row{ display:flex; gap:8px; align-items:center; margin:8px 0 }
 .modal input{ width:56px; padding:6px 8px; border:1px solid var(--border); border-radius:8px }
 .modal .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px }
@@ -131,6 +144,9 @@ body.dark .modal{ background:#0b1325; color:#e2e8f0 }
 .modal .time-input{ width:64px; text-align:center; padding:6px 8px; border:1px solid var(--border); border-radius:10px; font-weight:600; }
 .modal .colon{ font-size:20px; line-height:1; opacity:.5; margin:0 2px; user-select:none; }
 .modal .hint{ font-size:.9rem; line-height:1.6; opacity:.8; margin:2px 0; }
+.modal .dash-close{ position:absolute; right: 12px; top: 10px; font-size:22px; line-height:1; cursor:pointer; opacity:.7; }
+.modal .dash-close:hover{ opacity:1; }
+
 body.modal-open{ overflow:hidden; touch-action:none; }
 
 /* Loading Overlay */
@@ -191,9 +207,7 @@ body.dark .loc-pill{ background:rgba(15,23,42,.28); }
 .loc-name{ font-weight:700; }
 .loc-num{ font-size:22px; font-weight:900; color:#2563eb; }
 
-/* 清單／詳情彈窗內部 */
-.modal .dash-close{ position:absolute; right:10px; top:8px; font-size:22px; line-height:1; cursor:pointer; opacity:.7; }
-.modal .dash-close:hover{ opacity:1; }
+/* 清單／詳情彈窗內部（部分已整合至 .modal 通用規則） */
 .list-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px dashed var(--border); }
 .list-left{ display:flex; flex-direction:column; gap:2px; }
 .list-title{ font-weight:800; }
@@ -202,14 +216,24 @@ body.dark .loc-pill{ background:rgba(15,23,42,.28); }
 .detail-table th, .detail-table td{ border:1px solid var(--border); padding:8px 10px; text-align:center; }
 .detail-table th{ background:#0f172a; color:#fff; }
 
+/* 詳細資料表格主色調 */
+.detail-table th{
+  background: var(--primary-700) !important;
+  color:#fff;
+}
+body.dark .detail-table th{
+  background: var(--primary-600) !important;
+}
+.detail-table, .detail-table th, .detail-table td{ border-color: var(--border); }
+.detail-table thead th:first-child{ border-top-left-radius:10px; }
+.detail-table thead th:last-child{  border-top-right-radius:10px; }
+
 /* RWD */
 @media(max-width:768px){
   .veh-list{ grid-template-columns:1fr; }
   .sheet-tabs{ gap:10px; }
 }
-@media (max-width:480px){
-  .modal .time-input{ width:56px; }
-}
+
 /* ====== 頂部兩欄排版（標題/分頁 ←→ 使用者/時鐘+更新） ====== */
 .topbar-grid{
   display:grid;
@@ -242,52 +266,6 @@ body.login .right-refresh{ display:none !important; }
   .topbar-grid .right-user,
   .topbar-grid .right-refresh{ justify-content:flex-start; }
 }
-/* 讓對話框不會超出可視高度，必要時內容自動滾動 */
-.modal{
-  max-height: calc(100dvh - 48px);
-  overflow: auto;
-}
-@supports not (height: 100dvh){
-  .modal{ max-height: 90vh; } /* 舊瀏覽器後備 */
-}
-/* 讓對話框不會超出可視高度，必要時內容自動滾動 */
-.modal{
-  max-height: calc(100dvh - 48px);
-  overflow: auto;
-}
-@supports not (height: 100dvh){
-  .modal{ max-height: 90vh; } /* 舊瀏覽器後備 */
-}
-/* ── 對話框加寬 + 預留關閉鈕空間 ── */
-.modal{
-  /* 原本就有 padding:16px; 這裡多預留右側空間避免文字被 ✕ 蓋住 */
-  padding-right: 44px !important;
-  max-width: 96vw !important;           /* 90vw -> 96vw 再寬一些 */
-  border-radius: 12px;
-}
-
-/* 標題元素本身也預留右側空間（避免個別 h3 超過） */
-.modal h3{ padding-right: 28px; }
-
-/* 關閉鈕位置微調，與邊緣留點呼吸 */
-.modal .dash-close{ right: 12px; top: 10px; }
-
-/* 詳細資料表格的標題列改成站內主色系 */
-.detail-table th{
-  background: var(--primary-700) !important;  /* #165bd1 */
-  color:#fff;
-}
-body.dark .detail-table th{
-  background: var(--primary-600) !important;  /* #1f6fe5 在深色背景看更清楚 */
-}
-
-/* 表格邊線使用站內邊框色，整體更一致 */
-.detail-table, .detail-table th, .detail-table td{
-  border-color: var(--border);
-}
-.detail-table thead th:first-child{ border-top-left-radius:10px; }
-.detail-table thead th:last-child{  border-top-right-radius:10px; }
-  
 </style>
 </head>
 <body>
@@ -295,7 +273,7 @@ body.dark .detail-table th{
   <!-- 兩列兩欄的頂部排版 -->
   <div class="topbar-grid">
     <!-- 左上：標題 -->
-    <div class="left-title">
+    <div class="left-title>
       <h1>車流人流退場情報</h1>
     </div>
 
@@ -606,8 +584,8 @@ function openModal(element){
   Object.assign(layer.style, {
     position:'fixed',
     inset:'0',
-    width:'100vw',
-    height:'100vh',
+    width:'100dvw',
+    height:'100dvh',
     background:'rgba(0,0,0,.45)',
     zIndex: String(MAX_Z),
     display:'grid',
@@ -622,7 +600,7 @@ function openModal(element){
     left:'auto',
     transform:'none',
     margin:'0',
-    maxWidth:'min(1300px,96vw)'
+    maxWidth:'min(1300px,96vw)',   // ← 修正漏逗號
     maxHeight:'min(86dvh, 640px)',
     overflow:'auto'
   });
@@ -662,8 +640,6 @@ function openModal(element){
   }
   return cleanup;
 }
-
-
 
 /* ---------------- 打卡頁：載入資料 & 渲染（原本） ---------------- */
 async function loadSheetData(key){
@@ -1023,8 +999,7 @@ function openListModal(sheetKey, step, type, locValue){
     });
   }
 
-  const box=document.createElement('div');
-  box.className='modal';
+  const box=document.createElement('div'); box.className='modal';
   const titleText = (type==='loc') ? `${sheetKey}：${step}＝${locValue}` : `${sheetKey}：${step}（${type==='done'?'完成':'未完成'}）`;
   box.innerHTML = `
     <div class="dash-close">✕</div>
@@ -1092,7 +1067,7 @@ function openDetailModal(sheetKey, row){
   box.querySelector('.dash-close').onclick = close;
 }
 
-/* ====== 其餘舊有的「確認/修改時間」小視窗（原封不動） ====== */
+/* ====== 其餘舊有的「確認/修改時間」小視窗 ====== */
 function openConfirmDialog(msg, onOK){
   const box = document.createElement('div');
   box.className = 'modal';
@@ -1105,7 +1080,7 @@ function openConfirmDialog(msg, onOK){
     </div>`;
   const close = openModal(box);
   const [btnCancel, btnOK] = box.querySelectorAll('button');
-  setTimeout(()=>{ try{ hh.focus({ preventScroll:true }); }catch{} }, 80);
+  // 已移除不存在元素的 focus 呼叫
   btnCancel.onclick = close;
   btnOK.onclick = ()=>{ try{ onOK && onOK(); } finally{ close(); } };
 }

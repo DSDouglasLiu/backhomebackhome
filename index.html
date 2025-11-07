@@ -271,6 +271,26 @@ body.dark .indiv-card{ background:rgba(15,23,42,.30); }
 .step-cell{ background:#1d4ed8; color:#fff; padding:8px; border-radius:8px; text-align:center; font-size:14px; }
 @media (max-width: 1200px){ .indiv-cards-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media (max-width: 680px){ .indiv-cards-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } .indiv-row select{ min-width:180px; } }
+/* 個別情報：精簡名片樣式（置中、三行同字級） */
+.single-list{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+.single-card{
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.9);
+  border-radius:12px; padding:14px;
+  box-shadow:var(--shadow-card);
+  text-align:center; cursor:pointer;
+}
+body.dark .single-card{ background:rgba(15,23,42,.30); }
+.single-card:hover{ filter:brightness(1.015); }
+.single-line{
+  font-size:var(--fz-title);
+  line-height:var(--lh-title);
+  font-weight:var(--fw-title);
+  color:var(--text-strong);
+}
+.single-line + .single-line{ margin-top:6px; }
+
+
 </style>
 </head>
 <body>
@@ -332,29 +352,29 @@ body.dark .indiv-card{ background:rgba(15,23,42,.30); }
 
   <!-- 第 3 頁：個別情報 -->
   <div id="pane-single" class="tab-pane hide">
-    <div class="card">
-      <!-- 第一列：三個下拉 -->
-      <div class="indiv-row">
-        <select id="indiv-sel-tab">
-          <option value="">全部（四個Tab）</option>
-        </select>
-        <select id="indiv-sel-area">
-          <option value="">全部區域車次編號</option>
-        </select>
-        <select id="indiv-sel-plate">
-          <option value="">全部車號</option>
-        </select>
-      </div>
-      <!-- 第二列：查詢／全部重設 -->
-      <div class="indiv-row indiv-actions">
-        <button id="indiv-btn-query" class="btn btn--primary">查詢</button>
-        <button id="indiv-btn-reset" class="btn btn--secondary">全部重設</button>
-      </div>
-
-      <!-- 結果卡片 -->
-      <div id="indiv-cards" class="indiv-cards-grid"></div>
+  <div class="card" id="singleControlsCard" style="padding-bottom:10px;">
+    <div class="single-controls" id="singleControls">
+      <select id="selSheet" class="step-select" aria-label="Tab（可不選）">
+        <option value="">— 全部 Tab —</option>
+      </select>
+      <select id="selArea" class="step-select" aria-label="區域車次編號（可不選）">
+        <option value="">— 全部 區域車次編號 —</option>
+      </select>
+      <select id="selCar" class="step-select" aria-label="車號（可不選）">
+        <option value="">— 全部 車號 —</option>
+      </select>
+    </div>
+    <div class="single-actions">
+      <button id="btnQuery" class="btn btn--primary btn--sm">查詢</button>
+      <button id="btnReset" class="btn btn--secondary btn--sm">全部重設</button>
     </div>
   </div>
+
+  <div class="card" id="singleResultsCard">
+    <div id="singleResults" class="single-list" aria-live="polite"></div>
+  </div>
+</div>
+
 </div>
 
 <div id="notif" class="notif"></div>
@@ -951,18 +971,18 @@ function switchPane(targetId){
   });
 
   if (targetId === 'pane-dashboard') {
-  buildDashboardTabs();        // ← 新增：先畫子分頁
-  buildDashboard(false);       // 首次切入：帶 Loading
-  startDashboardAutoRefresh(); // 保持原行為
-} else {
-  stopDashboardAutoRefresh();
-}
+    buildDashboardTabs();        // ← 先畫子分頁
+    buildDashboard(false);       // 首次切入：帶 Loading
+    startDashboardAutoRefresh(); // 保持原行為
+  } else {
+    stopDashboardAutoRefresh();
+  }
 
-/* 進入「個別情報」時，如未初始化則載入 */
   if (targetId === 'pane-single') {
-    if (!window.__indivInited__) initIndividual();
+    initSinglePage();            // ← 新增：第一次切到個別情報就初始化與載入資料
   }
 }
+
 
 function isDashboardVisible() {
   return !document.getElementById('pane-dashboard').classList.contains('hide');
@@ -1485,6 +1505,189 @@ function indivReset(){
   indivApplyFilter();
   document.getElementById('indiv-cards').innerHTML = '';
 }
+// 只顯示：區域車次編號／車號／最新狀態；點卡片開詳情（沿用整體情報表格樣式）
+function buildSingleCard(cfg, header, row){
+  const area   = String(row[1]||'').trim();             // 區域車次編號
+  const car    = String(row[2]||'').trim();             // 車號
+  const latest = getLatestStatus(cfg, header, row);      // 最新狀態（已有的工具）
+
+  const card = document.createElement('div');
+  card.className = 'single-card';
+  card.innerHTML = `
+    <div class="single-line">${area}</div>
+    <div class="single-line">${car}</div>
+    <div class="single-line">${latest}</div>
+  `;
+  card.addEventListener('click', ()=> openDetailModal(cfg, row, header));
+  return card;
+}
+/* ======================= 個別情報（三選單 + 三行置中名片） ======================= */
+let SINGLE_INITTED = false;
+let SINGLE_ITEMS = [];  // 每筆：{ sheetKey, cfg, header, row }
+
+/* 動態塞入這頁專用樣式（只會插一次） */
+(function ensureSingleStyles(){
+  if (document.getElementById('singleCardStyles')) return;
+  const css = document.createElement('style');
+  css.id = 'singleCardStyles';
+  css.textContent = `
+    .single-controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .single-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+    .single-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .single-card{
+      border:1px solid var(--border);background:rgba(255,255,255,.9);
+      border-radius:12px;padding:14px;text-align:center;cursor:pointer;box-shadow:var(--shadow-card)
+    }
+    body.dark .single-card{background:rgba(15,23,42,.30)}
+    .single-card:hover{filter:brightness(1.015)}
+    .single-line{font-size:var(--fz-title);line-height:var(--lh-title);font-weight:var(--fw-title);color:var(--text-strong)}
+    .single-line + .single-line{margin-top:6px}
+  `;
+  document.head.appendChild(css);
+})();
+
+/* 初始化頁面（只做一次） */
+function initSinglePage(){
+  if (SINGLE_INITTED){ return; }
+  SINGLE_INITTED = true;
+
+  // 綁定事件
+  document.getElementById('btnQuery').addEventListener('click', onSingleQuery);
+  document.getElementById('btnReset').addEventListener('click', onSingleReset);
+  ['selSheet','selArea','selCar'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', rebuildSelectOptions);
+  });
+
+  // 載入四張表資料
+  withLoading(loadSingleData, '讀取資料…');
+}
+
+/* 讀四張表，整理為可篩選的 items */
+async function loadSingleData(){
+  SINGLE_ITEMS = [];
+  const results = await Promise.all(
+    SHEET_CONFIGS.map(async cfg=>{
+      const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+      const j = await r.json();
+      const values = j.values || [];
+      const headerIdx = values.findIndex(
+        r => Array.isArray(r) &&
+             String(r[0]||'').trim() === '編號' &&
+             String(r[1]||'').trim().startsWith('區域') &&
+             String(r[2]||'').trim() === '車號'
+      );
+      const header = headerIdx>=0 ? values[headerIdx].map(c=>String(c||'').trim()) : [];
+      const rows   = headerIdx>=0 ? values.slice(headerIdx+1)
+                        .filter(r=>String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim())
+                        : [];
+      // 確保 openDetailModal 也能用（若使用者沒先去整體情報）
+      ALL_SHEETS[cfg.key] = { cfg, header, rows };
+      rows.forEach(row => SINGLE_ITEMS.push({ sheetKey: cfg.key, cfg, header, row }));
+      return { cfg, header, rows };
+    })
+  );
+
+  // 填入「Tab」選單（四張表）
+  const selSheet = document.getElementById('selSheet');
+  selSheet.innerHTML = '<option value="">— 全部 Tab —</option>' +
+    SHEET_CONFIGS.map(s=>`<option value="${s.key}">${s.key}</option>`).join('');
+
+  // 依目前條件重建另外兩個選單
+  rebuildSelectOptions();
+}
+
+/* 依當前條件，重建三個選單的可選值（保留仍有效的既有選擇） */
+function rebuildSelectOptions(){
+  const selSheet = document.getElementById('selSheet');
+  const selArea  = document.getElementById('selArea');
+  const selCar   = document.getElementById('selCar');
+
+  const keepSheet = selSheet.value || '';
+  const keepArea  = selArea.value  || '';
+  const keepCar   = selCar.value   || '';
+
+  const filtered = filterItems(keepSheet, '', ''); // 先看目前選的 Tab，另外兩個先放寬
+  const areas = uniq(filtered.map(it => String(it.row[1]||'').trim())).sort(localeCmp);
+  const cars  = uniq(filtered.map(it => String(it.row[2]||'').trim())).sort(localeCmp);
+
+  selArea.innerHTML = '<option value="">— 全部 區域車次編號 —</option>' + areas.map(a=>`<option value="${a}">${a}</option>`).join('');
+  selCar.innerHTML  = '<option value="">— 全部 車號 —</option>' + cars.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+  // 若舊選項仍在列表中就保留
+  if (keepArea && areas.includes(keepArea)) selArea.value = keepArea;
+  if (keepCar  && cars.includes(keepCar))   selCar.value  = keepCar;
+}
+
+/* 點「查詢」→ 渲染名片 */
+function onSingleQuery(){
+  const sheet = document.getElementById('selSheet').value || '';
+  const area  = document.getElementById('selArea').value  || '';
+  const car   = document.getElementById('selCar').value   || '';
+
+  const items = filterItems(sheet, area, car)
+    .slice()
+    .sort((a,b)=>{
+      // 依每張表的「編號」欄位排序（升冪）
+      const ai = parseInt(String(a.row?.[0]||''),10);
+      const bi = parseInt(String(b.row?.[0]||''),10);
+      if (isNaN(ai) && isNaN(bi)) return 0;
+      if (isNaN(ai)) return 1;
+      if (isNaN(bi)) return -1;
+      return ai - bi;
+    });
+
+  renderSingleCards(items);
+}
+
+/* 點「全部重設」 */
+function onSingleReset(){
+  document.getElementById('selSheet').value = '';
+  document.getElementById('selArea').value  = '';
+  document.getElementById('selCar').value   = '';
+  rebuildSelectOptions();
+  renderSingleCards([]); // 清空顯示
+}
+
+/* 以條件篩選 items */
+function filterItems(sheetKey, area, car){
+  return SINGLE_ITEMS.filter(it =>
+    (!sheetKey || it.sheetKey === sheetKey) &&
+    (!area  || String(it.row[1]||'').trim() === area) &&
+    (!car   || String(it.row[2]||'').trim() === car)
+  );
+}
+
+/* 渲染三行置中名片（只顯示：區域車次編號、車號、最新狀態） */
+function renderSingleCards(items){
+  const box = document.getElementById('singleResults');
+  box.innerHTML = '';
+  if (!items || items.length===0){
+    box.innerHTML = '<div style="opacity:.6;text-align:center;padding:10px 0;">（沒有符合項目）</div>';
+    return;
+  }
+
+  for (const it of items){
+    const area = String(it.row?.[1]||'').trim();
+    const car  = String(it.row?.[2]||'').trim();
+    const latest = getLatestStatus(it.cfg, it.header, it.row); // 你原本已有的函式
+
+    const card = document.createElement('div');
+    card.className = 'single-card';
+    card.innerHTML = `
+      <div class="single-line">${area}</div>
+      <div class="single-line">${car}</div>
+      <div class="single-line">${latest}</div>
+    `;
+    card.addEventListener('click', () => openDetailModal(it.sheetKey, it.row));
+    box.appendChild(card);
+  }
+}
+
+/* 小工具 */
+const uniq = arr => Array.from(new Set(arr.filter(Boolean)));
+const localeCmp = (a,b)=> a.localeCompare(b,'zh-Hant-u-nu-hanidec',{numeric:true, sensitivity:'base'});
+/* ======================= 個別情報 end ======================= */
+  
 </script>
 </body>
 </html>

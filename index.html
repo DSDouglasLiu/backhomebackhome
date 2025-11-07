@@ -69,7 +69,7 @@ body.dark .tab, body.dark .btn-tab{background:transparent}
 .tab.active,.btn-tab.active{background:var(--primary-600);color:#fff;border-color:var(--primary-600)}
 .tab:focus-visible,.btn-tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
-/* ======= 新增：上方時鐘 + 更新頻率 ======= */
+/* ======= 上方時鐘 + 更新頻率 ======= */
 .refresh-bar{ display:flex; gap:10px; align-items:center; justify-content:flex-end; margin:4px 0 6px; }
 .clock{ font-weight:900; letter-spacing:.5px; font-variant-numeric: tabular-nums; }
 .seg-group{ display:flex; gap:8px; flex-wrap:wrap; }
@@ -117,26 +117,13 @@ body.dark .btn--secondary{background:transparent}
 .btn--secondary:hover{background:rgba(31,111,229,.06)}
 .btn-group{display:flex;gap:8px;flex-wrap:wrap}
 
-/* 通知 & Modal & Loading（精簡整合版） */
+/* 通知 & Modal & Loading */
 .notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;z-index:9990;}
 .notif.show{opacity:1;transform:translateY(0);}
-
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: block; }
-
-/* 單一權威的 .modal 規則（避免重複打架） */
-.modal {
-  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  background: #fff; color: var(--text); padding: 16px; border-radius: 12px;
-  min-width: 280px; max-width: 96vw; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-  z-index: 10001; display: block;
-  /* 上限高度與卷軸 */
-  max-height: calc(100dvh - 48px);
-  overflow: auto;
-  /* 預留右側空間給關閉鈕 */
-  padding-right: 44px;
-}
+.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 16px; border-radius: 12px; min-width: 280px; max-width: 90vw; box-shadow: 0 10px 30px rgba(0,0,0,0.25); z-index: 10001; display: block; }
 body.dark .modal{ background:#0b1325; color:#e2e8f0 }
-.modal h3{ margin:0 0 10px; font-size:16px; padding-right: 28px; }
+.modal h3{ margin:0 0 10px; font-size:16px }
 .modal .row{ display:flex; gap:8px; align-items:center; margin:8px 0 }
 .modal input{ width:56px; padding:6px 8px; border:1px solid var(--border); border-radius:8px }
 .modal .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px }
@@ -144,34 +131,37 @@ body.dark .modal{ background:#0b1325; color:#e2e8f0 }
 .modal .time-input{ width:64px; text-align:center; padding:6px 8px; border:1px solid var(--border); border-radius:10px; font-weight:600; }
 .modal .colon{ font-size:20px; line-height:1; opacity:.5; margin:0 2px; user-select:none; }
 .modal .hint{ font-size:.9rem; line-height:1.6; opacity:.8; margin:2px 0; }
-.modal .dash-close{ position:absolute; right: 12px; top: 10px; font-size:22px; line-height:1; cursor:pointer; opacity:.7; }
-.modal .dash-close:hover{ opacity:1; }
-
 body.modal-open{ overflow:hidden; touch-action:none; }
 
 /* Loading Overlay */
 #loading.loading{ position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); z-index: 2147483000; }
 #loading.loading.show{ display: flex; }
-.loading-box{ display:flex; align-items:center; gap:10px; background: var(--surface); color: var(--text); border:1px solid var(--border); border-radius:12px; padding:12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); backdrop-filter: blur(8px); }
+.loading-box{ display:flex; align-items:center; gap:10px; background: var(--surface); color: var(--text); border:1px solid var(--border); border-radius:12px; padding:12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); backdrop-filter: blur(8px); }
 .spinner{ width:20px; height:20px; border-radius:50%; border:2.5px solid #cbd5e1; border-top-color: var(--primary-600); animation: spin 1s linear infinite; }
 @keyframes spin{ to{ transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce){ .spinner{ animation: none; border-top-color:#cbd5e1; } }
 body.loading-open{ overflow:hidden; touch-action:none; overscroll-behavior: contain; }
 @supports (height: 100dvh){ .modal-backdrop{ height: 100dvh; } }
 
-/* ===== 登入畫面置中 ===== */
-body.login .wrap{ min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
-body.login .wrap > div:first-child{ display: grid !important; grid-auto-flow: row; gap: 16px; justify-items: center; text-align: center; width: 100%; }
-body.login h1{ margin: 0; text-align: center; font-size: clamp(28px, 6vw, 56px); line-height: 1.2; }
-body.login #tabs, body.login #content, body.login #userInfo{ display: none !important; }
-
-/* 更完整的登入畫面（保持原設定） */
+/* ===== 登入畫面（不再覆蓋 .wrap > div:first-child） ===== */
 body.login{ height: 100dvh; overflow: hidden; }
-body.login .wrap{ height: 100%; max-width: 1080px; margin: 0 auto; padding: 0 16px; display: grid; place-items: center; }
-body.login .wrap > div:first-child{ display: flex !important; flex-direction: column; align-items: center; justify-content: center; gap: clamp(20px, 5vh, 100px); width: 100%; text-align: center; }
-body.login h1{ margin: 0; text-align: center; font-size: clamp(36px, 8vw, 64px); line-height: 1.15; }
+body.login .wrap{ height: 100%; display: grid; place-items: center; }
 body.login #tabs, body.login #content, body.login #userInfo{ display: none !important; }
-body.login #signin{ display: block; }
+body.login #signin{ display:block; }
+body.login .topbar-grid{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 12px;
+  align-items:center;
+  justify-items:center;     /* 讓登入按鈕置中 */
+  text-align:center;
+}
+body.login .left-title h1{
+  font-size: clamp(36px, 8vw, 64px);
+  line-height: 1.15;
+  margin: 0;
+}
 #logoutBtn { white-space: nowrap; }
 #logoutBtn:hover { background:rgba(239,68,68,.1) !important; }  
 
@@ -182,9 +172,8 @@ body.dark .main-tab{ background:transparent; }
 .main-tab:hover{ background:rgba(31,111,229,.06) }
 .main-tab.active{ background:var(--primary-600); color:#fff }
 .tab-pane{ margin-top:8px; }
-body.login #mainTabs{ display:none !important; }
 
-/* ======= 新增：整體情報（儀表板）樣式 ======= */
+/* ======= 整體情報（儀表板）樣式 ======= */
 .dash-section{ margin:16px 0 24px; }
 .dash-title{ font-size:18px; font-weight:800; color:var(--text-strong); margin:0 0 8px; }
 .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
@@ -207,7 +196,9 @@ body.dark .loc-pill{ background:rgba(15,23,42,.28); }
 .loc-name{ font-weight:700; }
 .loc-num{ font-size:22px; font-weight:900; color:#2563eb; }
 
-/* 清單／詳情彈窗內部（部分已整合至 .modal 通用規則） */
+/* 清單／詳情彈窗內部 */
+.modal .dash-close{ position:absolute; right:10px; top:8px; font-size:22px; line-height:1; cursor:pointer; opacity:.7; }
+.modal .dash-close:hover{ opacity:1; }
 .list-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px dashed var(--border); }
 .list-left{ display:flex; flex-direction:column; gap:2px; }
 .list-title{ font-weight:800; }
@@ -216,25 +207,13 @@ body.dark .loc-pill{ background:rgba(15,23,42,.28); }
 .detail-table th, .detail-table td{ border:1px solid var(--border); padding:8px 10px; text-align:center; }
 .detail-table th{ background:#0f172a; color:#fff; }
 
-/* 詳細資料表格主色調 */
-.detail-table th{
-  background: var(--primary-700) !important;
-  color:#fff;
-}
-body.dark .detail-table th{
-  background: var(--primary-600) !important;
-}
-.detail-table, .detail-table th, .detail-table td{ border-color: var(--border); }
-.detail-table thead th:first-child{ border-top-left-radius:10px; }
-.detail-table thead th:last-child{  border-top-right-radius:10px; }
-
 /* RWD */
 @media(max-width:768px){
   .veh-list{ grid-template-columns:1fr; }
   .sheet-tabs{ gap:10px; }
 }
 
-/* ====== 頂部兩欄排版（標題/分頁 ←→ 使用者/時鐘+更新） ====== */
+/* ====== 頂部兩列排版（標題/分頁 ←→ 使用者/時鐘+更新） ====== */
 .topbar-grid{
   display:grid;
   grid-template-columns: 1fr auto;   /* 左寬右窄 */
@@ -254,27 +233,26 @@ body.dark .detail-table th{
 .refresh-bar{ margin:0; display:flex; gap:8px; align-items:center; justify-content:flex-end; }
 .clock{ font-weight:800; font-variant-numeric: tabular-nums; letter-spacing:.5px; }
 
-/* 登入頁不顯示右側的更新列 */
+/* 登入頁不顯示右側的更新列，但保留標題 */
 body.login .right-refresh{ display:none !important; }
 
-/* 手機時改為直排 */
-@media (max-width: 768px){
-  .topbar-grid{
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
-  }
-  .topbar-grid .right-user,
-  .topbar-grid .right-refresh{ justify-content:flex-start; }
-}
+/* Modal 版面安全高度與配色 */
+.modal{ max-height: calc(100dvh - 48px); overflow:auto; padding-right:44px !important; max-width:96vw !important; border-radius:12px; }
+@supports not (height: 100dvh){ .modal{ max-height: 90vh; } }
+.detail-table th{ background: var(--primary-700) !important; color:#fff; }
+body.dark .detail-table th{ background: var(--primary-600) !important; }
+.detail-table, .detail-table th, .detail-table td{ border-color: var(--border); }
+.detail-table thead th:first-child{ border-top-left-radius:10px; }
+.detail-table thead th:last-child{  border-top-right-radius:10px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <!-- 兩列兩欄的頂部排版 -->
   <div class="topbar-grid">
-    <!-- 左上：標題 -->
-    <div class="left-title>
-      <h1>車流人流退場情報</h1>
+    <!-- 左上：標題（登入與登入後皆顯示） -->
+    <div class="left-title">
+      <h1 id="pageTitle">車流人流退場情報</h1>
     </div>
 
     <!-- 右上：登入資訊 -->
@@ -584,15 +562,15 @@ function openModal(element){
   Object.assign(layer.style, {
     position:'fixed',
     inset:'0',
-    width:'100dvw',
-    height:'100dvh',
+    width:'100vw',
+    height:'100vh',
     background:'rgba(0,0,0,.45)',
     zIndex: String(MAX_Z),
     display:'grid',
     placeItems:'center'
   });
 
-  // 對話框本體：使用相對定位、限制最大尺寸
+  // 對話框本體：使用相對定位、限制最大尺寸（修正少逗號的 bug）
   element.classList.add('modal');
   Object.assign(element.style, {
     position:'relative',
@@ -600,7 +578,7 @@ function openModal(element){
     left:'auto',
     transform:'none',
     margin:'0',
-    maxWidth:'min(1300px,96vw)',   // ← 修正漏逗號
+    maxWidth:'min(1300px,96vw)',
     maxHeight:'min(86dvh, 640px)',
     overflow:'auto'
   });
@@ -641,7 +619,7 @@ function openModal(element){
   return cleanup;
 }
 
-/* ---------------- 打卡頁：載入資料 & 渲染（原本） ---------------- */
+/* ---------------- 打卡頁：載入資料 & 渲染 ---------------- */
 async function loadSheetData(key){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);
   document.getElementById('vehList').textContent = '讀取中...';
@@ -653,7 +631,7 @@ async function loadSheetData(key){
 }
 function isCompletedValue(v){ if (v==null) return false; const s=String(v).trim(); return !!s && s!=='—' && s!=='-'; }
 
-/* ====== 打卡頁 renderVehicles（原樣） ====== */
+/* ====== 打卡頁 renderVehicles ====== */
 function renderVehicles(cfg, data) {
   const box = document.getElementById('vehList'); box.innerHTML = '';
   const canWrite = currentUser?.permission === '全功能';
@@ -999,7 +977,8 @@ function openListModal(sheetKey, step, type, locValue){
     });
   }
 
-  const box=document.createElement('div'); box.className='modal';
+  const box=document.createElement('div');
+  box.className='modal';
   const titleText = (type==='loc') ? `${sheetKey}：${step}＝${locValue}` : `${sheetKey}：${step}（${type==='done'?'完成':'未完成'}）`;
   box.innerHTML = `
     <div class="dash-close">✕</div>
@@ -1080,7 +1059,6 @@ function openConfirmDialog(msg, onOK){
     </div>`;
   const close = openModal(box);
   const [btnCancel, btnOK] = box.querySelectorAll('button');
-  // 已移除不存在元素的 focus 呼叫
   btnCancel.onclick = close;
   btnOK.onclick = ()=>{ try{ onOK && onOK(); } finally{ close(); } };
 }

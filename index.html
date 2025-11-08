@@ -220,25 +220,26 @@
 
   <!-- 整體情報 -->
   <section id="pane-dashboard" class="section">
-    <div class="hd">
-      <div class="title">整體情報</div>
-      <div id="dashInfo" class="muted">—</div>
-      <div class="spacer"></div>
+  <div class="hd">
+    <div class="title">整體情報</div>
+    <div id="dashInfo" class="muted">—</div>
+    <div class="spacer"></div>
 
-      <div class="field">
-        <label>自動刷新</label>
-        <div class="seg" id="refreshSeg">
-          <button class="seg-btn active" data-ms="0">關閉</button>
-          <button class="seg-btn" data-ms="15000">15s</button>
-          <button class="seg-btn" data-ms="30000">30s</button>
-          <button class="seg-btn" data-ms="60000">60s</button>
-        </div>
+    <!-- 這整段只要放在 pane-dashboard 裡，就只會在該頁出現 -->
+    <div class="field">
+      <label>自動刷新</label>
+      <div class="seg" id="refreshSeg">
+        <button class="seg-btn active" data-ms="0">關閉</button>
+        <button class="seg-btn" data-ms="15000">15s</button>
+        <button class="seg-btn" data-ms="30000">30s</button>
+        <button class="seg-btn" data-ms="60000">60s</button>
       </div>
-      <button id="btnForceRefresh" class="btn">立即更新</button>
     </div>
+    <button id="btnForceRefresh" class="btn">立即更新</button>
+  </div>
+  <div id="dashboard" class="veh-grid"></div>
+</section>
 
-    <div id="dashboard" class="veh-grid"></div>
-  </section>
 
   <!-- 個別情報 -->
   <section id="pane-single" class="section hidden">

@@ -1370,52 +1370,34 @@ function bindSingleEvents(){
 }
 
 function runSingleQuery(){
-  const resBox  = document.getElementById(SINGLE_IDS.result);
-  const selSheet= document.getElementById(SINGLE_IDS.sheet).value || '';
-  const selArea = document.getElementById(SINGLE_IDS.area).value  || '';
-  const selCar  = document.getElementById(SINGLE_IDS.car).value   || '';
+  const resBox   = document.getElementById(SINGLE_IDS.result);
+  const tabKey   = document.getElementById(SINGLE_IDS.sheet).value || '';   // 指定 Tab 或 ALL
+  const selArea  = document.getElementById(SINGLE_IDS.area).value || '';
+  const selCar   = document.getElementById(SINGLE_IDS.car).value  || '';
 
-  resBox.innerHTML = '';
-
-  // 搜集候選（保留 cfg/header/row，之後給完成度排序器用）
-  const keys = selSheet ? [selSheet] : SHEET_CONFIGS.map(s=>s.key);
+  // 蒐集符合條件的車輛（保持 cfg / header / row，供完成度計算與畫卡）
+  const keys  = tabKey ? [tabKey] : SHEET_CONFIGS.map(s => s.key);
   const items = [];
-  keys.forEach(k=>{
+  keys.forEach(k => {
     const st = SINGLE_STORE[k]; if (!st) return;
-    const { cfg, header, rows } = st;
-    rows.forEach(row=>{
-      const area = String(row[1]||'').trim();
-      const car  = String(row[2]||'').trim();
-      if ((selArea && area!==selArea) || (selCar && car!==selCar)) return;
-
-      // 建名片（只有三行：區域車次編號／車號／最新狀態）
-      const latest = getLatestStatus(cfg, header, row);
-      const card = document.createElement('div');
-      card.className = 'veh-card';
-      card.style.textAlign = 'center';
-      card.innerHTML = `
-        <div style="font-weight:800;font-size:16px;">${area}</div>
-        <div style="font-weight:900;font-size:22px;letter-spacing:.5px;">${car}</div>
-        <div style="font-weight:800;font-size:16px;opacity:.85;">${latest}</div>
-      `;
-      card.addEventListener('click', ()=> openDetailModal(k, row));
-
-      items.push({ cfg, header, row, el: card });
+    st.rows.forEach(r => {
+      const area = String(r[1]||'').trim();
+      const car  = String(r[2]||'').trim();
+      if ((selArea && area !== selArea) || (selCar && car !== selCar)) return;
+      items.push({ cfg: st.cfg, header: st.header, row: r, sheetKey: k });
     });
   });
 
-  if (!items.length){
-    resBox.innerHTML = '<div style="opacity:.6;text-align:center;padding:10px 0;">（沒有符合項目）</div>';
-    return;
-  }
+  // 依「完成度低→高」排序；ALL 再加上 Tab 次序（SHEET_CONFIGS 的順序）
+  sortCardsByCompletion(items, tabKey || 'ALL');
 
-  // 依完成度排序；ALL 再以 Tab 次序（SHEET_CONFIGS 的順序）為第二優先
-  const tabVal = selSheet || 'ALL';
-  sortCardsByCompletion(items, tabVal);
-
-  // 渲染
-  items.forEach(it => resBox.appendChild(it.el));
+  // 繪製名片（三行置中：區域／車號／最新狀態）
+  resBox.innerHTML = '';
+  items.forEach(it => {
+    resBox.appendChild(buildSingleCard(it.cfg, it.header, it.row));
+  });
 }
+
 
 
 function resetSingleUI(){

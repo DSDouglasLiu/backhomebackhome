@@ -265,6 +265,8 @@
     <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
   </div>
 </div>
+
+    
     <div class="left-tabs">
       <div id="mainTabs" class="main-tabs">
         <button class="main-tab active" data-target="pane-punch">登錄</button>
@@ -338,9 +340,10 @@
 
 <script>
 /* ======================= 常量與設定 ======================= */
-
+const GOOGLE_CLIENT_ID = '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com';
 const API_BASE = 'https://script.google.com/macros/s/AKfycbx5I5lBOYm1FhEK_0TCvKL76X1WTo_xwq2Nvgh5WxnA5y2w8Ardj6vrBfJBxh583tyYsw/exec';
-const FRONT_ORIGIN = 'https://dsdouglasliu.github.io';
+const TOKEN_STORAGE_KEY = 'ddcc_user_token';
+  
 
 /* 停車位置選單 */
 const STOP_OPTIONS = [
@@ -464,29 +467,83 @@ function hideLoading(){ const el=document.getElementById('loading'); el.classLis
 async function withLoading(fn,msg='處理中…'){ showLoading(msg); try{ return await fn(); } finally{ hideLoading(); } }
 
 /* ======================= 登入流程 ======================= */
-window.onload = function(){
-  startClock(); buildRefreshControls();
+window.onload = async function () {
+  startClock();
+  buildRefreshControls();
+
   const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
+
   if (saved) {
-    idToken = saved;
-    fetch(API_BASE + '?action=verify', { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken })})
-      .then(r=>r.json()).then(j=>{
-        if (j.error) throw new Error(j.error);
-        currentUser = j; finishLoginUI(); buildTabs(); loadSheetData(currentSheetKey);
-      }).catch(()=>{ logout(); initGoogleSignIn(); });
+    try {
+      idToken = saved;
+      const r = await fetch(API_BASE + '?action=verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ idToken })
+      });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error);
+
+      currentUser = j;
+      finishLoginUI();
+      buildTabs();
+      loadSheetData(currentSheetKey);
+    } catch (err) {
+      console.warn('verify failed:', err);
+      logout();            // 會清掉 localStorage 與 UI
+      initGoogleSignIn();  // 顯示登入鈕
+      buildTabs();
+    }
   } else {
-    initGoogleSignIn(); buildTabs();
+    initGoogleSignIn();    // 顯示登入鈕
+    buildTabs();
   }
-  document.getElementById('logoutBtn').addEventListener('click', logout);
+
+  const btn = document.getElementById('logoutBtn');
+  if (btn) btn.addEventListener('click', logout);
 };
 
-function initGoogleSignIn() {
-  enterLoginView();
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
-  google.accounts.id.renderButton(document.getElementById('signin'), {
-    theme: 'outline', size: 'large'
+
+function initGoogleSignIn(){
+  enterLoginView(); // 切到未登入 UI（顯示登入按鈕）
+
+  if (!window.google || !google.accounts || !google.accounts.id) {
+    console.error('GSI client not loaded');
+    return;
+  }
+
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredential,   // 這是你現有的處理函式
+    ux_mode: 'popup'
   });
+
+  const mount = document.getElementById('signin');
+  if (mount) {
+    mount.classList.remove('hide');
+    mount.innerHTML = '';
+    google.accounts.id.renderButton(mount, { theme: 'outline', size: 'large' });
+  }
 }
+
+function logout(){
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  idToken = null;
+  currentUser = null;
+
+  enterLoginView();
+  stopDashboardAutoRefresh();
+
+  const signinDiv = document.getElementById('signin');
+  signinDiv.classList.remove('hide');
+  signinDiv.innerHTML = '';
+
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
+  google.accounts.id.renderButton(signinDiv, { theme:'outline', size:'large' });
+
+  showNotif('已登出', false);
+}
+
   
 async function handleCredential(resp){
   idToken = resp.credential; localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
@@ -508,20 +565,7 @@ function finishLoginUI(){
   switchPane('pane-punch');
   document.querySelectorAll('#mainTabs .main-tab').forEach(b=>{ b.tabIndex=0; b.removeAttribute('aria-disabled'); });
 }
-function logout() {
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
-  idToken = null; currentUser = null;
-  enterLoginView(); stopDashboardAutoRefresh();
 
-  const signinDiv = document.getElementById('signin');
-  signinDiv.classList.remove('hide');
-  signinDiv.innerHTML = '';
-
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
-  google.accounts.id.renderButton(signinDiv, { theme: 'outline', size: 'large' });
-
-  showNotif('已登出', false);
-}
   
 function enterLoginView(){
   document.body.classList.add('login'); stopDashboardAutoRefresh();

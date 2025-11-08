@@ -346,11 +346,7 @@ window.CONFIG = {
   TOKEN_STORAGE_KEY: 'ddcc_user_token'
 };
 
-// 取出成全域常數（之後程式直接用這三個）
-const GOOGLE_CLIENT_ID  = window.CONFIG.GOOGLE_CLIENT_ID;
-const API_BASE          = window.CONFIG.API_BASE;
-const TOKEN_STORAGE_KEY = window.CONFIG.TOKEN_STORAGE_KEY;
-  
+const { GOOGLE_CLIENT_ID, API_BASE, TOKEN_STORAGE_KEY } = window.CONFIG;
 
 /* 停車位置選單 */
 const STOP_OPTIONS = [
@@ -391,7 +387,6 @@ let currentDashFilter = 'ALL';
 let currentUser = null;
 let currentSheetKey = SHEET_CONFIGS[0].key;
 let sheetData = [];
-const TOKEN_STORAGE_KEY = 'ddcc_user_token';
 let idToken = null;
 
 /* === If-Match 版本（讀取時取得、更新時帶上） === */

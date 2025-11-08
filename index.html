@@ -656,16 +656,32 @@ const TOKEN_STORAGE_KEY = 'ddcc_user_token';
 /* ================================== */
 /* 2. Global State                    */
 /* ================================== */
+/* ===== 1. 修改：狀態管理 (各自獨立) ===== */
+let currentPaneId = 'pane-punch'; // 預設當前頁籤
+let currentDashFilter = 'ALL';  // [cite: 6] (保留) 'ALL' 或某一個 SHEET_CONFIGS[i].key
 
-const REFRESH_STORAGE_KEY = 'dash_refresh_ms';
-let refreshMs = parseInt(localStorage.getItem(REFRESH_STORAGE_KEY) || '', 10);
-if (!Number.isFinite(refreshMs) || refreshMs <= 0) refreshMs = 30*1000;
-// 預設 30 秒
-
-/* 原本的 dashboard 計時器 */
-let dashTimer = null;
-let currentDashFilter = 'ALL';
-// 'ALL' 或某一個 SHEET_CONFIGS[i].key
+// 用一個物件管理三個頁籤各自的更新設定
+const REFRESH_SETTINGS = {
+  'pane-punch': {
+    storageKey: 'punch_refresh_ms', // 登錄頁的 Key
+    defaultMs: 0,                   // 預設 0 = 不自動更新
+    currentMs: 0,                   // 當前設定值
+    timerId: null                   // 專屬計時器
+  },
+  'pane-dashboard': {
+    storageKey: 'dash_refresh_ms',  // [cite: 4] (沿用舊 Key)
+    defaultMs: 30 * 1000,           // [cite: 5] 預設 30 秒
+    currentMs: 30 * 1000,
+    timerId: null
+  },
+  'pane-single': {
+    storageKey: 'single_refresh_ms',// 個別情報的 Key
+    defaultMs: 0,                   // 預設 0 = 不自動更新
+    currentMs: 0,
+    timerId: null
+  }
+};
+/* (替換結束) */
 
 let currentUser = null;
 let currentSheetKey = SHEET_CONFIGS[0].key;
@@ -695,8 +711,81 @@ let INDIV_ROWS = [];
 /* ================================== */
 /* 3. Initialization (Entry Point)    */
 /* ================================== */
+/* ===== 2. 新增：讀取/啟停函式 (各自獨立) ===== */
 
+// 程式啟動時，載入所有頁籤的儲存設定
+function loadRefreshSettings() {
+  for (const paneId in REFRESH_SETTINGS) {
+    const setting = REFRESH_SETTINGS[paneId];
+    const savedMs = parseInt(localStorage.getItem(setting.storageKey) || '', 10);
+    
+    // 允許 0 (不更新)
+    if (Number.isFinite(savedMs) && savedMs >= 0) {
+      setting.currentMs = savedMs;
+    } else {
+      setting.currentMs = setting.defaultMs;
+    }
+  }
+}
+
+// 停止特定頁籤的計時器
+function stopAutoRefresh(paneId) {
+  const setting = REFRESH_SETTINGS[paneId];
+  if (setting && setting.timerId) {
+    clearInterval(setting.timerId);
+    setting.timerId = null;
+  }
+}
+
+// 停止所有頁籤的計時器 (登出或切換分頁時使用)
+function stopAllAutoRefresh() {
+  for (const paneId in REFRESH_SETTINGS) {
+    stopAutoRefresh(paneId);
+  }
+}
+
+// 啟動特定頁籤的計時器
+function startAutoRefresh(paneId) {
+  stopAutoRefresh(paneId); // 先確保停止舊的
+  
+  const setting = REFRESH_SETTINGS[paneId];
+  // 頻率為 0 或無設定，則不啟動
+  if (!setting || setting.currentMs <= 0) {
+    return;
+  }
+
+  // 建立新的計時器
+  setting.timerId = setInterval(() => {
+    // 如果頁面已隱藏，或已切換到不同頁籤，則不執行
+    if (document.hidden || currentPaneId !== paneId) {
+      return;
+    }
+
+    // 根據不同頁籤，執行對應的「靜默更新」
+    try {
+      switch (paneId) {
+        case 'pane-punch':
+          // 靜默更新「登錄」頁
+          loadSheetData(currentSheetKey);
+          break;
+        case 'pane-dashboard':
+          // 靜默更新「整體情報」 [cite: 117]
+          buildDashboard(true); 
+          break;
+        case 'pane-single':
+          // 靜默更新「個別情報」 [cite: 264]
+          onSingleQuery();
+          break;
+      }
+    } catch (err) {
+      console.error(`Auto-refresh failed for ${paneId}:`, err);
+      stopAutoRefresh(paneId); // 發生錯誤時停止，避免連環錯
+    }
+  }, setting.currentMs);
+}
+/* (新增結束) */
 window.onload = function(){
+  loadRefreshSettings(); // <-- ★ 在此新增
   // 啟動時鐘 & 建立更新頻率控制列
   startClock();
   buildRefreshControls();
@@ -771,8 +860,8 @@ function logout() {
   idToken = null;
   currentUser = null;
 
-  enterLoginView();           // 先切回登入版面，統一隱藏所有 pane
-  stopDashboardAutoRefresh();
+  enterLoginView();
+  stopAllAutoRefresh(); // <-- ★ 修改 [cite: 43] (停止所有計時器)
 // 關掉儀表板自動刷新
 
   const signinDiv = document.getElementById('signin');
@@ -817,35 +906,7 @@ if (ui) {
 /* 5. Core UI & Navigation            */
 /* ================================== */
 
-/* ===== 頂層三頁切換 ===== */
-function switchPane(targetId){
-  // 未登入就不要切換
-  if (!currentUser) {
-    showNotif('請先登入', true);
-    return;
-}
 
-  // 切換 tab 樣式與顯示對應面板
-  document.querySelectorAll('#mainTabs .main-tab')
-    .forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
-PANE_IDS.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('hide', id !== targetId);
-  });
-// 整體情報：啟動自動刷新；其他頁停掉
-  if (targetId === 'pane-dashboard') {
-    buildDashboardTabs();
-    buildDashboard(false);
-    startDashboardAutoRefresh();
-} else {
-    stopDashboardAutoRefresh();
-  }
-
-  // 個別情報：初始化（內部有 singleInitialized 防重複）
-  if (targetId === 'pane-single') {
-    initSinglePage();
-}
-}
 
 /* 建立「登錄頁」的工作表頁籤 */
 function buildTabs(){
@@ -923,31 +984,53 @@ const tick = ()=>{ if (el) el.textContent = getTaipeiHHMMSS(); };
 }
 
 /* ===== 自動更新頻率控制列 ===== */
+/* ===== 3. 修改：自動更新頻率控制列 (讀取/儲存當前頁籤) ===== */
 function buildRefreshControls(){
   const box = document.getElementById('refreshControls');
   if (!box) return;
   box.innerHTML = '';
+  
+  const currentSetting = REFRESH_SETTINGS[currentPaneId];
+
 // 頻率按鈕
   REFRESH_PRESETS.forEach(p=>{
     const btn = document.createElement('button');
     btn.className = 'seg-btn';
     btn.textContent = p.label;
     btn.dataset.ms = String(p.ms);
-    if (p.ms === refreshMs){
+    
+    // ★ 修改：檢查「當前頁籤」的設定
+    if (p.ms === currentSetting.currentMs){
       btn.classList.add('active');
-      btn.disabled = true; // 當前選擇：不可按、變色
+      btn.disabled = true;
     }
     btn.onclick = ()=> openRefreshSaveDialog(p.ms, p.label);
     box.appendChild(btn);
   });
+  
 // 立即更新
   const nowBtn = document.createElement('button');
   nowBtn.className = 'seg-btn';
   nowBtn.textContent = '立即更新';
-  nowBtn.title = '立刻重新整理整體情報';
+  nowBtn.title = '立刻重新整理目前頁面';
+
+  // ★ 修改：點擊時，根據「當前頁籤」執行對應的更新
 nowBtn.onclick = ()=> {
-    if (isDashboardVisible()) buildDashboard(false);
-    else showNotif('切到「整體情報」即可看到最新資料', false);
+    switch (currentPaneId) {
+      case 'pane-punch':
+        withLoading(async () => {
+          await loadSheetData(currentSheetKey);
+        }, '更新「登錄」頁...');
+        break;
+      case 'pane-dashboard':
+        buildDashboard(false); // [cite: 16] (false = 顯示 Loading)
+        break;
+      case 'pane-single':
+         withLoading(async () => {
+          await onSingleQuery();
+        }, '更新「個別情報」...');
+        break;
+    }
   };
   box.appendChild(nowBtn);
 }
@@ -958,7 +1041,7 @@ function openRefreshSaveDialog(ms, label){
 box.innerHTML = `
     <h3>儲存自動更新頻率</h3>
     <div class="modal-msg" style="font-size:15px;line-height:1.7;margin:6px 0 10px;">
-      將自動更新頻率設定為 <b>${label}</b>。按「儲存」後即刻生效。
+      將「${document.querySelector(`.main-tab[data-target="${currentPaneId}"]`).textContent}」頁的更新頻率設為 <b>${label}</b>。
     </div>
     <div class="actions">
       <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
@@ -968,15 +1051,17 @@ box.innerHTML = `
 const close = openModal(box);
   const [btnCancel, btnOK] = box.querySelectorAll('button');
   btnCancel.onclick = close;
+  
 btnOK.onclick = ()=>{
     try{
-      refreshMs = ms;
-      localStorage.setItem(REFRESH_STORAGE_KEY, String(refreshMs));
-      updateRefreshButtonsUI();
-if (isDashboardVisible()){
-        startDashboardAutoRefresh();
-// 重啟定時（新頻率）
-      }
+      // ★ 修改：只儲存「當前頁籤」的設定
+      const setting = REFRESH_SETTINGS[currentPaneId];
+      setting.currentMs = ms;
+      localStorage.setItem(setting.storageKey, String(ms));
+      
+      updateRefreshButtonsUI(); // 更新按鈕 UI
+      startAutoRefresh(currentPaneId); // [cite: 21, 22] (用新頻率重啟「當前頁籤」的計時器)
+      
       showNotif(`已設定為每 ${label} 自動更新`, false);
     } finally{ close();
 }
@@ -985,14 +1070,19 @@ if (isDashboardVisible()){
 
 function updateRefreshButtonsUI(){
   const btns = document.querySelectorAll('#refreshControls .seg-btn');
+  // ★ 修改：讀取「當前頁籤」的設定
+  const currentMs = REFRESH_SETTINGS[currentPaneId].currentMs;
+
 btns.forEach(btn=>{
-    if (btn.textContent === '立即更新') return; // 永遠不變色
+    if (btn.textContent === '立即更新') return;
     const ms = parseInt(btn.dataset.ms||'0',10);
-    const isActive = (ms === refreshMs);
+    // ★ 修改：比對「當前頁籤」的設定
+    const isActive = (ms === currentMs);
     btn.classList.toggle('active', isActive);
     btn.disabled = isActive;
   });
 }
+/* (替換結束) */
 
 /* ================================== */
 /* 7. Page Module: Pane 1 (Punch)     */
@@ -1214,28 +1304,57 @@ const val = (colIdx !== -1 && colIdx < row.length) ? row[colIdx] : '';
 /* ================================== */
 /* 8. Page Module: Pane 2 (Dashboard) */
 /* ================================== */
+/* ===== 4. 修改：頂層三頁切換 (啟停各自的計時器) ===== */
+function switchPane(targetId){
+  // 未登入就不要切換
+  if (!currentUser) {
+    showNotif('請先登入', true);
+    return;
+}
+  
+  // ★ 新增：停止「上一個」頁籤的計時器
+  stopAutoRefresh(currentPaneId);
 
-function isDashboardVisible() {
-  const el = document.getElementById('pane-dashboard');
-  return el ? !el.classList.contains('hide') : false;
-}
+  // ★ 新增：更新當前頁籤 ID
+  currentPaneId = targetId;
 
-function startDashboardAutoRefresh() {
-  stopDashboardAutoRefresh();
-dashTimer = setInterval(() => {
-    if (isDashboardVisible()) buildDashboard(true); // 靜默刷新
-  }, refreshMs);
-}
+  // 切換 tab 樣式與顯示對應面板
+  document.querySelectorAll('#mainTabs .main-tab')
+    .forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
+PANE_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hide', id !== targetId);
+  });
+  
+  // ★ 新增：根據新頁籤，更新控制列按鈕狀態
+  updateRefreshButtonsUI();
 
-function stopDashboardAutoRefresh() {
-  if (dashTimer) { clearInterval(dashTimer); dashTimer = null;
+  // ★ 修改：[cite: 114, 115]
+  // 不論切到哪一頁，都執行初始化，並嘗試啟動該頁的計時器
+  
+  if (targetId === 'pane-dashboard') {
+    buildDashboardTabs(); // 執行「整體情報」的初始化
+    buildDashboard(false);
+  }
+  
+  if (targetId === 'pane-single') {
+    initSinglePage(); // [cite: 116] (執行「個別情報」的初始化)
+  }
+  
+  // (「登錄」頁在登入時已載入 [cite: 9]，切換時不需重載，交給計時器)
+
+  // ★ 新增：啟動「新頁籤」的計時器
+  startAutoRefresh(currentPaneId);
 }
-}
+/* (替換結束) */
 
 // 頁面可見性切換時自動暫停/恢復
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) stopDashboardAutoRefresh();
-  else if (isDashboardVisible()) startDashboardAutoRefresh();
+  if (document.hidden) {
+    stopAllAutoRefresh(); // <-- ★ 修改：停止所有計時器 [cite: 119]
+  } else {
+    startAutoRefresh(currentPaneId); // <-- ★ 修改：恢復「當前頁籤」的計時器 [cite: 119]
+  }
 });
 
 /* ======================= 整體情報 ======================= */

@@ -256,12 +256,15 @@
   <div class="topbar-grid">
     <div class="left-title"><h1 id="pageTitle">車流人流退場情報</h1></div>
     <div class="right-user">
-      <div id="signin"></div>
-      <div id="userInfo" class="hide user-info">
-        <span id="userDisplay"></span>
-        <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
-      </div>
-    </div>
+  <!-- 這裡會被 GSI 渲染登入按鈕 -->
+  <div id="signin"></div>
+
+  <!-- 登入後才顯示 -->
+  <div id="userInfo" class="hide user-info">
+    <span id="userDisplay"></span>
+    <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
+  </div>
+</div>
     <div class="left-tabs">
       <div id="mainTabs" class="main-tabs">
         <button class="main-tab active" data-target="pane-punch">登錄</button>
@@ -476,11 +479,15 @@ window.onload = function(){
   }
   document.getElementById('logoutBtn').addEventListener('click', logout);
 };
-function initGoogleSignIn(){
+
+function initGoogleSignIn() {
   enterLoginView();
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
-  google.accounts.id.renderButton(document.getElementById('signin'), { theme:'outline', size:'large' });
+  google.accounts.id.renderButton(document.getElementById('signin'), {
+    theme: 'outline', size: 'large'
+  });
 }
+  
 async function handleCredential(resp){
   idToken = resp.credential; localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
   try{
@@ -501,14 +508,21 @@ function finishLoginUI(){
   switchPane('pane-punch');
   document.querySelectorAll('#mainTabs .main-tab').forEach(b=>{ b.tabIndex=0; b.removeAttribute('aria-disabled'); });
 }
-function logout(){
-  localStorage.removeItem(TOKEN_STORAGE_KEY); idToken=null; currentUser=null;
+function logout() {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  idToken = null; currentUser = null;
   enterLoginView(); stopDashboardAutoRefresh();
-  const signinDiv=document.getElementById('signin'); signinDiv.classList.remove('hide'); signinDiv.innerHTML='';
+
+  const signinDiv = document.getElementById('signin');
+  signinDiv.classList.remove('hide');
+  signinDiv.innerHTML = '';
+
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
-  google.accounts.id.renderButton(signinDiv, { theme:'outline', size:'large' });
+  google.accounts.id.renderButton(signinDiv, { theme: 'outline', size: 'large' });
+
   showNotif('已登出', false);
 }
+  
 function enterLoginView(){
   document.body.classList.add('login'); stopDashboardAutoRefresh();
   try{ clearNode(document.getElementById('dashboard')); }catch{}
@@ -775,94 +789,7 @@ function openEditTimeDialog(cur, onSave){
     onSave && onSave(`${hh}:${mm}:${ss}`); close();
   };
 }
-<!-- 登入按鈕容器（看不到按鈕就是這個沒被渲染） -->
-<div id="signinContainer"></div>
-/** === 必填：你的設定 === */
-const GOOGLE_CLIENT_ID = '在這裡換成你真的 client_id.apps.googleusercontent.com';
-const API_BASE = 'https://script.google.com/macros/s/AKfycbx5I5lBOYm1FhEK_0TCvKL76X1WTo_xwq2Nvgh5WxnA5y2w8Ardj6vrBfJBxh583tyYsw/exec';
 
-/** === 小工具 === */
-const $ = (sel) => document.querySelector(sel);
-function notify(msg) {
-  console.log('[INFO]', msg);
-}
-
-/** === 取得 ID Token 後，呼叫後端 verify === */
-async function handleCredentialResponse(cred) {
-  try {
-    const idToken = cred.credential;
-    if (!idToken) throw new Error('No credential from GSI');
-
-    const r = await fetch(API_BASE + '?action=verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken })
-    });
-
-    if (!r.ok) throw new Error('verify http ' + r.status);
-    const data = await r.json();
-    // data: { email, name, permission } 依你的後端回傳
-    notify('登入成功：' + (data.email || ''));
-    // TODO: 這裡切換你的 UI（例如移除 .login class、載入資料等）
-    document.body.classList.remove('login');
-  } catch (err) {
-    console.error('verify failed:', err);
-    alert('登入失敗：' + err.message);
-  }
-}
-
-/** === 初始化 Google Sign-In 並渲染按鈕 === */
-function initGoogleSignIn() {
-  if (!window.google || !google.accounts || !google.accounts.id) {
-    console.error('GSI client not loaded');
-    return;
-  }
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_ID.includes('.apps.googleusercontent.com')) {
-    console.error('請正確設定 GOOGLE_CLIENT_ID');
-    return;
-  }
-
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleCredentialResponse,
-    ux_mode: 'popup' // 或 'redirect'
-  });
-
-  const mount = $('#signinContainer');
-  if (mount) {
-    google.accounts.id.renderButton(mount, {
-      theme: 'outline',
-      size: 'large',
-      type: 'standard',
-      text: 'signin_with', // or 'continue_with'
-      shape: 'pill'
-    });
-  }
-
-  // 可選：自動提示
-  // google.accounts.id.prompt();
-}
-
-/** === 當 GSI 腳本載入完成後再初始化 === */
-window.addEventListener('load', () => {
-  // 等待 gsi/client 載入
-  if (window.google && google.accounts && google.accounts.id) {
-    initGoogleSignIn();
-  } else {
-    // 最多等 2 秒
-    let tries = 0;
-    const t = setInterval(() => {
-      tries++;
-      if (window.google && google.accounts && google.accounts.id) {
-        clearInterval(t);
-        initGoogleSignIn();
-      } else if (tries > 20) {
-        clearInterval(t);
-        console.error('GSI client still not available');
-      }
-    }, 100);
-  }
-});
   
 </script>
 </body>

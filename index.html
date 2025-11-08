@@ -773,9 +773,13 @@ function startAutoRefresh(paneId) {
           buildDashboard(true); 
           break;
         case 'pane-single':
-          // 靜默更新「個別情報」 [cite: 264]
-          onSingleQuery();
-          break;
+  // 靜默更新「個別情報」
+  // 1. 重新抓取資料
+  loadSingleData().then(() => {
+    // 2. 依據當前篩選器，重新渲染畫面
+    onSingleQuery();
+  });
+  break;
       }
     } catch (err) {
       console.error(`Auto-refresh failed for ${paneId}:`, err);
@@ -861,7 +865,7 @@ function logout() {
   currentUser = null;
 
   enterLoginView();
-  stopAllAutoRefresh(); // <-- ★ 修改 [cite: 43] (停止所有計時器)
+  stopAllAutoRefresh();
 // 關掉儀表板自動刷新
 
   const signinDiv = document.getElementById('signin');

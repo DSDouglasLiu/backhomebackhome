@@ -3,26 +3,22 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>多頁各自更新控制</title>
+<title>車流人流退場情報（每頁獨立更新）</title>
 <style>
-  :root { --blue:#2f6de1; --blue-ghost:#e8f0fe; --text:#0e1116; --muted:#6b7280; }
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei",Roboto,Arial,sans-serif;margin:0;background:#f5f7fa;color:var(--text);}
-  header{display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid #e5e7eb;background:#fff;position:sticky;top:0;z-index:10}
-  .tabs{display:flex;gap:16px;margin-right:auto}
-  .tab{padding:14px 30px;border:2px solid var(--blue);border-radius:16px;background:#fff;color:var(--blue);font-weight:700;cursor:pointer;user-select:none}
+  :root { --blue:#2f6de1; --text:#0e1116; --muted:#6b7280; --bd:#e5e7eb; }
+  body{font-family:-apple-system,BlinkMacSystemFont,"Microsoft JhengHei",Roboto,Arial,sans-serif;margin:0;background:#f5f7fa;color:var(--text)}
+  header{display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--bd);background:#fff;position:sticky;top:0;z-index:10}
+  .tabs{display:flex;gap:12px;margin-right:auto;flex-wrap:wrap}
+  .tab{padding:12px 20px;border:2px solid var(--blue);border-radius:14px;background:#fff;color:var(--blue);font-weight:700;cursor:pointer;user-select:none}
   .tab.active{background:var(--blue);color:#fff}
-  .right-refresh{display:flex;align-items:center;gap:14px;margin-left:auto}
-  .clock{font-size:28px;font-weight:800;letter-spacing:0.5px}
-  .chip{padding:12px 22px;border:2px solid var(--blue);border-radius:16px;background:#fff;color:var(--blue);font-weight:700;cursor:pointer;user-select:none}
+  .right-refresh{display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:wrap}
+  .clock{font-size:26px;font-weight:800;letter-spacing:.5px}
+  .chip{padding:10px 18px;border:2px solid var(--blue);border-radius:14px;background:#fff;color:var(--blue);font-weight:700;cursor:pointer;user-select:none;min-width:64px;text-align:center}
   .chip.active{background:var(--blue);color:#fff}
-  .chip.ghost{background:#fff;color:var(--blue)}
-  .chip.primary{background:#fff;color:var(--blue)}
-  main{padding:20px}
+  main{padding:18px}
   .pane{display:none}
   .pane.active{display:block}
-  .hint{color:var(--muted);margin:8px 0 18px}
-  .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 18px;box-shadow:0 .5px 0 rgba(0,0,0,.02)}
-  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .card{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:14px;box-shadow:0 .5px 0 rgba(0,0,0,.02);margin-bottom:14px}
   .small{font-size:12px;color:var(--muted)}
 </style>
 </head>
@@ -33,10 +29,8 @@
       <div class="tab" data-pane="dashboard">整體情報</div>
       <div class="tab" data-pane="single">個別情報</div>
     </nav>
-
-    <div class="right-refresh">
+    <div class="right-refresh" id="refreshBar">
       <div class="clock" id="clock">--:--:--</div>
-
       <button class="chip" data-period="300">5分</button>
       <button class="chip" data-period="120">2分</button>
       <button class="chip" data-period="60">60秒</button>
@@ -47,107 +41,93 @@
 
   <main>
     <section id="pane-punch" class="pane active">
-      <div class="hint">這一頁有自己的自動更新設定與倒數。</div>
-      <div class="card">
-        <h3>登錄頁內容</h3>
-        <div class="small" id="log-punch">尚未更新</div>
-      </div>
+      <div class="card"><h3>登錄頁</h3><div class="small" id="log-punch">尚未更新</div></div>
     </section>
 
     <section id="pane-dashboard" class="pane">
-      <div class="hint">整體情報頁的自動刷新與立即更新只會作用在這一頁。</div>
-      <div class="card">
-        <h3>整體情報內容</h3>
-        <div class="small" id="log-dashboard">尚未更新</div>
-      </div>
+      <div class="card"><h3>整體情報</h3><div class="small" id="log-dashboard">尚未更新</div></div>
     </section>
 
     <section id="pane-single" class="pane">
-      <div class="hint">個別情報頁也能設定自己的更新週期。</div>
-      <div class="card">
-        <h3>個別情報內容</h3>
-        <div class="small" id="log-single">尚未更新</div>
-      </div>
+      <div class="card"><h3>個別情報</h3><div class="small" id="log-single">尚未更新</div></div>
     </section>
   </main>
 
 <script>
-/**
- * ─────────────────────────────────────────────────────────────
- * 每頁獨立的更新狀態（period/left/計時器/是否啟用）
- * ─────────────────────────────────────────────────────────────
- */
-const PAGES = {
-  punch:     { period: 0, left: 0, timer: null, enabled: false, logEl: '#log-punch',     refresh: refreshPunch },
-  dashboard: { period: 0, left: 0, timer: null, enabled: false, logEl: '#log-dashboard', refresh: refreshDashboard },
-  single:    { period: 0, left: 0, timer: null, enabled: false, logEl: '#log-single',    refresh: refreshSingle }
+/* ================== 每頁獨立更新狀態 ================== */
+const Pages = {
+  punch:     { period:0, left:0, timer:null, enabled:false, log:'#log-punch',     refresh: refreshPunch },
+  dashboard: { period:0, left:0, timer:null, enabled:false, log:'#log-dashboard', refresh: refreshDashboard },
+  single:    { period:0, left:0, timer:null, enabled:false, log:'#log-single',    refresh: refreshSingle },
 };
 
-// 取得目前頁 ID
-function currentPaneId() {
-  return document.querySelector('.pane.active').id.replace('pane-','');
+/* ===== 你現有專案的實際「更新動作」請改在這三個函式 ===== */
+function refreshPunch()     { stampTo(Pages.punch.log,      '登錄頁');      /* 例：reloadSheet(); */ }
+function refreshDashboard() { stampTo(Pages.dashboard.log,  '整體情報');    /* 例：buildDashboard(false); */ }
+function refreshSingle()    { stampTo(Pages.single.log,     '個別情報');    /* 例：loadSingleData(); */ }
+
+/* 小工具：寫入時間戳 */
+function stampTo(sel, label){
+  const el = document.querySelector(sel);
+  const d = new Date(); const p = n => String(n).padStart(2,'0');
+  el.textContent = `${label}已更新：${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
-// 時鐘
+/* ================== 共同 UI：時鐘與按鈕 ================== */
+const clockEl = document.getElementById('clock');
 setInterval(()=>{
-  const d=new Date();
-  const pad=n=>String(n).padStart(2,'0');
-  document.getElementById('clock').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const d=new Date(); const p=n=>String(n).padStart(2,'0');
+  clockEl.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }, 500);
 
-// 監聽上方頁籤
-document.querySelectorAll('.tab').forEach(tab=>{
-  tab.addEventListener('click', ()=>{
-    if (tab.classList.contains('active')) return;
-    // 切換 pane
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
+function currentPane(){ return document.querySelector('.pane.active').id.replace('pane-',''); }
 
-    const target = tab.dataset.pane;
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    if (t.classList.contains('active')) return;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const target = t.dataset.pane;
     document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
     document.getElementById(`pane-${target}`).classList.add('active');
-
-    // 切出舊頁面時不需要特別停表：每頁自管自己的計時器
-    // 切入新頁面時，同步 UI（高亮對應 period / 立即更新作用頁）
-    syncChipsFor(target);
+    // 切頁時，同步高亮該頁目前的 period
+    highlightFor(target);
   });
 });
 
-// 監聽四個 period 按鈕
+/* 頻率按鈕：針對「目前頁」設定並啟動計時器 */
 document.querySelectorAll('.chip[data-period]').forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    const page = currentPaneId();
+    const page = currentPane();
     const sec  = Number(btn.dataset.period);
-    setPagePeriod(page, sec);       // 設定該頁的週期（也代表啟用自動更新）
-    startPageTimer(page);           // 重新開表
-    highlightActivePeriod(page);    // 高亮
-    // 立即執行一次更新（多數情境更直覺）
-    PAGES[page].refresh();
+    setPagePeriod(page, sec);
+    startTimer(page);
+    highlightFor(page);
+    // 多數情境會希望設定後馬上刷新一次
+    Pages[page].refresh();
   });
 });
 
-// 立即更新只針對當前頁
+/* 立即更新：只更新當前頁 */
 document.getElementById('now').addEventListener('click', ()=>{
-  const page = currentPaneId();
-  PAGES[page].refresh();
+  Pages[currentPane()].refresh();
 });
 
-// ── 每頁獨立控制 ──────────────────────────────────────────────
+/* ================== 每頁計時器邏輯 ================== */
 function setPagePeriod(page, seconds){
-  const st = PAGES[page];
+  const st = Pages[page];
   st.period  = seconds;
   st.left    = seconds;
   st.enabled = seconds > 0;
 }
 
-function startPageTimer(page){
-  const st = PAGES[page];
+function startTimer(page){
+  const st = Pages[page];
   if (st.timer) clearInterval(st.timer);
   if (!st.enabled || st.period<=0) return;
   st.left = st.period;
   st.timer = setInterval(()=>{
     st.left--;
-    // 可擴充：顯示倒數在頁內；此範例省略
     if (st.left<=0){
       st.left = st.period;
       st.refresh();
@@ -155,57 +135,23 @@ function startPageTimer(page){
   }, 1000);
 }
 
-function stopPageTimer(page){
-  const st = PAGES[page];
+function stopTimer(page){
+  const st = Pages[page];
   if (st.timer){ clearInterval(st.timer); st.timer=null; }
 }
 
-function highlightActivePeriod(page){
-  // 先清掉全部 chip 的 active
+/* 切頁時同步上方按鈕的 active 樣式（只做視覺，不改動其他頁設定） */
+function highlightFor(page){
   document.querySelectorAll('.chip[data-period]').forEach(c=>c.classList.remove('active'));
-  const st = PAGES[page];
+  const st = Pages[page];
   if (st.enabled){
     const btn = document.querySelector(`.chip[data-period="${st.period}"]`);
     if (btn) btn.classList.add('active');
   }
 }
 
-function syncChipsFor(page){
-  // 切頁時，同步顯示當頁設定
-  highlightActivePeriod(page);
-}
-
-// ── 範例：三頁的實際「更新行為」在這裡換成你的資料處理 ─────
-function stamp() {
-  const d=new Date();
-  const pad=n=>String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
-function refreshPunch(){
-  // TODO: 換成你的「登錄頁」重新載入/上傳/拉取流程
-  const el = document.querySelector(PAGES.punch.logEl);
-  el.textContent = `登錄頁已更新：${stamp()}`;
-  // 範例：console.log('reloadSheet()');
-}
-
-function refreshDashboard(){
-  // TODO: 換成你的「整體情報」重建流程
-  const el = document.querySelector(PAGES.dashboard.logEl);
-  el.textContent = `整體情報已更新：${stamp()}`;
-  // 範例：console.log('buildDashboard(false)');
-}
-
-function refreshSingle(){
-  // TODO: 換成你的「個別情報」資料載入流程
-  const el = document.querySelector(PAGES.single.logEl);
-  el.textContent = `個別情報已更新：${stamp()}`;
-  // 範例：console.log('loadSingleData()');
-}
-
-// 初始：同步一次（預設停用自動刷新）
-syncChipsFor('punch');
-
+/* 初始：預設全部不自動刷新，只同步一次按鈕高亮 */
+highlightFor('punch');
 </script>
 </body>
 </html>

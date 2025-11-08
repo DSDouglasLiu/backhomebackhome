@@ -339,10 +339,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script>
-/* ======================= 常量與設定 ======================= */
-const GOOGLE_CLIENT_ID = '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com';
-const API_BASE = 'https://script.google.com/macros/s/AKfycbx5I5lBOYm1FhEK_0TCvKL76X1WTo_xwq2Nvgh5WxnA5y2w8Ardj6vrBfJBxh583tyYsw/exec';
-const TOKEN_STORAGE_KEY = 'ddcc_user_token';
+// ===== 必填設定（放最上面！）=====
+window.CONFIG = {
+  GOOGLE_CLIENT_ID: '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com',
+  API_BASE: 'https://script.google.com/macros/s/AKfycbx5I5lBOYm1FhEK_0TCvKL76X1WTo_xwq2Nvgh5WxnA5y2w8Ardj6vrBfJBxh583tyYsw/exec',
+  TOKEN_STORAGE_KEY: 'ddcc_user_token'
+};
+
+// 取出成全域常數（之後程式直接用這三個）
+const GOOGLE_CLIENT_ID  = window.CONFIG.GOOGLE_CLIENT_ID;
+const API_BASE          = window.CONFIG.API_BASE;
+const TOKEN_STORAGE_KEY = window.CONFIG.TOKEN_STORAGE_KEY;
   
 
 /* 停車位置選單 */

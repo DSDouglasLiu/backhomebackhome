@@ -10,14 +10,17 @@
 
   <!-- ✅ 最小且可運作的 CSP：允許 GSI / gstatic / cloudflare(domPurify) / GAS / OAuth -->
   <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self';
-    script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://cdnjs.cloudflare.com;
-    connect-src 'self' https://script.google.com https://script.googleapis.com https://accounts.google.com https://www.googleapis.com https://oauth2.googleapis.com https://cdnjs.cloudflare.com;
-    img-src 'self' https://www.gstatic.com data:;
-    font-src 'self' data:;
-    style-src 'self' 'unsafe-inline';
-    frame-src 'self' https://accounts.google.com;
-  ">
+  default-src 'self';
+  script-src 'self' https://accounts.google.com https://apis.google.com;
+  style-src  'self' https://accounts.google.com 'unsafe-inline';
+  style-src-elem 'self' https://accounts.google.com 'unsafe-inline';
+  img-src 'self' data: https://accounts.google.com;
+  connect-src 'self' https://script.google.com https://script.googleapis.com;
+  frame-src https://accounts.google.com;
+  base-uri 'self';
+  frame-ancestors 'self';
+">
+
 
   <!-- ❗ 注意：X-Frame-Options 必須由伺服器端 header 設定，<meta> 無效且會報錯，因此不放。 -->
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
@@ -338,8 +341,7 @@
 <!-- DOMPurify（如需富文字輸出時啟用；否則 setSafeHTML 會自動退化為 setText） -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script type="module">
-  // ===== 必填設定（放最上面！）=====
+<script type="module">// ===== 必填設定（放最上面！）=====
 window.CONFIG = {
   GOOGLE_CLIENT_ID: '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com',
   API_BASE: 'https://script.google.com/macros/s/AKfycbx5I5lBOYm1FhEK_0TCvKL76X1WTo_xwq2Nvgh5WxnA5y2w8Ardj6vrBfJBxh583tyYsw/exec',
@@ -480,6 +482,7 @@ window.onload = async function () {
       idToken = saved;
       const r = await fetch(API_BASE + '?action=verify', {
         method: 'POST',
+        credentials: 'omit',                 // 不帶 cookie，伺服器可用 '*'
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ idToken })
       });
@@ -550,7 +553,7 @@ function logout(){
 async function handleCredential(resp){
   idToken = resp.credential; localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
   try{
-    const r = await fetch(API_BASE + '?action=verify', { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken }) });
+    const r = await fetch(API_BASE + '?action=verify', { method:'POST', credentials: 'omit', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken }) });
     const j = await r.json(); if (j.error) throw new Error(j.error);
     currentUser=j; finishLoginUI(); loadSheetData(currentSheetKey);
   }catch(err){ showNotif('登入失敗：'+err.message, true); logout(); }
@@ -674,7 +677,7 @@ function renderVehicles(cfg, data){
             if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');
             const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch: (window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:sel.value}] };
             await withLoading(async()=>{
-              const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+              const r=await fetch(API_BASE+'?action=update',{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
               const j=await r.json();
               if(!j.ok){
                 if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
@@ -710,7 +713,7 @@ function renderVehicles(cfg, data){
             const now=getTaipeiHHMMSS();
             const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:now}] };
             await withLoading(async()=>{
-              const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+              const r=await fetch(API_BASE+'?action=update',{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
               const j=await r.json();
               if(!j.ok){
                 if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
@@ -729,7 +732,7 @@ function renderVehicles(cfg, data){
             openEditTimeDialog(cur, async (newHHMMSS)=>{
               const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:newHHMMSS}] };
               await withLoading(async()=>{
-                const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+                const r=await fetch(API_BASE+'?action=update',{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
                 const j=await r.json();
                 if(!j.ok){
                   if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
@@ -750,7 +753,7 @@ function renderVehicles(cfg, data){
             openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
               const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:''}] };
               await withLoading(async()=>{
-                const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+                const r=await fetch(API_BASE+'?action=update',{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
                 const j=await r.json();
                 if(!j.ok){
                   if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
@@ -779,7 +782,7 @@ function renderVehicles(cfg, data){
       if(!canWrite) return;
       const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:memoColIdx+1,value:sanitizeForSheet(memoTA.value)}] };
       await withLoading(async()=>{
-        const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const r=await fetch(API_BASE+'?action=update',{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
         const j=await r.json();
         if(!j.ok){
           if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }

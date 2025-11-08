@@ -1003,11 +1003,10 @@ function buildRefreshControls(){
     btn.textContent = p.label;
     btn.dataset.ms = String(p.ms);
     
-    // ★ 修改：檢查「當前頁籤」的設定
-    if (p.ms === currentSetting.currentMs){
-      btn.classList.add('active');
-      btn.disabled = true;
-    }
+    // ★ 修正：檢查「當前頁籤」的設定
+    const isActive = (p.ms === currentSetting.currentMs);
+    btn.classList.toggle('active', isActive);
+    btn.disabled = isActive;
     btn.onclick = ()=> openRefreshSaveDialog(p.ms, p.label);
     box.appendChild(btn);
   });
@@ -1078,9 +1077,11 @@ function updateRefreshButtonsUI(){
   const currentMs = REFRESH_SETTINGS[currentPaneId].currentMs;
 
 btns.forEach(btn=>{
-    if (btn.textContent === '立即更新') return;
-    const ms = parseInt(btn.dataset.ms||'0',10);
-    // ★ 修改：比對「當前頁籤」的設定
+    // ★ 修正：確保只處理頻率按鈕
+    if (!btn.dataset.ms) return; 
+    
+    const ms = parseInt(btn.dataset.ms, 10);
+    // ★ 修正：比對「當前頁籤」的設定
     const isActive = (ms === currentMs);
     btn.classList.toggle('active', isActive);
     btn.disabled = isActive;
@@ -1330,8 +1331,8 @@ PANE_IDS.forEach(id => {
     if (el) el.classList.toggle('hide', id !== targetId);
   });
   
-  // ★ 新增：根據新頁籤，更新控制列按鈕狀態
-  updateRefreshButtonsUI();
+  // ★ 修正：切換頁籤時，重新建構整個控制列
+  buildRefreshControls(); //
 
   // ★ 修改：[cite: 114, 115]
   // 不論切到哪一頁，都執行初始化，並嘗試啟動該頁的計時器

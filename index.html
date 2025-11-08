@@ -10,13 +10,15 @@
 
   <!-- 最小安全標頭（保底）-->
   <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self';
-    script-src 'self' https://accounts.google.com https://cdnjs.cloudflare.com;
-    connect-src 'self' https://script.google.com https://script.googleapis.com;
-    style-src 'self' 'unsafe-inline';
-    img-src 'self' data:;
-    frame-ancestors 'self';
-  ">
+  default-src 'self';
+  script-src 'self' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://cdnjs.cloudflare.com;
+  connect-src 'self' https://script.google.com https://script.googleapis.com https://accounts.google.com https://www.googleapis.com https://oauth2.googleapis.com;
+  frame-src 'self' https://accounts.google.com;
+  img-src 'self' https://www.gstatic.com data:;
+  style-src 'self' 'unsafe-inline';
+  frame-ancestors 'self';
+">
+
   <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -351,8 +353,9 @@ a:focus-visible{outline:none;box-shadow:var(--focus)}
 
 <script>
 /* ======================= 常量與設定 ======================= */
-const GOOGLE_CLIENT_ID = '你的client_id.apps.googleusercontent.com';
-const API_BASE = '你的Apps Script部署URL'; // e.g. https://script.google.com/macros/s/XXXXX/exec
+
+const API_BASE = 'https://script.google.com/macros/s/AKfycbx5I5lBOYm1FhEK_0TCvKL76X1WTo_xwq2Nvgh5WxnA5y2w8Ardj6vrBfJBxh583tyYsw/exec';
+const FRONT_ORIGIN = 'https://dsdouglasliu.github.io';
 
 /* 停車位置選單 */
 const STOP_OPTIONS = [

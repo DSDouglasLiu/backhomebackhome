@@ -487,14 +487,11 @@ window.onload = async function () {
 
       // 使用 POST + JSON body（與登入流程一致）
     const r = await fetch(API_BASE, {
-      method: 'POST',
-      credentials: 'omit',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        action: 'verify', 
-        idToken: idToken 
-      })
-    });
+  method: 'POST',
+  credentials: 'omit',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'verify', idToken: saved })
+});
 
       const j = await r.json();
       if (j.error) throw new Error(j.error);
@@ -561,13 +558,26 @@ function logout(){
 }
 
   
-async function handleCredential(resp){
-  idToken = resp.credential; localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
-  try{
-    const r = await fetch(API_BASE + '?action=verify', { method:'POST', credentials: 'omit', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken }) });
-    const j = await r.json(); if (j.error) throw new Error(j.error);
-    currentUser=j; finishLoginUI(); loadSheetData(currentSheetKey);
-  }catch(err){ showNotif('登入失敗：'+err.message, true); logout(); }
+async function handleCredential(resp) {
+  idToken = resp.credential;
+  localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
+
+  try {
+    const r = await fetch(API_BASE, {  // 移除 ?action=verify
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'verify', idToken })
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'verify failed');
+    currentUser = j;
+    finishLoginUI();
+    loadSheetData(currentSheetKey);
+  } catch (err) {
+    showNotif('登入失敗：' + err.message, true);
+    logout();
+  }
 }
 function finishLoginUI(){
   document.body.classList.remove('login');
@@ -690,7 +700,7 @@ function renderVehicles(cfg, data){
             if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');
             const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch: (window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:sel.value}] };
             await withLoading(async()=>{
-              const r=await fetch(API_BASE+'?action=update',{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+              const r=await fetch(API_BASE,{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
               const j=await r.json();
               if(!j.ok){
                 if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
@@ -726,7 +736,7 @@ function renderVehicles(cfg, data){
             const now=getTaipeiHHMMSS();
             const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:now}] };
             await withLoading(async()=>{
-              const r=await fetch(API_BASE+'?action=update',{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+              const r=await fetch(API_BASE,{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
               const j=await r.json();
               if(!j.ok){
                 if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
@@ -745,7 +755,7 @@ function renderVehicles(cfg, data){
             openEditTimeDialog(cur, async (newHHMMSS)=>{
               const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:newHHMMSS}] };
               await withLoading(async()=>{
-                const r=await fetch(API_BASE+'?action=update',{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+                const r=await fetch(API_BASE,{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
                 const j=await r.json();
                 if(!j.ok){
                   if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
@@ -766,7 +776,7 @@ function renderVehicles(cfg, data){
             openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
               const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:''}] };
               await withLoading(async()=>{
-                const r=await fetch(API_BASE+'?action=update',{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+                const r=await fetch(API_BASE,{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
                 const j=await r.json();
                 if(!j.ok){
                   if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
@@ -795,7 +805,7 @@ function renderVehicles(cfg, data){
       if(!canWrite) return;
       const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:memoColIdx+1,value:sanitizeForSheet(memoTA.value)}] };
       await withLoading(async()=>{
-        const r=await fetch(API_BASE+'?action=update',{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const r=await fetch(API_BASE,{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
         const j=await r.json();
         if(!j.ok){
           if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }

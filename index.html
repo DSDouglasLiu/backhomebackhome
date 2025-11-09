@@ -214,26 +214,41 @@ function buildRefreshControls(){
 
 /* ===== 登入流程（全部改為「簡單請求」） ===== */
 window.onload = async function () {
-  startClock(); buildRefreshControls();
+  startClock();
+  buildRefreshControls();
 
   const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
   if (saved) {
     try {
-      idToken = saved;
-      // ✅ GET 驗證（避免 CORS 預檢）
-      const r = await fetch(API_BASE + '?action=verify&idToken=' + encodeURIComponent(saved), { method:'GET', credentials:'omit' });
+      // ✅ 同樣用 POST + JSON，action 放 body
+      const r = await fetch(API_BASE, {
+        method: 'POST',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', idToken: saved })
+      });
       const j = await r.json();
-      if (!j.ok) throw new Error(j.error||'verify failed');
-      currentUser=j; finishLoginUI(); buildTabs(); loadSheetData(currentSheetKey);
+      if (!j.ok) throw new Error(j.error);
+
+      idToken = saved;
+      currentUser = j;
+      finishLoginUI();
+      buildTabs();
+      loadSheetData(currentSheetKey);
     } catch (err) {
-      console.warn('verify failed:', err); logout(); initGoogleSignIn(); buildTabs();
+      console.warn('verify failed:', err);
+      logout();
+      initGoogleSignIn();
+      buildTabs();
     }
   } else {
-    initGoogleSignIn(); buildTabs();
+    initGoogleSignIn();
+    buildTabs();
   }
 
   document.getElementById('logoutBtn')?.addEventListener('click', logout);
 };
+
 
 function initGoogleSignIn(){
   enterLoginView();
@@ -252,19 +267,30 @@ function logout(){
 }
 
 async function handleCredential(resp){
-  idToken = resp.credential; localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
-  try{
-    // ✅ POST text/plain + query action（避免預檢）
-    const r = await fetch(API_BASE + '?action=verify', {
-      method:'POST',
-      credentials:'omit',
-      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
-      body: JSON.stringify({ idToken })
+  idToken = resp.credential;
+  localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
+
+  try {
+    // ✅ 正確：POST + JSON，action 放在 body
+    const r = await fetch(API_BASE, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'verify', idToken })
     });
-    const j = await r.json(); if (!j.ok) throw new Error(j.error||'verify failed');
-    currentUser=j; finishLoginUI(); loadSheetData(currentSheetKey);
-  }catch(err){ showNotif('登入失敗：'+err.message,true); logout(); }
+
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'verify failed');
+
+    currentUser = j;
+    finishLoginUI();
+    loadSheetData(currentSheetKey);
+  } catch (err) {
+    showNotif('登入失敗：' + err.message, true);
+    logout();
+  }
 }
+
 
 function finishLoginUI(){
   document.body.classList.remove('login');

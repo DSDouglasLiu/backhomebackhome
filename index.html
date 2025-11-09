@@ -11,15 +11,18 @@
   <!-- ✅ 最小且可運作的 CSP：允許 GSI / gstatic / cloudflare(domPurify) / GAS / OAuth -->
   <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
-  script-src 'self' https://accounts.google.com https://apis.google.com;
+  script-src 'self' https://accounts.google.com https://apis.google.com https://cdnjs.cloudflare.com 'nonce-abc123';
+  script-src-elem 'self' https://accounts.google.com https://apis.google.com https://cdnjs.cloudflare.com 'nonce-abc123';
   style-src  'self' https://accounts.google.com 'unsafe-inline';
   style-src-elem 'self' https://accounts.google.com 'unsafe-inline';
   img-src 'self' data: https://accounts.google.com;
+  font-src 'self' data:;
   connect-src 'self' https://script.google.com https://script.googleapis.com;
   frame-src https://accounts.google.com;
   base-uri 'self';
   frame-ancestors 'self';
-">
+  ">
+
 
 
   <!-- ❗ 注意：X-Frame-Options 必須由伺服器端 header 設定，<meta> 無效且會報錯，因此不放。 -->
@@ -341,7 +344,8 @@
 <!-- DOMPurify（如需富文字輸出時啟用；否則 setSafeHTML 會自動退化為 setText） -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script type="module">// ===== 必填設定（放最上面！）=====
+<script type="module" nonce="abc123">
+// ===== 必填設定（放最上面！）=====
 window.CONFIG = {
   GOOGLE_CLIENT_ID: '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com',
   API_BASE: 'https://script.google.com/macros/s/AKfycbx5I5lBOYm1FhEK_0TCvKL76X1WTo_xwq2Nvgh5WxnA5y2w8Ardj6vrBfJBxh583tyYsw/exec',
@@ -610,7 +614,9 @@ document.getElementById('mainTabs').addEventListener('click', (e)=>{ const btn=e
 async function loadSheetData(key){
   const cfg=SHEET_CONFIGS.find(s=>s.key===key);
   setText(document.getElementById('vehList'), '讀取中...');
-  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet),credentials:'omit'}`);
+  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`, {
+  credentials: 'omit'
+  });
   const j = await r.json();
   if (j.error){ setText(document.getElementById('vehList'), '❌ '+j.error); return; }
   sheetData = j.values || [];

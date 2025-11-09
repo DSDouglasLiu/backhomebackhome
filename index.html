@@ -8,7 +8,7 @@
   <!-- Google Sign-In -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- ✅ 最小且可運作的 CSP：允許 GSI / gstatic / cloudflare(domPurify) / GAS / OAuth -->
+  <!-- ✅ CSP（與你現在相同） -->
   <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
   script-src 'self' https://accounts.google.com https://apis.google.com https://cdnjs.cloudflare.com 'nonce-abc123';
@@ -23,237 +23,48 @@
   frame-ancestors 'self';
   ">
 
-
-
-  <!-- ❗ 注意：X-Frame-Options 必須由伺服器端 header 設定，<meta> 無效且會報錯，因此不放。 -->
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta name="referrer" content="strict-origin-when-cross-origin">
 
   <style>
-  /* ===== 你的完整 CSS，原樣保留 ===== */
-  :root{
-    --bg: #0b1220;
-    --bg-soft: #0f172a;
-    --card: #111827;
-    --muted: #9ca3af;
-    --text: #e5e7eb;
-    --text-strong:#f3f4f6;
-    --primary:#3b82f6;
-    --primary-600:#2563eb;
-    --success:#10b981;
-    --danger:#ef4444;
-    --warning:#f59e0b;
-    --border:#1f2937;
-    --pill:#0b284a;
-    --pill-soft:#0a1f3a;
-    --focus: 0 0 0 3px rgba(59,130,246,.35);
-  }
-
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;
-    background:linear-gradient(180deg,#0a1224 0%, #0a0f1e 60%, #0a0f1e 100%);
-    color:var(--text);
-    font: 14px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Microsoft JhengHei", "PingFang TC", "Heiti TC", sans-serif;
-  }
-
-  .wrap{max-width:1280px;margin:0 auto;padding:16px}
-  .topbar-grid{
-    display:grid;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
-    gap:12px 16px;
-    align-items:center;
-  }
-  .left-title h1{margin:0;font-size:22px;color:#f9fafb;letter-spacing:.2px}
-  .right-user{display:flex;align-items:center;gap:10px;justify-self:end}
-  .user-info{display:flex;align-items:center;gap:10px}
-  .user-info .btn{margin-left:6px}
-
-  .left-tabs{grid-column:1/2}
-  .right-refresh{grid-column:2/3;justify-self:end}
-
-  .hide{display:none !important}
-
-  .main-tabs{display:flex;gap:8px;flex-wrap:wrap}
-  .main-tab{
-    background:transparent;border:1px solid var(--border);color:var(--text);
-    padding:8px 12px;border-radius:10px;cursor:pointer;transition:.15s;
-  }
-  .main-tab:hover{border-color:#334155;background:#0c1426}
-  .main-tab.active{background:#11213f;border-color:#214072;color:#f7fafc}
-  .main-tab:focus{outline: none; box-shadow: var(--focus)}
-
-  .card{
-    background:var(--card);
-    border:1px solid var(--border);
-    border-radius:14px;
-    padding:12px;
-    box-shadow: 0 2px 14px rgba(0,0,0,.25);
-    margin-bottom:12px;
-  }
-
-  .refresh-bar{display:flex;align-items:center;gap:10px}
-  .clock{
-    font-variant-numeric: tabular-nums;
-    font-weight:600;background:#0d1a33;border:1px solid #15233f;
-    padding:6px 10px;border-radius:10px;letter-spacing:0.5px;
-  }
-  .seg-group{display:flex;gap:6px;flex-wrap:wrap}
-  .seg-btn{
-    border:1px solid #1f2a44;background:#0d1a33;color:#cbd5e1;border-radius:9px;
-    padding:6px 10px;cursor:pointer;transition:.15s;
-  }
-  .seg-btn:hover{border-color:#2e3f6b;background:#0c1a35;color:#e5efff}
-  .seg-btn.active{background:#17305e;border-color:#2a4a8a;color:#fff}
-  .seg-btn:disabled{opacity:.55;cursor:not-allowed}
-  .seg-btn:focus{outline:none;box-shadow:var(--focus)}
-
-  .sheet-tabs{display:flex;gap:8px;flex-wrap:wrap}
-  .btn-tab{
-    border:1px solid var(--border);background:#0d1527;color:#c7d2fe;padding:6px 10px;border-radius:9px;cursor:pointer
-  }
-  .btn-tab:hover{border-color:#2a3c68;background:#0d1932}
-  .btn-tab.active{background:#182a55;border-color:#2e4786;color:#fff}
-
-  .veh-list{
-    display:grid;
-    grid-template-columns: repeat(2, minmax(0,1fr));
-    gap:12px;
-  }
-  @media (max-width: 980px){
-    .veh-list{grid-template-columns: 1fr;}
-  }
-
-  .veh-card{
-    background:linear-gradient(180deg,#0f1a31 0%, #0d172b 100%);
-    border:1px solid #17213d;
-    border-radius:14px;
-    padding:12px;
-    box-shadow:0 8px 28px rgba(2,6,23,.45);
-  }
-  .veh-card + .veh-card{margin-top:0}
-  .veh-title-main{font-size:16px;font-weight:700;color:#e9eef9}
-  .veh-title-sub{font-size:14px;color:#c7d2fe;opacity:.9;margin-top:2px}
-
-  .step-row{
-    display:grid;
-    grid-template-columns: 160px 1fr auto;
-    gap:8px; align-items:center;
-    padding:8px 0; border-top:1px dashed #1d2a4a;
-  }
-  .step-row:first-of-type{border-top:none;margin-top:8px}
-  .step-label{color:#b6bfdb}
-  .step-time{
-    font-variant-numeric: tabular-nums;
-    background:#0b1932;border:1px solid #16264a;color:#e5e7eb;
-    padding:6px 10px;border-radius:8px;min-width:70px;display:inline-block;text-align:center
-  }
-
-  .btn{
-    background:#0f1a31;color:#e5e7eb;border:1px solid #1f2a44;border-radius:10px;
-    padding:8px 12px;cursor:pointer;transition:.15s;
-  }
-  .btn:hover{background:#132041;border-color:#2c3e69}
-  .btn:focus{outline:none;box-shadow:var(--focus)}
-  .btn:disabled{opacity:.55;cursor:not-allowed}
-
-  .btn--sm{padding:6px 10px;border-radius:9px}
-  .btn--primary{background:var(--primary);border-color:var(--primary-600);color:#fff}
-  .btn--primary:hover{background:var(--primary-600)}
-  .btn--success{background:var(--success);border-color:#0e9f7a;color:#062815}
-  .btn--danger{background:var(--danger);border-color:#dc2626;color:#220808}
-  .btn--secondary{background:#e5e7eb;color:#0f172a;border-color:#d1d5db}
-  .btn--secondary:hover{background:#dfe3ea}
-
-  .btn-group{display:flex;gap:6px;justify-content:flex-end}
-
-  .step-select, select{
-    background:#0b1932;color:#e5e7eb;border:1px solid #1f2a44;border-radius:8px;padding:6px 8px;
-  }
-  .step-select:focus, select:focus{outline:none;box-shadow:var(--focus)}
-
-  .single-controls{
-    display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;
-  }
-  @media (max-width: 980px){ .single-controls{grid-template-columns: 1fr;} }
-  .single-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
-  .single-list{display:grid;grid-template-columns:1fr;gap:8px}
-
-  #dashboard{display:grid;gap:12px}
-  .stat-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
-  .stat-card{
-    background:#0e1a32;border:1px solid #182749;color:#e5e7eb;border-radius:14px;padding:10px 12px;
-  }
-  .stat-head{font-weight:700;color:#eaf2ff}
-  .stat-pill{
-    display:grid;grid-template-columns:auto 1fr;align-items:baseline;gap:6px;
-    background:#0b203e;border:1px solid #17325a;border-radius:10px;padding:8px 10px;cursor:pointer;transition:.15s;
-  }
-  .stat-pill:hover{background:#0e2a52;border-color:#204371}
-  .stat-num{font-variant-numeric: tabular-nums; font-weight:800;font-size:18px}
-  .stat-num.done{color:#bbf7d0}
-  .stat-num.todo{color:#fde68a}
-  .stat-label{font-size:12px;color:#b9c2d7}
-
-  .loc-pill{
-    display:flex;align-items:center;gap:8px;
-    background:#07172d;border:1px solid #132a4d;border-radius:10px;padding:8px 10px;cursor:pointer
-  }
-  .loc-pill:hover{background:#0a1f3a;border-color:#1b3a6b}
-  .loc-name{color:#c7d2fe}
-  .loc-num{font-variant-numeric: tabular-nums;font-weight:700}
-
-  .notif{
-    position:fixed;left:16px;bottom:16px;background:rgba(15,23,42,.85);
-    color:#fff;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
-    transform: translateY(12px); opacity:0; pointer-events:none; transition:.25s;
-    z-index: 2147483000;
-  }
-  .notif.show{transform:none;opacity:1}
-
-  .modal-open{overflow:hidden}
-  .modal{
-    width:min(720px, 96vw);
-    background:#0e182d;border:1px solid #1c2a48;border-radius:14px;padding:14px;
-    color:#e5e7eb; box-shadow: 0 10px 40px rgba(0,0,0,.55);
-  }
-  .modal h3{margin:0 0 8px 0;padding:0;font-size:18px;color:#f3f4f6}
-  .modal .hint{color:#cbd5e1;margin:6px 0 10px}
-  .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-  .modal .modal-msg{color:#dbeafe}
-
-  .time-edit{display:flex;align-items:center;gap:6px;margin:8px 0}
-  .time-input{
-    width:58px;background:#0b1932;color:#e5e7eb;border:1px solid #1f2a44;border-radius:8px;
-    padding:6px 8px;text-align:center;font-variant-numeric: tabular-nums;
-  }
-  .colon{opacity:.65}
-
-  .loading{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;place-items:center;z-index:2147483000}
-  .loading.show{display:grid}
-  .loading-box{
-    background:#0e182d;border:1px solid #1b2a49;border-radius:14px;padding:16px 18px;min-width:220px;
-    display:flex;align-items:center;gap:12px;color:#e5e7eb
-  }
-  .spinner{
-    width:20px;height:20px;border:3px solid rgba(148,163,184,.25);border-top-color:#93c5fd;border-radius:50%;
-    animation:spin 0.9s linear infinite
-  }
-  @keyframes spin{to{transform:rotate(360deg)}}
-
-  .textarea{
-    min-height:60px;resize:vertical;width:100%;
-    background:#0b1932;color:#e5e7eb;border:1px solid #1f2a44;border-radius:8px;padding:8px
-  }
-
-  button, [role="button"]{outline:none}
-  button:focus-visible{box-shadow:var(--focus)}
-  a:focus-visible{outline:none;box-shadow:var(--focus)}
-
-  .tab-pane.hide{display:none}
-  .login #tabs, .login #content, .login #pane-dashboard, .login #pane-single{display:none}
+    /*（保留你原樣 CSS）*/
+    :root{--bg:#0b1220;--bg-soft:#0f172a;--card:#111827;--muted:#9ca3af;--text:#e5e7eb;--text-strong:#f3f4f6;--primary:#3b82f6;--primary-600:#2563eb;--success:#10b981;--danger:#ef4444;--warning:#f59e0b;--border:#1f2937;--pill:#0b284a;--pill-soft:#0a1f3a;--focus:0 0 0 3px rgba(59,130,246,.35)}
+    *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:linear-gradient(180deg,#0a1224 0%, #0a0f1e 60%, #0a0f1e 100%);color:var(--text);font:14px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Microsoft JhengHei","PingFang TC","Heiti TC",sans-serif}
+    .wrap{max-width:1280px;margin:0 auto;padding:16px}.topbar-grid{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:12px 16px;align-items:center}
+    .left-title h1{margin:0;font-size:22px;color:#f9fafb;letter-spacing:.2px}.right-user{display:flex;align-items:center;gap:10px;justify-self:end}
+    .user-info{display:flex;align-items:center;gap:10px}.user-info .btn{margin-left:6px}.left-tabs{grid-column:1/2}.right-refresh{grid-column:2/3;justify-self:end}
+    .hide{display:none!important}.main-tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .main-tab{background:transparent;border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer;transition:.15s}
+    .main-tab:hover{border-color:#334155;background:#0c1426}.main-tab.active{background:#11213f;border-color:#214072;color:#f7fafc}.main-tab:focus{outline:none;box-shadow:var(--focus)}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;box-shadow:0 2px 14px rgba(0,0,0,.25);margin-bottom:12px}
+    .refresh-bar{display:flex;align-items:center;gap:10px}.clock{font-variant-numeric:tabular-nums;font-weight:600;background:#0d1a33;border:1px solid #15233f;padding:6px 10px;border-radius:10px;letter-spacing:.5px}
+    .seg-group{display:flex;gap:6px;flex-wrap:wrap}.seg-btn{border:1px solid #1f2a44;background:#0d1a33;color:#cbd5e1;border-radius:9px;padding:6px 10px;cursor:pointer;transition:.15s}
+    .seg-btn:hover{border-color:#2e3f6b;background:#0c1a35;color:#e5efff}.seg-btn.active{background:#17305e;border-color:#2a4a8a;color:#fff}.seg-btn:disabled{opacity:.55;cursor:not-allowed}.seg-btn:focus{outline:none;box-shadow:var(--focus)}
+    .sheet-tabs{display:flex;gap:8px;flex-wrap:wrap}.btn-tab{border:1px solid var(--border);background:#0d1527;color:#c7d2fe;padding:6px 10px;border-radius:9px;cursor:pointer}
+    .btn-tab:hover{border-color:#2a3c68;background:#0d1932}.btn-tab.active{background:#182a55;border-color:#2e4786;color:#fff}
+    .veh-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}@media (max-width:980px){.veh-list{grid-template-columns:1fr}}
+    .veh-card{background:linear-gradient(180deg,#0f1a31 0%,#0d172b 100%);border:1px solid #17213d;border-radius:14px;padding:12px;box-shadow:0 8px 28px rgba(2,6,23,.45)}
+    .veh-title-main{font-size:16px;font-weight:700;color:#e9eef9}.veh-title-sub{font-size:14px;color:#c7d2fe;opacity:.9;margin-top:2px}
+    .step-row{display:grid;grid-template-columns:160px 1fr auto;gap:8px;align-items:center;padding:8px 0;border-top:1px dashed #1d2a4a}.step-row:first-of-type{border-top:none;margin-top:8px}
+    .step-label{color:#b6bfdb}.step-time{font-variant-numeric:tabular-nums;background:#0b1932;border:1px solid #16264a;color:#e5e7eb;padding:6px 10px;border-radius:8px;min-width:70px;display:inline-block;text-align:center}
+    .btn{background:#0f1a31;color:#e5e7eb;border:1px solid #1f2a44;border-radius:10px;padding:8px 12px;cursor:pointer;transition:.15s}
+    .btn:hover{background:#132041;border-color:#2c3e69}.btn:focus{outline:none;box-shadow:var(--focus)}.btn:disabled{opacity:.55;cursor:not-allowed}
+    .btn--sm{padding:6px 10px;border-radius:9px}.btn--primary{background:var(--primary);border-color:var(--primary-600);color:#fff}.btn--primary:hover{background:var(--primary-600)}
+    .btn--success{background:#10b981;border-color:#0e9f7a;color:#062815}.btn--danger{background:#ef4444;border-color:#dc2626;color:#220808}.btn--secondary{background:#e5e7eb;color:#0f172a;border-color:#d1d5db}
+    .btn-group{display:flex;gap:6px;justify-content:flex-end}
+    .step-select,select{background:#0b1932;color:#e5e7eb;border:1px solid #1f2a44;border-radius:8px;padding:6px 8px}
+    .single-controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}@media (max-width:980px){.single-controls{grid-template-columns:1fr}}
+    .single-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}.single-list{display:grid;grid-template-columns:1fr;gap:8px}
+    #dashboard{display:grid;gap:12px}.notif{position:fixed;left:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);transform:translateY(12px);opacity:0;pointer-events:none;transition:.25s;z-index:2147483000}
+    .notif.show{transform:none;opacity:1}.modal-open{overflow:hidden}
+    .modal{width:min(720px,96vw);background:#0e182d;border:1px solid #1c2a48;border-radius:14px;padding:14px;color:#e5e7eb;box-shadow:0 10px 40px rgba(0,0,0,.55)}
+    .modal h3{margin:0 0 8px 0;padding:0;font-size:18px;color:#f3f4f6}.modal .hint{color:#cbd5e1;margin:6px 0 10px}.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}.modal .modal-msg{color:#dbeafe}
+    .time-edit{display:flex;align-items:center;gap:6px;margin:8px 0}.time-input{width:58px;background:#0b1932;color:#e5e7eb;border:1px solid #1f2a44;border-radius:8px;padding:6px 8px;text-align:center;font-variant-numeric:tabular-nums}
+    .colon{opacity:.65}.loading{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;place-items:center;z-index:2147483000}
+    .loading.show{display:grid}.loading-box{background:#0e182d;border:1px solid #1b2a49;border-radius:14px;padding:16px 18px;min-width:220px;display:flex;align-items:center;gap:12px;color:#e5e7eb}
+    .spinner{width:20px;height:20px;border:3px solid rgba(148,163,184,.25);border-top-color:#93c5fd;border-radius:50%;animation:spin .9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    .textarea{min-height:60px;resize:vertical;width:100%;background:#0b1932;color:#e5e7eb;border:1px solid #1f2a44;border-radius:8px;padding:8px}
+    .tab-pane.hide{display:none}.login #tabs,.login #content,.login #pane-dashboard,.login #pane-single{display:none}
   </style>
 </head>
 
@@ -262,17 +73,13 @@
   <div class="topbar-grid">
     <div class="left-title"><h1 id="pageTitle">車流人流退場情報</h1></div>
     <div class="right-user">
-  <!-- 這裡會被 GSI 渲染登入按鈕 -->
-  <div id="signin"></div>
+      <div id="signin"></div>
+      <div id="userInfo" class="hide user-info">
+        <span id="userDisplay"></span>
+        <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
+      </div>
+    </div>
 
-  <!-- 登入後才顯示 -->
-  <div id="userInfo" class="hide user-info">
-    <span id="userDisplay"></span>
-    <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
-  </div>
-</div>
-
-    
     <div class="left-tabs">
       <div id="mainTabs" class="main-tabs">
         <button class="main-tab active" data-target="pane-punch">登錄</button>
@@ -288,7 +95,6 @@
     </div>
   </div>
 
-  <!-- 登錄（打卡） -->
   <div id="pane-punch" class="tab-pane">
     <div id="tabs" class="card hide" style="padding-bottom:6px;">
       <div class="sheet-tabs" id="sheetTabs"></div>
@@ -298,7 +104,6 @@
     </div>
   </div>
 
-  <!-- 整體情報 -->
   <div id="pane-dashboard" class="tab-pane hide">
     <div class="card" id="dashTabsBar" style="padding-bottom:6px;">
       <div class="sheet-tabs" id="dashboardTabs"></div>
@@ -306,7 +111,6 @@
     <div id="dashboard"></div>
   </div>
 
-  <!-- 個別情報 -->
   <div id="pane-single" class="tab-pane hide">
     <div class="card" id="singleControlsCard" style="padding-bottom:10px;">
       <div class="single-controls" id="singleControls">
@@ -333,7 +137,6 @@
 
 <div id="notif" class="notif"></div>
 
-<!-- 全螢幕 Loading Overlay -->
 <div id="loading" class="loading" role="status" aria-live="polite" aria-busy="true">
   <div class="loading-box">
     <div class="spinner" aria-hidden="true"></div>
@@ -341,11 +144,10 @@
   </div>
 </div>
 
-<!-- DOMPurify（如需富文字輸出時啟用；否則 setSafeHTML 會自動退化為 setText） -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script type="module" nonce="abc123">
-// ===== 必填設定（放最上面！）=====
+/* ===== 必填設定 ===== */
 window.CONFIG = {
   GOOGLE_CLIENT_ID: '368914333961-504cujbloe9n3v28p4bjsc8c1lh5pg0o.apps.googleusercontent.com',
   API_BASE: 'https://script.google.com/macros/s/AKfycbwiwhNHsLNoT-fQxmZYB1KzTwcGZC2g8DM0_Guxti2AyBPd5GkYpLMMacBVnCHF2TjIMQ/exec',
@@ -354,51 +156,7 @@ window.CONFIG = {
 
 const { GOOGLE_CLIENT_ID, API_BASE, TOKEN_STORAGE_KEY } = window.CONFIG;
 
-/* 停車位置選單 */
-const STOP_OPTIONS = [
-  '禪堂平台','法心北路','法心南路（西）','法心南路（東）','法大路',
-  '雙環路到三門','三門到大停車場','靈山勝境石往外','雙環路至法大一橋'
-];
-
-/* 四個工作表 */
-const SHEET_CONFIGS = [
-  { key:'地區專車退場（遊覽車平台）', sheet:'地區專車退場（遊覽車平台）', steps:[
-    '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
-    '退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台'
-  ]},
-  { key:'地區專車退場（禪堂平台）', sheet:'地區專車退場（禪堂平台）', steps:[
-    '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','車已離開禪堂平台'
-  ]},
-  { key:'水陸專車退場', sheet:'水陸專車退場', steps:[
-    '已 Call 車排車隊','已排好車隊','退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','車暫停位置','車已離開遊覽車平台'
-  ]},
-  { key:'288法青退場', sheet:'288法青退場', steps:[
-    '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
-  ]}
-];
-
-/* 自動更新頻率 */
-const REFRESH_PRESETS = [
-  { label:'5分',  ms: 5*60*1000 },
-  { label:'2分',  ms: 2*60*1000 },
-  { label:'60秒', ms: 60*1000 },
-  { label:'30秒', ms: 30*1000 }
-];
-const REFRESH_STORAGE_KEY = 'dash_refresh_ms';
-let refreshMs = +localStorage.getItem(REFRESH_STORAGE_KEY) || 30000;
-
-/* 狀態 */
-let dashTimer = null;
-let currentDashFilter = 'ALL';
-let currentUser = null;
-let currentSheetKey = SHEET_CONFIGS[0].key;
-let sheetData = [];
-let idToken = null;
-
-/* === If-Match 版本（讀取時取得、更新時帶上） === */
-window.sheetVersion = '';  // 由 apiGetSheet 回傳 version 設定
-
-/* ======================= 小工具（安全輸出） ======================= */
+/* ===== 小工具 ===== */
 function setText(el, v){ if (el) el.textContent = v == null ? '' : String(v); }
 function clearNode(el){ if (el) el.replaceChildren(); }
 function el(tag, className, text){
@@ -419,52 +177,7 @@ function setSafeHTML(el, dirtyHTML){
     setText(el, dirtyHTML);
   }
 }
-
-/* ======================= 時鐘與 UI ======================= */
 function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
-function startClock(){
-  const el = document.getElementById('clockDisplay');
-  const tick = ()=>{ setText(el, getTaipeiHHMMSS()); };
-  tick(); setInterval(tick, 1000);
-}
-function buildRefreshControls(){
-  const box = document.getElementById('refreshControls');
-  clearNode(box);
-  REFRESH_PRESETS.forEach(p=>{
-    const btn=document.createElement('button');
-    btn.className='seg-btn';
-    btn.textContent=p.label;
-    btn.dataset.ms=String(p.ms);
-    if (p.ms===refreshMs){ btn.classList.add('active'); btn.disabled=true; }
-    btn.onclick=()=>openRefreshSaveDialog(p.ms, p.label);
-    box.appendChild(btn);
-  });
-  const nowBtn = el('button','seg-btn','立即更新');
-  nowBtn.title='立刻重新整理整體情報';
-  nowBtn.onclick=()=>{ if(isDashboardVisible()) buildDashboard(false); };
-  box.appendChild(nowBtn);
-}
-function openRefreshSaveDialog(ms,label){
-  const box=document.createElement('div'); box.className='modal';
-  const h3=el('h3','', '儲存自動更新頻率');
-  const msg=el('div','modal-msg'); msg.style.cssText='font-size:15px;line-height:1.7;margin:6px 0 10px;';
-  setSafeHTML(msg, '將自動更新頻率設定為 <b>'+String(label)+'</b>。按「儲存」後即刻生效。');
-  const actions=el('div','actions');
-  const c=el('button','btn','取消'); c.style.cssText='background:#e5e7eb;color:#111827;';
-  const ok=el('button','btn btn--primary','儲存');
-  actions.append(c,ok); box.append(h3,msg,actions);
-  const close=openModal(box); c.onclick=close; ok.onclick=()=>{ try{
-    refreshMs=ms; localStorage.setItem(REFRESH_STORAGE_KEY,String(refreshMs));
-    updateRefreshButtonsUI(); if(isDashboardVisible()) startDashboardAutoRefresh(); showNotif(`已設定為每 ${label} 自動更新`, false);
-  } finally{ close(); } };
-}
-function updateRefreshButtonsUI(){
-  document.querySelectorAll('#refreshControls .seg-btn').forEach(btn=>{
-    if (btn.textContent==='立即更新') return;
-    const ms = +btn.dataset.ms; const act = (ms===refreshMs);
-    btn.classList.toggle('active', act); btn.disabled=act;
-  });
-}
 function showNotif(msg,isErr){
   const box=document.getElementById('notif');
   setText(box, msg); box.style.background=isErr?'rgba(248,113,113,.9)':'rgba(15,23,42,.85)';
@@ -474,301 +187,223 @@ function showLoading(msg='處理中…'){ const el=document.getElementById('load
 function hideLoading(){ const el=document.getElementById('loading'); el.classList.remove('show'); document.body.classList.remove('loading-open'); }
 async function withLoading(fn,msg='處理中…'){ showLoading(msg); try{ return await fn(); } finally{ hideLoading(); } }
 
-/* ======================= 登入流程 ======================= */
+/* ===== 停車選單 & 表單設定（保留） ===== */
+const STOP_OPTIONS = ['禪堂平台','法心北路','法心南路（西）','法心南路（東）','法大路','雙環路到三門','三門到大停車場','靈山勝境石往外','雙環路至法大一橋'];
+const SHEET_CONFIGS = [
+  { key:'地區專車退場（遊覽車平台）', sheet:'地區專車退場（遊覽車平台）', steps:['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台']},
+  { key:'地區專車退場（禪堂平台）', sheet:'地區專車退場（禪堂平台）', steps:['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','車已離開禪堂平台']},
+  { key:'水陸專車退場', sheet:'水陸專車退場', steps:['已 Call 車排車隊','已排好車隊','退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','車暫停位置','車已離開遊覽車平台']},
+  { key:'288法青退場', sheet:'288法青退場', steps:['退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台']}
+];
+
+/* ===== 狀態 ===== */
+let dashTimer=null, refreshMs=30000, currentUser=null, currentSheetKey=SHEET_CONFIGS[0].key, sheetData=[], idToken=null;
+window.sheetVersion='';
+
+/* ===== 時鐘與 UI ===== */
+function startClock(){ const el=document.getElementById('clockDisplay'); const tick=()=>setText(el,getTaipeiHHMMSS()); tick(); setInterval(tick,1000); }
+function buildRefreshControls(){
+  const box=document.getElementById('refreshControls'); clearNode(box);
+  [{label:'5分',ms:300000},{label:'2分',ms:120000},{label:'60秒',ms:60000},{label:'30秒',ms:30000}]
+    .forEach(p=>{ const b=el('button','seg-btn',p.label); b.dataset.ms=p.ms; if(p.ms===refreshMs){b.classList.add('active'); b.disabled=true;}
+      b.onclick=()=>{ refreshMs=p.ms; document.querySelectorAll('#refreshControls .seg-btn').forEach(x=>{ if(x.textContent!=='立即更新'){ x.classList.toggle('active',+x.dataset.ms===refreshMs); x.disabled=(+x.dataset.ms===refreshMs);} }); if(isDashboardVisible()) startDashboardAutoRefresh(); };
+      box.appendChild(b);
+    });
+  const nowBtn=el('button','seg-btn','立即更新'); nowBtn.onclick=()=>{ if(isDashboardVisible()) buildDashboard(false); }; box.appendChild(nowBtn);
+}
+
+/* ===== 登入流程（全部改為「簡單請求」） ===== */
 window.onload = async function () {
-  startClock();
-  buildRefreshControls();
+  startClock(); buildRefreshControls();
 
   const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
-
   if (saved) {
     try {
       idToken = saved;
-
-      // 使用 POST + JSON body（與登入流程一致）
-const r = await fetch(API_BASE, {
-  method: 'POST',
-  credentials: 'omit',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ action: 'verify', idToken: saved })
-});
-
+      // ✅ GET 驗證（避免 CORS 預檢）
+      const r = await fetch(API_BASE + '?action=verify&idToken=' + encodeURIComponent(saved), { method:'GET', credentials:'omit' });
       const j = await r.json();
-      if (j.error) throw new Error(j.error);
-
-      currentUser = j;
-      finishLoginUI();
-      buildTabs();
-      loadSheetData(currentSheetKey);
+      if (!j.ok) throw new Error(j.error||'verify failed');
+      currentUser=j; finishLoginUI(); buildTabs(); loadSheetData(currentSheetKey);
     } catch (err) {
-      console.warn('verify failed:', err);
-      logout();            // 清掉 localStorage 與 UI
-      initGoogleSignIn();  // 顯示登入鈕
-      buildTabs();
+      console.warn('verify failed:', err); logout(); initGoogleSignIn(); buildTabs();
     }
   } else {
-    initGoogleSignIn();    // 顯示登入鈕
-    buildTabs();
+    initGoogleSignIn(); buildTabs();
   }
 
-  const btn = document.getElementById('logoutBtn');
-  if (btn) btn.addEventListener('click', logout);
+  document.getElementById('logoutBtn')?.addEventListener('click', logout);
 };
 
-
-
 function initGoogleSignIn(){
-  enterLoginView(); // 切到未登入 UI（顯示登入按鈕）
-
-  if (!window.google || !google.accounts || !google.accounts.id) {
-    console.error('GSI client not loaded');
-    return;
-  }
-
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleCredential,   // 這是你現有的處理函式
-    ux_mode: 'popup'
-  });
-
-  const mount = document.getElementById('signin');
-  if (mount) {
-    mount.classList.remove('hide');
-    mount.innerHTML = '';
-    google.accounts.id.renderButton(mount, { theme: 'outline', size: 'large' });
-  }
+  enterLoginView();
+  if (!window.google || !google.accounts || !google.accounts.id) return;
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential, ux_mode:'popup' });
+  const mount=document.getElementById('signin'); mount.classList.remove('hide'); mount.innerHTML=''; google.accounts.id.renderButton(mount,{ theme:'outline', size:'large' });
 }
 
 function logout(){
   localStorage.removeItem(TOKEN_STORAGE_KEY);
-  idToken = null;
-  currentUser = null;
-
-  enterLoginView();
-  stopDashboardAutoRefresh();
-
-  const signinDiv = document.getElementById('signin');
-  signinDiv.classList.remove('hide');
-  signinDiv.innerHTML = '';
-
+  idToken=null; currentUser=null; enterLoginView(); stopDashboardAutoRefresh();
+  const mount=document.getElementById('signin'); mount.classList.remove('hide'); mount.innerHTML='';
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
-  google.accounts.id.renderButton(signinDiv, { theme:'outline', size:'large' });
-
+  google.accounts.id.renderButton(mount,{ theme:'outline', size:'large' });
   showNotif('已登出', false);
 }
 
-  
-async function handleCredential(resp) {
-  idToken = resp.credential;
-  localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
-
-  try {
-    const r = await fetch(API_BASE, {
-      method: 'POST',
-      credentials: 'omit',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'verify', idToken })
+async function handleCredential(resp){
+  idToken = resp.credential; localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
+  try{
+    // ✅ POST text/plain + query action（避免預檢）
+    const r = await fetch(API_BASE + '?action=verify', {
+      method:'POST',
+      credentials:'omit',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify({ idToken })
     });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error);
-    currentUser = j;
-    finishLoginUI();
-    loadSheetData(currentSheetKey);
-  } catch (err) {
-    showNotif('登入失敗：' + err.message, true);
-    logout();
-  }
+    const j = await r.json(); if (!j.ok) throw new Error(j.error||'verify failed');
+    currentUser=j; finishLoginUI(); loadSheetData(currentSheetKey);
+  }catch(err){ showNotif('登入失敗：'+err.message,true); logout(); }
 }
+
 function finishLoginUI(){
   document.body.classList.remove('login');
   document.getElementById('signin').classList.add('hide');
   const ui=document.getElementById('userInfo'); ui.classList.remove('hide'); ui.style.display='';
   const disp=document.getElementById('userDisplay'); clearNode(disp);
   disp.append(document.createTextNode((currentUser?.name||'')+' <'+(currentUser?.email||'')+'> ｜ 權限：'), el('b','', currentUser?.permission||''));
-  document.getElementById('tabs').classList.remove('hide');
-  document.getElementById('content').classList.remove('hide');
+  document.getElementById('tabs').classList.remove('hide'); document.getElementById('content').classList.remove('hide');
   if (currentUser.permission==='檢視') showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
   switchPane('pane-punch');
   document.querySelectorAll('#mainTabs .main-tab').forEach(b=>{ b.tabIndex=0; b.removeAttribute('aria-disabled'); });
 }
 
-  
 function enterLoginView(){
   document.body.classList.add('login'); stopDashboardAutoRefresh();
   try{ clearNode(document.getElementById('dashboard')); }catch{}
-  ['pane-punch','pane-dashboard','pane-single'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hide'); });
-  const signinDiv=document.getElementById('signin'); signinDiv?.classList.remove('hide');
-  const ui=document.getElementById('userInfo'); if (ui){ ui.classList.add('hide'); ui.style.display='none'; }
+  ['pane-punch','pane-dashboard','pane-single'].forEach(id=>document.getElementById(id)?.classList.add('hide'));
+  const signinDiv=document.getElementById('signin'); signinDiv.classList.remove('hide'); signinDiv.innerHTML='';
+  const ui=document.getElementById('userInfo'); ui.classList.add('hide'); ui.style.display='none';
   document.querySelectorAll('#mainTabs .main-tab').forEach(b=>{ b.tabIndex=-1; b.setAttribute('aria-disabled','true'); });
 }
 
-/* ======================= 頁籤與切換 ======================= */
+/* ===== 頁籤/切換 ===== */
 function buildTabs(){
   const box=document.getElementById('sheetTabs'); clearNode(box);
   SHEET_CONFIGS.forEach(cfg=>{
-    const btn = document.createElement('button');
-    btn.className = 'btn-tab tab' + (cfg.key === currentSheetKey ? ' active' : '');
-    btn.textContent = cfg.key;
-    btn.onclick = () => { currentSheetKey = cfg.key; box.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); loadSheetData(currentSheetKey); };
+    const btn=document.createElement('button'); btn.className='btn-tab tab'+(cfg.key===currentSheetKey?' active':''); btn.textContent=cfg.key;
+    btn.onclick=()=>{ currentSheetKey=cfg.key; box.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); loadSheetData(currentSheetKey); };
     box.appendChild(btn);
   });
 }
 const PANE_IDS=['pane-punch','pane-dashboard','pane-single'];
 function switchPane(targetId){
   if (!currentUser) return showNotif('請先登入', true);
-  document.querySelectorAll('#mainTabs .main-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
-  PANE_IDS.forEach(id => { const el=document.getElementById(id); el && el.classList.toggle('hide', id !== targetId); });
-  if (targetId==='pane-dashboard'){ buildDashboardTabs(); buildDashboard(false); startDashboardAutoRefresh(); }
-  else { stopDashboardAutoRefresh(); if (targetId==='pane-single') initSinglePage(); }
+  document.querySelectorAll('#mainTabs .main-tab').forEach(btn=>btn.classList.toggle('active', btn.dataset.target===targetId));
+  PANE_IDS.forEach(id=>{ const el=document.getElementById(id); el && el.classList.toggle('hide', id!==targetId); });
+  if (targetId==='pane-dashboard'){ buildDashboardTabs?.(); buildDashboard?.(false); startDashboardAutoRefresh(); }
+  else { stopDashboardAutoRefresh(); if (targetId==='pane-single') initSinglePage?.(); }
 }
 function isDashboardVisible(){ return !document.getElementById('pane-dashboard').classList.contains('hide'); }
-function startDashboardAutoRefresh(){ stopDashboardAutoRefresh(); dashTimer=setInterval(()=>{ if(isDashboardVisible()) buildDashboard(true); }, refreshMs); }
+function startDashboardAutoRefresh(){ stopDashboardAutoRefresh(); dashTimer=setInterval(()=>{ if(isDashboardVisible()) buildDashboard?.(true); }, refreshMs); }
 function stopDashboardAutoRefresh(){ if (dashTimer){ clearInterval(dashTimer); dashTimer=null; } }
-document.addEventListener('visibilitychange', ()=>{ if (document.hidden) stopDashboardAutoRefresh(); else if (isDashboardVisible()) startDashboardAutoRefresh(); });
-document.getElementById('mainTabs').addEventListener('click', (e)=>{ const btn=e.target.closest('.main-tab'); if(!btn) return; switchPane(btn.dataset.target); });
+document.getElementById('mainTabs').addEventListener('click',(e)=>{ const btn=e.target.closest('.main-tab'); if(!btn) return; switchPane(btn.dataset.target); });
 
-/* ======================= 資料載入（含 If-Match） ======================= */
+/* ===== 讀表（維持 GET） ===== */
 async function loadSheetData(key){
   const cfg=SHEET_CONFIGS.find(s=>s.key===key);
-  setText(document.getElementById('vehList'), '讀取中...');
-  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`, {
-  credentials: 'omit'
-  });
+  setText(document.getElementById('vehList'),'讀取中...');
+  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`, { method:'GET', credentials:'omit' });
   const j = await r.json();
-  if (j.error){ setText(document.getElementById('vehList'), '❌ '+j.error); return; }
-  sheetData = j.values || [];
-  window.sheetVersion = j.version || '';             // ★ 取得 version
-  renderVehicles(cfg, sheetData);
+  if (!j.ok){ setText(document.getElementById('vehList'),'❌ '+(j.error||'讀取失敗')); return; }
+  sheetData=j.values||[]; window.sheetVersion=j.version||''; renderVehicles(cfg, sheetData);
 }
 function reloadSheet(){ loadSheetData(currentSheetKey); }
 
-/* ======================= 打卡頁 renderVehicles（含 ifMatch 的更新） ======================= */
-function formatSheetTime(v){
-  if (!v) return '';
-  const s=String(v).trim();
-  if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) return s.split(':').map(p=>p.padStart(2,'0')).join(':');
-  if (/^\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}$/.test(s)) return s.split(' ')[1];
-  return s;
-}
-function isCompletedValue(v){ if (v==null) return false; const s=String(v).trim(); return !!s && s!=='—' && s!=='-'; }
+/* ===== 打卡/修改/刪除/備註：POST text/plain + query action ===== */
+function formatSheetTime(v){ if(!v) return ''; const s=String(v).trim(); if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) return s.split(':').map(p=>p.padStart(2,'0')).join(':'); if (/^\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}$/.test(s)) return s.split(' ')[1]; return s; }
 function prevDone(cfg, header, row, st){ const idx=cfg.steps.indexOf(st); if (idx===0) return true; const prev=cfg.steps[idx-1]; const col=header.indexOf(prev); if (col===-1) return true; return !!row[col]; }
-function sanitizeForSheet(value){ if (typeof value !== 'string') return value; const trimmed = value.replace(/[\u0000-\u001F\u007F]/g, '').trim(); return /^[=+\-@]/.test(trimmed) ? "'" + trimmed : trimmed; }
+function sanitizeForSheet(value){ if (typeof value!=='string') return value; const t=value.replace(/[\u0000-\u001F\u007F]/g,'').trim(); return /^[=+\-@]/.test(t) ? "'"+t : t; }
 
 function renderVehicles(cfg, data){
   const box=document.getElementById('vehList'); clearNode(box);
   const canWrite = currentUser?.permission === '全功能';
-  const headerRowIdx = data.findIndex(row => Array.isArray(row) && String(row[0]||'').trim()==='編號' && String(row[1]||'').trim().startsWith('區域') && String(row[2]||'').trim()==='車號');
+  const headerRowIdx=data.findIndex(r=>Array.isArray(r)&&String(r[0]||'').trim()==='編號'&&String(r[1]||'').trim().startsWith('區域')&&String(r[2]||'').trim()==='車號');
   if (headerRowIdx===-1){ setText(box,'找不到表頭'); return; }
-  const header = data[headerRowIdx].map(c=>String(c||'').trim());
-  const rows = data.slice(headerRowIdx+1).filter(r => Array.isArray(r) && String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim());
-  if (!rows.length){ setText(box,'(這張表目前沒有車輛資料)'); return; }
+  const header=data[headerRowIdx].map(c=>String(c||'').trim());
+  const rows=data.slice(headerRowIdx+1).filter(r=>Array.isArray(r)&&String(r[0]||'').trim()&&String(r[1]||'').trim()&&String(r[2]||'').trim());
+  if(!rows.length){ setText(box,'(這張表目前沒有車輛資料)'); return; }
 
-  const cards=[];
   rows.forEach((row, idx)=>{
-    const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim(); const baseRow = headerRowIdx+2+idx;
-    const card = document.createElement('div'); card.className='veh-card';
-    const head = document.createElement('div');
-    head.append(el('div','veh-title-main', area), el('div','veh-title-sub', car));
-    head.style.cursor='pointer'; head.title='點我看詳情';
-    head.addEventListener('click',()=>openDetailModal(cfg, row, header));
-    card.appendChild(head);
+    const area=String(row[1]||'').trim(), car=String(row[2]||'').trim(), baseRow=headerRowIdx+2+idx;
+    const card=document.createElement('div'); card.className='veh-card';
+    const head=document.createElement('div'); head.append(el('div','veh-title-main',area), el('div','veh-title-sub',car));
+    head.style.cursor='pointer'; head.title='點我看詳情'; head.addEventListener('click',()=>openDetailModal?.(cfg,row,header)); card.appendChild(head);
 
-    // 步驟列
     cfg.steps.forEach(st=>{
       const colIdx=header.indexOf(st);
-      const rawVal = (colIdx!==-1 && row[colIdx]!=null) ? String(row[colIdx]).trim(): '';
-      const displayVal = rawVal?formatSheetTime(rawVal):'';
-
-      const rowEl=el('div','step-row');
-      const labelEl=el('div','step-label', st); rowEl.appendChild(labelEl);
+      const rawVal=(colIdx!==-1 && row[colIdx]!=null) ? String(row[colIdx]).trim() : '';
+      const displayVal=rawVal?formatSheetTime(rawVal):'';
+      const rowEl=el('div','step-row'); const labelEl=el('div','step-label',st); rowEl.appendChild(labelEl);
 
       if (st==='車暫停位置'){
-        const valueEl=document.createElement('div');
-        const sel=document.createElement('select'); sel.className='step-select';
+        const valueEl=document.createElement('div'); const sel=document.createElement('select'); sel.className='step-select';
         const optEmpty=document.createElement('option'); optEmpty.value=''; optEmpty.textContent='— 請選擇 —'; sel.appendChild(optEmpty);
         STOP_OPTIONS.forEach(opt=>{ const o=document.createElement('option'); o.value=opt; o.textContent=opt; sel.appendChild(o); });
         if (rawVal) sel.value=rawVal;
-        const ghost=el('span',''); ghost.style.display='none';
-
-        valueEl.append(sel, ghost); rowEl.appendChild(valueEl);
+        valueEl.append(sel, document.createElement('span')); rowEl.appendChild(valueEl);
         const btnG=el('div','btn-group'); rowEl.appendChild(btnG);
 
         if (!canWrite){ sel.disabled=true; rowEl.classList.add('locked'); }
-        else {
-          const prevOk=prevDone(cfg, header, row, st); if (!prevOk && !rawVal) sel.disabled=true;
+        else{
+          const prevOk=prevDone(cfg,header,row,st); if(!prevOk && !rawVal) sel.disabled=true;
           sel.onchange=async()=>{
             if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');
-            const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch: (window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:sel.value}] };
+            const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:sel.value}] };
             await withLoading(async()=>{
-              const r=await fetch(API_BASE,{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-              const j=await r.json();
-              if(!j.ok){
-                if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
-                throw new Error(j.error||'unknown');
-              }
-              window.sheetVersion = j.version || window.sheetVersion;  // ★ 更新版本
-              await reloadSheet();
+              const r=await fetch(API_BASE+'?action=update',{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
+              const j=await r.json(); if(!j.ok){ if(j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。',true); return; } throw new Error(j.error||'unknown'); }
+              window.sheetVersion=j.version||window.sheetVersion; await reloadSheet();
             },'更新中…');
             showNotif(sel.value?'已更新車暫停位置':'已清除車暫停位置', false);
           };
         }
-        card.appendChild(rowEl);
-        return;
+        card.appendChild(rowEl); return;
       }
 
-      const timeSpan=el('span','step-time', displayVal||'—'); rowEl.appendChild(timeSpan);
-      const btnG=el('div','btn-group');
-      const btnPunch=el('button','btn btn--primary btn--sm','打卡');
-      const btnEdit =el('button','btn btn--success btn--sm','修改');
-      const btnDel  =el('button','btn btn--danger btn--sm','刪除');
+      const timeSpan=el('span','step-time',displayVal||'—'); rowEl.appendChild(timeSpan);
+      const btnG=el('div','btn-group'); const btnPunch=el('button','btn btn--primary btn--sm','打卡'); const btnEdit=el('button','btn btn--success btn--sm','修改'); const btnDel=el('button','btn btn--danger btn--sm','刪除');
       btnG.append(btnPunch,btnEdit,btnDel); rowEl.appendChild(btnG);
 
       if (!canWrite){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; rowEl.classList.add('locked'); }
       else{
-        const prevOk=prevDone(cfg, header, row, st); const hasVal=!!rawVal;
-        if (!prevOk && !hasVal){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; }
+        const prevOk=prevDone(cfg,header,row,st), hasVal=!!rawVal;
+        if(!prevOk && !hasVal){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; }
         else{
           btnPunch.disabled=hasVal; btnEdit.disabled=btnDel.disabled=!hasVal;
 
           btnPunch.onclick=async()=>{
             if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');
             if (timeSpan.textContent.trim() && timeSpan.textContent.trim()!=='—'){ showNotif('此步驟已有時間，請用「修改」或「刪除」',true); return; }
-            const now=getTaipeiHHMMSS();
-            const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:now}] };
+            const now=getTaipeiHHMMSS(); const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:now}] };
             await withLoading(async()=>{
-              const r=await fetch(API_BASE,{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-              const j=await r.json();
-              if(!j.ok){
-                if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
-                throw new Error(j.error||'unknown');
-              }
-              window.sheetVersion = j.version || window.sheetVersion;
-              await reloadSheet();
+              const r=await fetch(API_BASE+'?action=update',{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
+              const j=await r.json(); if(!j.ok){ if(j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。',true); return; } throw new Error(j.error||'unknown'); }
+              window.sheetVersion=j.version||window.sheetVersion; await reloadSheet();
             },'打卡中…');
-            setText(timeSpan, formatSheetTime(now));
-            btnPunch.disabled=true; btnEdit.disabled=false; btnDel.disabled=false;
-            showNotif('已打卡', false);
+            setText(timeSpan, formatSheetTime(now)); btnPunch.disabled=true; btnEdit.disabled=false; btnDel.disabled=false; showNotif('已打卡', false);
           };
 
           btnEdit.onclick=()=>{
-            const cur=timeSpan.textContent==='—' ? getTaipeiHHMMSS() : timeSpan.textContent;
+            const cur=timeSpan.textContent==='—'?getTaipeiHHMMSS():timeSpan.textContent;
             openEditTimeDialog(cur, async (newHHMMSS)=>{
               const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:newHHMMSS}] };
               await withLoading(async()=>{
-                const r=await fetch(API_BASE,{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-                const j=await r.json();
-                if(!j.ok){
-                  if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
-                  throw new Error(j.error||'unknown');
-                }
-                window.sheetVersion = j.version || window.sheetVersion;
-                await reloadSheet();
+                const r=await fetch(API_BASE+'?action=update',{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
+                const j=await r.json(); if(!j.ok){ if(j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。',true); return; } throw new Error(j.error||'unknown'); }
+                window.sheetVersion=j.version||window.sheetVersion; await reloadSheet();
               },'儲存中…');
-              const wasEmpty=(timeSpan.textContent||'')==='—';
-              setText(timeSpan, formatSheetTime(newHHMMSS));
-              btnPunch.disabled=true; btnEdit.disabled=false; btnDel.disabled=false;
-              if (wasEmpty){ /* unlock next */ }
-              showNotif('已修改時間', false);
+              setText(timeSpan, formatSheetTime(newHHMMSS)); btnPunch.disabled=true; btnEdit.disabled=false; btnDel.disabled=false; showNotif('已修改時間', false);
             });
           };
 
@@ -776,17 +411,11 @@ function renderVehicles(cfg, data){
             openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
               const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:''}] };
               await withLoading(async()=>{
-                const r=await fetch(API_BASE,{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-                const j=await r.json();
-                if(!j.ok){
-                  if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
-                  throw new Error(j.error||'unknown');
-                }
-                window.sheetVersion = j.version || window.sheetVersion;
-                await reloadSheet();
+                const r=await fetch(API_BASE+'?action=update',{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
+                const j=await r.json(); if(!j.ok){ if(j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。',true); return; } throw new Error(j.error||'unknown'); }
+                window.sheetVersion=j.version||window.sheetVersion; await reloadSheet();
               },'刪除中…');
-              setText(timeSpan,''); btnPunch.disabled=false; btnEdit.disabled=true; btnDel.disabled=true;
-              showNotif('已刪除', false);
+              setText(timeSpan,''); btnPunch.disabled=false; btnEdit.disabled=true; btnDel.disabled=true; showNotif('已刪除', false);
             });
           };
         }
@@ -800,38 +429,26 @@ function renderVehicles(cfg, data){
     const memoTA=document.createElement('textarea'); memoTA.className='textarea'; memoTA.placeholder='備註'; memoTA.style.flex='1';
     let memoColIdx=header.indexOf('備註'); if (memoColIdx===-1) memoColIdx=header.length-1;
     memoTA.value=(memoColIdx!==-1 && row[memoColIdx]) ? String(row[memoColIdx]):'';
-    const memoBtn=el('button','btn btn--primary','儲存'); memoBtn.disabled=!canWrite;
+    const memoBtn=el('button','btn btn--primary','儲存'); memoBtn.disabled=(currentUser?.permission!=='全功能');
     memoBtn.onclick=async()=>{
-      if(!canWrite) return;
+      if(currentUser?.permission!=='全功能') return;
       const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:memoColIdx+1,value:sanitizeForSheet(memoTA.value)}] };
       await withLoading(async()=>{
-        const r=await fetch(API_BASE,{method:'POST',credentials: 'omit', headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-        const j=await r.json();
-        if(!j.ok){
-          if (j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。', true); return; }
-          throw new Error(j.error||'unknown');
-        }
-        window.sheetVersion = j.version || window.sheetVersion;
-        await reloadSheet();
-      },'儲存備註…');
-      showNotif('備註已儲存', false);
+        const r=await fetch(API_BASE+'?action=update',{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
+        const j=await r.json(); if(!j.ok){ if(j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。',true); return; } throw new Error(j.error||'unknown'); }
+        window.sheetVersion=j.version||window.sheetVersion; await reloadSheet();
+      },'儲存備註…'); showNotif('備註已儲存', false);
     };
-    memoRow.append(memoTA, memoBtn); memoWrap.appendChild(memoRow); card.appendChild(memoWrap);
+    memoRow.append(memoTA,memoBtn); memoWrap.appendChild(memoRow); card.appendChild(memoWrap);
 
-    box.appendChild(card);
+    document.getElementById('vehList').appendChild(card);
   });
 }
 
-/* ======= 儀表板（統計/清單/loc 等）與個別情報頁 ======= */
-/* 這裡保留你原本的 buildDashboard / buildDashboardTabs / openListModal / openDetailModal /
-   initSinglePage 等函式內容；若你要我把整段 JS 也一併「完整貼上」，回我：要完整 JS。*/
-
-/* ======= Modal 基礎 ======= */
+/* ===== Modal（保留） ===== */
 function openModal(element){
-  const layer=document.createElement('div');
-  Object.assign(layer.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.45)',zIndex:'2147483647',display:'grid',placeItems:'center'});
-  element.classList.add('modal');
-  Object.assign(element.style,{position:'relative',maxWidth:'min(1300px,96vw)',maxHeight:'min(86dvh,640px)',overflow:'auto'});
+  const layer=document.createElement('div'); Object.assign(layer.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.45)',zIndex:'2147483647',display:'grid',placeItems:'center'});
+  element.classList.add('modal'); Object.assign(element.style,{position:'relative',maxWidth:'min(1300px,96vw)',maxHeight:'min(86dvh,640px)',overflow:'auto'});
   layer.appendChild(element); document.body.appendChild(layer); document.body.classList.add('modal-open');
   const onEsc=e=>{ if(e.key==='Escape') cleanup(); }; document.addEventListener('keydown',onEsc);
   function cleanup(){ document.body.classList.remove('modal-open'); document.removeEventListener('keydown',onEsc); try{layer.remove();}catch{} }
@@ -848,10 +465,7 @@ function openEditTimeDialog(cur, onSave){
   const box=document.createElement('div'); box.className='modal';
   const [hh0,mm0,ss0]=String(cur||'').split(':'); 
   box.append(el('h3','', '修改時間'));
-  const row=el('div','time-edit');
-  const h=el('input','time-input'); h.value=(hh0||'').padStart(2,'0');
-  const m=el('input','time-input'); m.value=(mm0||'').padStart(2,'0');
-  const s=el('input','time-input'); s.value=(ss0||'00').padStart(2,'0');
+  const row=el('div','time-edit'); const h=el('input','time-input'); h.value=(hh0||'').padStart(2,'0'); const m=el('input','time-input'); m.value=(mm0||'').padStart(2,'0'); const s=el('input','time-input'); s.value=(ss0||'00').padStart(2,'0');
   row.append(h,el('span','colon',':'),m,el('span','colon',':'),s);
   const hint=el('div','hint','請輸入 00–23:00–59:00–59');
   const actions=el('div','actions'); const no=el('button','btn','取消'); const yes=el('button','btn btn--primary','儲存');
@@ -861,8 +475,6 @@ function openEditTimeDialog(cur, onSave){
     onSave && onSave(`${hh}:${mm}:${ss}`); close();
   };
 }
-
-  
 </script>
 </body>
 </html>

@@ -155,18 +155,7 @@ window.CONFIG = {
 };
 
 const { GOOGLE_CLIENT_ID, API_BASE, TOKEN_STORAGE_KEY } = window.CONFIG;
-function buildDashboardTabs() {
-  const box = document.getElementById('dashboardTabs');
-  if (box) { box.textContent = '(儀表板頁籤尚未實作)'; }
-}
-function buildDashboard() {
-  const dash = document.getElementById('dashboard');
-  if (dash) { dash.textContent = '(儀表板內容尚未實作)'; }
-}
-function initSinglePage() {
-  // 你已能看到「下拉與查詢/全部重設」代表這頁基本 OK
-  // 這裡先留空，等你要做真的查詢再補
-}
+
 /* ===== 小工具 ===== */
 function setText(el, v){ if (el) el.textContent = v == null ? '' : String(v); }
 function clearNode(el){ if (el) el.replaceChildren(); }
@@ -225,20 +214,26 @@ function buildRefreshControls(){
 
 /* ===== 登入流程（全部改為「簡單請求」） ===== */
 window.onload = async function () {
-  // …你的 startClock()、buildRefreshControls() 等…
+  startClock();
+  buildRefreshControls();
 
   const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
   if (saved) {
     try {
-      const r = await fetch(API_BASE, {
-        method: 'POST',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify', idToken: saved })
-      });
+      // ✅ 同樣用 POST + JSON，action 放 body
+      const r = await fetch(API_BASE + '?action=verify', {
+  method: 'POST',
+  // ⚠️ 不要帶任何自訂 header（包含 Authorization），只保留這個 Content-Type
+  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+  // body 只放 idToken（不要在 body 再放 action）
+  body: JSON.stringify({ idToken: saved }),
+  // ⚠️ 不要帶 credentials（omit 就好）
+  credentials: 'omit'
+});
       const j = await r.json();
-      if (!j.ok) throw new Error(j.error || 'verify failed');
+      if (!j.ok) throw new Error(j.error);
 
+      idToken = saved;
       currentUser = j;
       finishLoginUI();
       buildTabs();
@@ -256,7 +251,6 @@ window.onload = async function () {
 
   document.getElementById('logoutBtn')?.addEventListener('click', logout);
 };
-
 
 
 function initGoogleSignIn(){
@@ -279,23 +273,19 @@ async function handleCredential(resp){
   idToken = resp.credential;
   localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
 
-  try{
-    const r = await fetch(API_BASE, {
-      method: 'POST',
-      credentials: 'omit',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'verify', idToken })
-    });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'verify failed');
+  const r = await fetch(API_BASE + '?action=verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ idToken }),
+    credentials: 'omit'
+  });
 
-    currentUser = j;
-    finishLoginUI();
-    loadSheetData(currentSheetKey);
-  }catch(err){
-    showNotif('登入失敗：' + err.message, true);
-    logout();
-  }
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'verify failed');
+
+  currentUser = j;
+  finishLoginUI();
+  loadSheetData(currentSheetKey);
 }
 
 
@@ -345,26 +335,13 @@ document.getElementById('mainTabs').addEventListener('click',(e)=>{ const btn=e.
 
 /* ===== 讀表（維持 GET） ===== */
 async function loadSheetData(key){
-  const cfg = SHEET_CONFIGS.find(s => s.key === key);
-  setText(document.getElementById('vehList'), '讀取中...');
-
-  // 讀表維持 GET + ?action=get&sheet=...
-  const r = await fetch(
-    API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`,
-    { method: 'GET', credentials: 'omit' }
-  );
-
+  const cfg=SHEET_CONFIGS.find(s=>s.key===key);
+  setText(document.getElementById('vehList'),'讀取中...');
+  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`, { method:'GET', credentials:'omit' });
   const j = await r.json();
-  if (!j.ok){
-    setText(document.getElementById('vehList'), '❌ ' + (j.error || '讀取失敗'));
-    return;
-  }
-
-  sheetData = j.values || [];
-  window.sheetVersion = j.version || '';
-  renderVehicles(cfg, sheetData);
+  if (!j.ok){ setText(document.getElementById('vehList'),'❌ '+(j.error||'讀取失敗')); return; }
+  sheetData=j.values||[]; window.sheetVersion=j.version||''; renderVehicles(cfg, sheetData);
 }
-
 function reloadSheet(){ loadSheetData(currentSheetKey); }
 
 /* ===== 打卡/修改/刪除/備註：POST text/plain + query action ===== */
@@ -408,7 +385,7 @@ function renderVehicles(cfg, data){
             if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');
             const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:sel.value}] };
             await withLoading(async()=>{
-              const r=await fetch(API_BASE,{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
+              const r=await fetch(API_BASE+'?action=update',{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
               const j=await r.json(); if(!j.ok){ if(j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。',true); return; } throw new Error(j.error||'unknown'); }
               window.sheetVersion=j.version||window.sheetVersion; await reloadSheet();
             },'更新中…');
@@ -434,7 +411,7 @@ function renderVehicles(cfg, data){
             if (timeSpan.textContent.trim() && timeSpan.textContent.trim()!=='—'){ showNotif('此步驟已有時間，請用「修改」或「刪除」',true); return; }
             const now=getTaipeiHHMMSS(); const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:now}] };
             await withLoading(async()=>{
-              const r=await fetch(API_BASE,{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
+              const r=await fetch(API_BASE+'?action=update',{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
               const j=await r.json(); if(!j.ok){ if(j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。',true); return; } throw new Error(j.error||'unknown'); }
               window.sheetVersion=j.version||window.sheetVersion; await reloadSheet();
             },'打卡中…');
@@ -446,7 +423,7 @@ function renderVehicles(cfg, data){
             openEditTimeDialog(cur, async (newHHMMSS)=>{
               const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:newHHMMSS}] };
               await withLoading(async()=>{
-                const r=await fetch(API_BASE,{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
+                const r=await fetch(API_BASE+'?action=update',{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
                 const j=await r.json(); if(!j.ok){ if(j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。',true); return; } throw new Error(j.error||'unknown'); }
                 window.sheetVersion=j.version||window.sheetVersion; await reloadSheet();
               },'儲存中…');
@@ -458,7 +435,7 @@ function renderVehicles(cfg, data){
             openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
               const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:colIdx+1,value:''}] };
               await withLoading(async()=>{
-                const r=await fetch(API_BASE,{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
+                const r=await fetch(API_BASE+'?action=update',{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
                 const j=await r.json(); if(!j.ok){ if(j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。',true); return; } throw new Error(j.error||'unknown'); }
                 window.sheetVersion=j.version||window.sheetVersion; await reloadSheet();
               },'刪除中…');
@@ -481,7 +458,7 @@ function renderVehicles(cfg, data){
       if(currentUser?.permission!=='全功能') return;
       const body={ sheet:cfg.sheet, email:currentUser.email, ifMatch:(window.sheetVersion||''), writes:[{row:baseRow,col:memoColIdx+1,value:sanitizeForSheet(memoTA.value)}] };
       await withLoading(async()=>{
-        const r=await fetch(API_BASE,{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
+        const r=await fetch(API_BASE+'?action=update',{ method:'POST', credentials:'omit', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
         const j=await r.json(); if(!j.ok){ if(j.error==='version_mismatch'){ window.sheetVersion=j.version||''; showNotif('資料已變更，已更新版本，請重試。',true); return; } throw new Error(j.error||'unknown'); }
         window.sheetVersion=j.version||window.sheetVersion; await reloadSheet();
       },'儲存備註…'); showNotif('備註已儲存', false);

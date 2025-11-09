@@ -486,7 +486,7 @@ window.onload = async function () {
       idToken = saved;
 
       // 使用 POST + JSON body（與登入流程一致）
-    const r = await fetch(API_BASE, {
+const r = await fetch(API_BASE, {
   method: 'POST',
   credentials: 'omit',
   headers: { 'Content-Type': 'application/json' },
@@ -563,14 +563,14 @@ async function handleCredential(resp) {
   localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
 
   try {
-    const r = await fetch(API_BASE, {  // 移除 ?action=verify
+    const r = await fetch(API_BASE, {
       method: 'POST',
       credentials: 'omit',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'verify', idToken })
     });
     const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'verify failed');
+    if (!j.ok) throw new Error(j.error);
     currentUser = j;
     finishLoginUI();
     loadSheetData(currentSheetKey);

@@ -485,13 +485,16 @@ window.onload = async function () {
     try {
       idToken = saved;
 
-      // 改成 GET：把 idToken 放在 query，免預檢
-      const url = `${API_BASE}?action=verify&idToken=${encodeURIComponent(idToken)}`;
-      const r = await fetch(url, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'omit'
-      });
+      // 使用 POST + JSON body（與登入流程一致）
+    const r = await fetch(API_BASE, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        action: 'verify', 
+        idToken: idToken 
+      })
+    });
 
       const j = await r.json();
       if (j.error) throw new Error(j.error);

@@ -17,7 +17,7 @@
   style-src-elem 'self' https://accounts.google.com 'unsafe-inline';
   img-src 'self' data: https://accounts.google.com;
   font-src 'self' data:;
-  connect-src 'self' https://script.google.com https://script.googleapis.com;
+  connect-src 'self' https://script.google.com https://script.googleapis.com https://cdnjs.cloudflare.com;
   frame-src https://accounts.google.com;
   base-uri 'self';
   frame-ancestors 'self';
@@ -484,12 +484,15 @@ window.onload = async function () {
   if (saved) {
     try {
       idToken = saved;
-      const r = await fetch(API_BASE + '?action=verify', {
-        method: 'POST',
-        credentials: 'omit',                 // 不帶 cookie，伺服器可用 '*'
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ idToken })
+
+      // 改成 GET：把 idToken 放在 query，免預檢
+      const url = `${API_BASE}?action=verify&idToken=${encodeURIComponent(idToken)}`;
+      const r = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit'
       });
+
       const j = await r.json();
       if (j.error) throw new Error(j.error);
 
@@ -499,7 +502,7 @@ window.onload = async function () {
       loadSheetData(currentSheetKey);
     } catch (err) {
       console.warn('verify failed:', err);
-      logout();            // 會清掉 localStorage 與 UI
+      logout();            // 清掉 localStorage 與 UI
       initGoogleSignIn();  // 顯示登入鈕
       buildTabs();
     }
@@ -511,6 +514,7 @@ window.onload = async function () {
   const btn = document.getElementById('logoutBtn');
   if (btn) btn.addEventListener('click', logout);
 };
+
 
 
 function initGoogleSignIn(){

@@ -610,7 +610,7 @@ document.getElementById('mainTabs').addEventListener('click', (e)=>{ const btn=e
 async function loadSheetData(key){
   const cfg=SHEET_CONFIGS.find(s=>s.key===key);
   setText(document.getElementById('vehList'), '讀取中...');
-  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet),credentials:'omit'}`);
   const j = await r.json();
   if (j.error){ setText(document.getElementById('vehList'), '❌ '+j.error); return; }
   sheetData = j.values || [];

@@ -155,7 +155,18 @@ window.CONFIG = {
 };
 
 const { GOOGLE_CLIENT_ID, API_BASE, TOKEN_STORAGE_KEY } = window.CONFIG;
-
+function buildDashboardTabs() {
+  const box = document.getElementById('dashboardTabs');
+  if (box) { box.textContent = '(儀表板頁籤尚未實作)'; }
+}
+function buildDashboard() {
+  const dash = document.getElementById('dashboard');
+  if (dash) { dash.textContent = '(儀表板內容尚未實作)'; }
+}
+function initSinglePage() {
+  // 你已能看到「下拉與查詢/全部重設」代表這頁基本 OK
+  // 這裡先留空，等你要做真的查詢再補
+}
 /* ===== 小工具 ===== */
 function setText(el, v){ if (el) el.textContent = v == null ? '' : String(v); }
 function clearNode(el){ if (el) el.replaceChildren(); }

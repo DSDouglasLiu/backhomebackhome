@@ -221,12 +221,15 @@ window.onload = async function () {
   if (saved) {
     try {
       // ✅ 同樣用 POST + JSON，action 放 body
-      const r = await fetch(API_BASE, {
-        method: 'POST',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify', idToken: saved })
-      });
+      const r = await fetch(API_BASE + '?action=verify', {
+  method: 'POST',
+  // ⚠️ 不要帶任何自訂 header（包含 Authorization），只保留這個 Content-Type
+  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+  // body 只放 idToken（不要在 body 再放 action）
+  body: JSON.stringify({ idToken: saved }),
+  // ⚠️ 不要帶 credentials（omit 就好）
+  credentials: 'omit'
+});
       const j = await r.json();
       if (!j.ok) throw new Error(j.error);
 
@@ -270,26 +273,21 @@ async function handleCredential(resp){
   idToken = resp.credential;
   localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
 
-  try {
-    // ✅ 正確：POST + JSON，action 放在 body
-    const r = await fetch(API_BASE, {
-      method: 'POST',
-      credentials: 'omit',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'verify', idToken })
-    });
+  const r = await fetch(API_BASE + '?action=verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ idToken }),
+    credentials: 'omit'
+  });
 
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'verify failed');
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'verify failed');
 
-    currentUser = j;
-    finishLoginUI();
-    loadSheetData(currentSheetKey);
-  } catch (err) {
-    showNotif('登入失敗：' + err.message, true);
-    logout();
-  }
+  currentUser = j;
+  finishLoginUI();
+  loadSheetData(currentSheetKey);
 }
+
 
 
 function finishLoginUI(){

@@ -134,33 +134,13 @@ body.dark .modal{ background:#0b1325; color:#e2e8f0 }
 body.modal-open{ overflow:hidden; touch-action:none; }
 
 /* Loading Overlay */
-#loading.loading{
-  position: fixed; inset: 0;
-  display: none;
-  align-items: center; justify-content: center;
-  background: rgba(0,0,0,.4);
-  z-index: 2147483000;
-}
+#loading.loading{ position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); z-index: 2147483000; }
 #loading.loading.show{ display: flex; }
-.loading-box{
-  display: flex; align-items: center; gap: 10px;
-  background: #111827; color: #fff;
-  border: 1px solid rgba(148,163,184,.35);
-  border-radius: 10px;
-  padding: 10px 14px;
-  box-shadow: 0 10px 24px rgba(0,0,0,.25);
-}
-.loading-text{ font-size: 14px; font-weight: 600; }  
-
-.spinner{
-  width: 18px; height: 18px; border-radius: 50%;
-  border: 2px solid #94a3b8; border-top-color: #fff;
-  animation: spin 1s linear infinite;
-}
+.loading-box{ display:flex; align-items:center; gap:10px; background: var(--surface); color: var(--text); border:1px solid var(--border); border-radius:12px; padding:12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); backdrop-filter: blur(8px); }
+.spinner{ width:20px; height:20px; border-radius:50%; border:2.5px solid #cbd5e1; border-top-color: var(--primary-600); animation: spin 1s linear infinite; }
 @keyframes spin{ to{ transform: rotate(360deg); } }
-
 @media (prefers-reduced-motion: reduce){ .spinner{ animation: none; border-top-color:#cbd5e1; } }
-body.loading-open{ overflow: hidden; touch-action: none; }
+body.loading-open{ overflow:hidden; touch-action:none; overscroll-behavior: contain; }
 @supports (height: 100dvh){ .modal-backdrop{ height: 100dvh; } }
 
 /* ===== 登入畫面（不再覆蓋 .wrap > div:first-child） ===== */
@@ -310,25 +290,6 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
 }
 .single-line + .single-line{ margin-top:6px; }
 
-/* 個別情報：控制列與按鈕排版（回到上一版外觀） */
-.single-controls{
-  display:grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-}
-.single-actions{
-  display:flex;
-  justify-content:flex-end;
-  gap:8px;
-  margin-top:8px;
-}
-
-/* 窄螢幕自動換行 */
-@media (max-width: 840px){
-  .single-controls{
-    grid-template-columns: 1fr;
-  }
-}
 
 </style>
 </head>
@@ -462,7 +423,7 @@ const REFRESH_PRESETS = [
 ];
 const REFRESH_STORAGE_KEY = 'dash_refresh_ms';
 let refreshMs = parseInt(localStorage.getItem(REFRESH_STORAGE_KEY) || '', 10);
-if (!Number.isFinite(refreshMs) || refreshMs <= 0) refreshMs = 2*60*1000; // 預設 2分鐘
+if (!Number.isFinite(refreshMs) || refreshMs <= 0) refreshMs = 2*60*1000; // 預設 30 秒
 
 /* 原本的 dashboard 計時器 */
 let dashTimer = null;
@@ -1188,32 +1149,699 @@ results.forEach(({ cfg, header, rows }) => {
   else { await withLoading(work, '整理整體情報…'); }
 }
 
-/* =================== 個別情報：下拉/過濾/鎖定（乾淨版） =================== */
+/* =================== 個別情報：下拉/過濾/鎖定 =================== */
+/* 需求：
+   - 三個下拉：分頁(Tab) / 區域車次編號 / 車號
+   - 選了「區域」→ 車號只顯示該區域的車；鎖住「分頁」
+   - 選了「車號」→ 反向約束到對應的區域與分頁，且「區域＋分頁」被鎖住
+   - 「區域」與「車號」都定案後，想更改必須點「全部重設」
+   - Tab 未選也可挑其它兩個（跨表查詢）
+*/
 
-let SINGLE_INITTED = false;      // 僅初始化一次
-let SINGLE_ITEMS   = [];         // 每筆：{ sheetKey, cfg, header, row }
-let AREA_INDEX     = new Map();  // area -> Map(sheetKey -> Set(cars))
-let CAR_INDEX      = new Map();  // car  -> [{sheetKey, area}, …]
-let singleLockedBy = null;       // 'area' | 'car' | null
+const SINGLE_IDS = {
+  sheet:  'selSheet',
+  area:   'selArea',
+  car:    'selCar',
+  search: 'btnSingleSearch',
+  reset:  'btnSingleReset',
+  result: 'singleResult',
+};
 
-function initSinglePage(){
-  if (SINGLE_INITTED) return;
-  SINGLE_INITTED = true;
+let SINGLE_STORE = {};        // {key: {cfg, header, rows, byArea:Map, byCar:Map}}
+let singleInitialized = false;
+let singleLockedBy = null;    // 'area' | 'car' | null
 
-  // 綁查詢/重設
-  document.getElementById('btnQuery').addEventListener('click', onSingleQuery);
-  document.getElementById('btnReset').addEventListener('click', onSingleReset);
-
-  // 載入資料 → 建索引 → 回填下拉 → 綁定事件
-  withLoading(async ()=>{
-    await loadSingleData();     // 會填好 SINGLE_ITEMS & ALL_SHEETS
-    buildSingleIndexes();       // 建 AREA_INDEX / CAR_INDEX
-    rebuildSelectOptions();     // 依目前 Tab 值產生「區域 / 車號」清單
-    bindSingleEvents();         // 啟用「單選區域鎖 Tab」「單選車號反帶區域+Tab」
-  }, '讀取資料…');
+async function initSinglePage(){
+  if (singleInitialized) return;
+  singleInitialized = true;
+  buildSingleSkeleton();
+  await loadSingleData();
+  fillSheetOptions();
+  bindSingleEvents();
 }
 
-/* 讀四張表，整理為可篩選的 items，並填入 Tab 選單 */
+function buildSingleSkeleton(){
+  const pane = document.getElementById('pane-single');
+  pane.innerHTML = `
+    <div class="card" style="padding-bottom:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <select id="${SINGLE_IDS.sheet}" class="step-select">
+          <option value="">— 全部分頁 —</option>
+        </select>
+        <select id="${SINGLE_IDS.area}" class="step-select">
+          <option value="">— 區域車次編號 —</option>
+        </select>
+        <select id="${SINGLE_IDS.car}" class="step-select">
+          <option value="">— 全部 車號 —</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px;">
+        <button id="${SINGLE_IDS.search}" class="btn btn--primary">查詢</button>
+        <button id="${SINGLE_IDS.reset}"  class="btn btn--secondary">全部重設</button>
+      </div>
+    </div>
+    <div id="${SINGLE_IDS.result}" class="veh-list" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));"></div>
+  `;
+}
+
+async function loadSingleData(){
+  const results = await Promise.all(
+    SHEET_CONFIGS.map(async cfg => {
+      const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+      const j = await r.json();
+      const values = j.values || [];
+      const headerIdx = values.findIndex(
+        r => Array.isArray(r) &&
+             String(r[0]||'').trim() === '編號' &&
+             String(r[1]||'').trim().startsWith('區域') &&
+             String(r[2]||'').trim() === '車號'
+      );
+      const header = headerIdx >= 0 ? values[headerIdx].map(c => String(c||'').trim()) : [];
+      const rows   = headerIdx >= 0 ? values.slice(headerIdx+1)
+                        .filter(r => String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim())
+                        : [];
+      const byArea = new Map(), byCar = new Map();
+      rows.forEach(r=>{
+        const area = String(r[1]||'').trim();
+        const car  = String(r[2]||'').trim();
+        if (!byArea.has(area)) byArea.set(area, []);
+        byArea.get(area).push(car);
+        if (!byCar.has(car)) byCar.set(car, []);
+        byCar.get(car).push(area);
+      });
+      return { key: cfg.key, cfg, header, rows, byArea, byCar };
+    })
+  );
+  SINGLE_STORE = {};
+  results.forEach(x => SINGLE_STORE[x.key] = x);
+}
+
+function fillSheetOptions(){
+  const selSheet = document.getElementById(SINGLE_IDS.sheet);
+  selSheet.innerHTML = `<option value="">— 全部分頁 —</option>` +
+    SHEET_CONFIGS.map(s=>`<option value="${s.key}">${s.key}</option>`).join('');
+  refreshAreaOptions();
+  refreshCarOptions();
+}
+
+function getActiveScope(){
+  const k = document.getElementById(SINGLE_IDS.sheet).value;
+  return k ? [k] : SHEET_CONFIGS.map(s=>s.key);
+}
+
+function refreshAreaOptions(keep=false){
+  const selArea = document.getElementById(SINGLE_IDS.area);
+  const selCar  = document.getElementById(SINGLE_IDS.car);
+  const chosenCar = selCar.value;
+  const keys = getActiveScope();
+  const items = [];
+  const seen = new Set();
+  keys.forEach(k=>{
+    const st = SINGLE_STORE[k]; if (!st) return;
+    const list = chosenCar ? (st.byCar.get(chosenCar)||[]) : Array.from(st.byArea.keys());
+    list.forEach(a=>{
+      const id = `${k}:::${a}`;
+      if (!seen.has(id)){ seen.add(id); items.push({k,a}); }
+    });
+  });
+  const prev = selArea.value;
+  selArea.innerHTML = `<option value="">— 區域車次編號 —</option>` +
+    items.sort((x,y)=>x.a.localeCompare(y.a,'zh-Hant')).map(({k,a})=>`<option data-sheet="${k}" value="${a}">${a}</option>`).join('');
+  if (keep && prev) selArea.value = prev;
+}
+
+function refreshCarOptions(keep=false){
+  const selArea = document.getElementById(SINGLE_IDS.area);
+  const selCar  = document.getElementById(SINGLE_IDS.car);
+  const chosenArea = selArea.value;
+  const chosenSheet = selArea.options[selArea.selectedIndex]?.dataset?.sheet || '';
+  const keys = chosenArea ? [chosenSheet] : getActiveScope();
+  const cars = new Set();
+  keys.forEach(k=>{
+    const st = SINGLE_STORE[k]; if (!st) return;
+    if (chosenArea) (st.byArea.get(chosenArea)||[]).forEach(c=>cars.add(c));
+    else st.byCar.forEach((_areas,c)=>cars.add(c));
+  });
+  const prev = selCar.value;
+  selCar.innerHTML = `<option value="">— 全部 車號 —</option>` +
+    [...cars].sort((a,b)=>a.localeCompare(b,'zh-Hant')).map(c=>`<option value="${c}">${c}</option>`).join('');
+  if (keep && prev) selCar.value = prev;
+}
+
+function bindSingleEvents(){
+  const selSheet = document.getElementById(SINGLE_IDS.sheet);
+  const selArea  = document.getElementById(SINGLE_IDS.area);
+  const selCar   = document.getElementById(SINGLE_IDS.car);
+  const btnSearch= document.getElementById(SINGLE_IDS.search);
+  const btnReset = document.getElementById(SINGLE_IDS.reset);
+
+  selSheet.onchange = ()=>{
+    if (singleLockedBy){
+      showNotif('已選定區域/車號，請先點「全部重設」再更改分頁', true);
+      selSheet.value = selSheet.dataset.prev || '';
+      return;
+    }
+    selSheet.dataset.prev = selSheet.value;
+    selArea.disabled = false;
+    selArea.value = '';
+    selCar.disabled = false;
+    selCar.value = '';
+    refreshAreaOptions();
+    refreshCarOptions();
+  };
+
+  selArea.onchange = ()=>{
+    if (singleLockedBy === 'car'){
+      showNotif('已選定車號；要更換請點「全部重設」', true);
+      return;
+    }
+    // 選了區域 → 車號收斂；且鎖住「分頁」
+    refreshCarOptions();
+    selSheet.disabled = !!selArea.value;
+    if (!selArea.value){
+      selSheet.disabled = false;
+      singleLockedBy = null;
+    }
+  };
+
+  selCar.onchange = ()=>{
+    if (!selCar.value){
+      // 清掉車 → 解除鎖定
+      selArea.disabled = false;
+      selSheet.disabled = !!selArea.value;
+      singleLockedBy = null;
+      refreshAreaOptions();
+      return;
+    }
+    // 選了車 → 反向收斂到該車所屬的唯一區域與分頁並鎖定
+    const keys = getActiveScope();
+    let firstArea='', firstSheet='';
+    keys.forEach(k=>{
+      (SINGLE_STORE[k]?.byCar.get(selCar.value)||[]).forEach(a=>{
+        if (!firstArea){ firstArea=a; firstSheet=k; }
+      });
+    });
+    // 套用收斂結果
+    if (firstArea){
+      selArea.disabled = true;
+      selArea.value = firstArea;
+      refreshAreaOptions(true);
+    }
+    selSheet.value   = firstSheet;
+    selSheet.disabled= true;
+    singleLockedBy = 'car';
+  };
+
+  btnSearch.onclick = ()=> runSingleQuery();
+  btnReset.onclick  = ()=> resetSingleUI();
+}
+
+function runSingleQuery(){
+  const resBox  = document.getElementById(SINGLE_IDS.result);
+  const selSheet= document.getElementById(SINGLE_IDS.sheet).value;
+  const selArea = document.getElementById(SINGLE_IDS.area).value;
+  const selCar  = document.getElementById(SINGLE_IDS.car).value;
+
+  resBox.innerHTML = '';
+  const keys = selSheet ? [selSheet] : SHEET_CONFIGS.map(s=>s.key);
+  const items = [];
+
+  keys.forEach(k=>{
+    const st = SINGLE_STORE[k]; if (!st) return;
+    st.rows.forEach(r=>{
+      const area=String(r[1]||'').trim();
+      const car =String(r[2]||'').trim();
+      if ((selArea && area!==selArea) || (selCar && car!==selCar)) return;
+      const latest = getLatestStatus(st.cfg, st.header, r);
+      const card = document.createElement('div');
+      card.className = 'veh-card';
+      Object.assign(card.style,{display:'flex',alignItems:'center',justifyContent:'center',textAlign:'center'});
+      card.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="veh-title-sub" style="font-weight:700;">${area}</div>
+          <div class="veh-title-sub" style="font-weight:700;">${car}</div>
+          <div class="veh-title-sub" style="font-weight:700;">${latest}</div>
+        </div>`;
+      card.onclick = ()=> openDetailModal(k, r);
+      items.push({k, idx: Number(r[0]||0), el:card});
+    });
+  });
+
+  // 依「sheet順序 → 編號」排序
+  items.sort((a,b)=>{
+    const si = SHEET_CONFIGS.findIndex(s=>s.key===a.k) - SHEET_CONFIGS.findIndex(s=>s.key===b.k);
+    return si!==0 ? si : (a.idx - b.idx);
+  });
+  items.forEach(x=>resBox.appendChild(x.el));
+}
+
+function resetSingleUI(){
+  const selSheet = document.getElementById(SINGLE_IDS.sheet);
+  const selArea  = document.getElementById(SINGLE_IDS.area);
+  const selCar   = document.getElementById(SINGLE_IDS.car);
+  singleLockedBy = null;
+  selSheet.disabled = selArea.disabled = selCar.disabled = false;
+  selSheet.value = ''; selArea.value=''; selCar.value='';
+  refreshAreaOptions(); refreshCarOptions();
+  document.getElementById(SINGLE_IDS.result).innerHTML = '';
+}
+  
+
+/* 取得一台車目前「最新狀態」 */
+function getLatestStatus(cfg, header, row){
+  for (let i=cfg.steps.length-1; i>=0; i--){
+    const st=cfg.steps[i]; const col=header.indexOf(st);
+    if (col>=0 && isCompletedValue(row[col])) {
+      if (st==='車暫停位置') return `車暫停位置：${row[col]}`;
+      return st;
+    }
+  }
+  return '尚未開始';
+}
+
+/* --------------- Overlay 1：清單 --------------- */
+function openListModal(sheetKey, step, type, locValue){
+  const {cfg, header, rows} = ALL_SHEETS[sheetKey];
+  const list = [];
+
+  if (type==='loc'){ // 停車位置
+    const c = header.indexOf('車暫停位置');
+    rows.forEach(r=>{ if (c>=0 && String(r[c]||'').trim()===locValue) list.push(r); });
+  } else if (type==='done' || type==='todo'){
+    const c = header.indexOf(step);
+    rows.forEach(r=>{
+      const v = c>=0 ? r[c] : '';
+      if ((type==='done' && isCompletedValue(v)) || (type==='todo' && !isCompletedValue(v))) list.push(r);
+    });
+  }
+
+  const box=document.createElement('div');
+  box.className='modal';
+  const titleText = (type==='loc') ? `${sheetKey}：${step}＝${locValue}` : `${sheetKey}：${step}（${type==='done'?'完成':'未完成'}）`;
+  box.innerHTML = `
+    <div class="dash-close">✕</div>
+    <h3 style="font-size:18px;margin:0 0 8px;">${titleText}</h3>
+    <div style="max-height:70vh; overflow:auto; padding-right:6px;">
+      ${list.length? '' : '<div style="opacity:.7">目前沒有資料</div>'}
+    </div>
+  `;
+  const close = openModal(box);
+  box.querySelector('.dash-close').onclick = close;
+
+  const scroller = box.querySelector('div[style*="overflow:auto"]');
+  list.forEach(r=>{
+    const area=String(r[1]||'').trim(); const car=String(r[2]||'').trim();
+    const latest = getLatestStatus(ALL_SHEETS[sheetKey].cfg, ALL_SHEETS[sheetKey].header, r);
+    const row = document.createElement('div'); row.className='list-item';
+    row.innerHTML = `
+      <div class="list-left">
+        <div class="list-title">${area}　<span style="font-weight:900">${car}</span></div>
+        <div class="list-sub">最新狀態：${latest}</div>
+      </div>
+      <div><button class="btn btn--primary btn--sm">詳細資料</button></div>
+    `;
+    row.querySelector('button').onclick = ()=> openDetailModal(sheetKey, r);
+    scroller.appendChild(row);
+  });
+}
+
+/* --------------- Overlay 2：單車詳情 --------------- */
+// 取代原本的 openDetailModal，支援兩種呼叫方式：
+// - openDetailModal(sheetKey, row)       // 供整體情報（用 ALL_SHEETS）
+// - openDetailModal(cfgObject, row, headerArray) // 供名片（打卡頁）直接帶 cfg 與 header
+function openDetailModal(sheetOrKey, row, headerOverride){
+  // 取得 cfg / header
+  let cfg, header;
+  if (typeof sheetOrKey === 'string') {
+    const pack = ALL_SHEETS[sheetOrKey] || {};
+    cfg    = pack.cfg;
+    header = pack.header;
+    if (!cfg || !header) return;
+  } else {
+    cfg    = sheetOrKey;
+    header = headerOverride;
+  }
+
+  const area = String(row[1]||'').trim();
+  const car  = String(row[2]||'').trim();
+
+  // 依「車暫停位置」切成進/退場兩段（若無此欄就全部一段）
+  const cutIdx = cfg.steps.indexOf('車暫停位置');
+  const groups = [];
+  if (cutIdx >= 0){
+    groups.push({ title:'進場', cols: cfg.steps.slice(0, cutIdx+1) });
+    if (cutIdx+1 < cfg.steps.length) groups.push({ title:'退場', cols: cfg.steps.slice(cutIdx+1) });
+  } else {
+    groups.push({ title:'狀態', cols: cfg.steps });
+  }
+
+  // 組畫面（沿用整體情報用的表格樣式）
+  const box = document.createElement('div');
+  box.className = 'modal';
+  let html = `
+    <div class="dash-close">✕</div>
+    <div style="font-weight:900;margin-bottom:8px;">${cfg.key}</div>
+    <div style="margin-bottom:10px;"><b>${area}</b>　<span style="font-weight:900">${car}</span></div>
+  `;
+
+  groups.forEach(g=>{
+    html += `<div style="font-weight:800;margin:6px 0 4px;">${g.title}</div>
+      <table class="detail-table">
+        <thead><tr>${g.cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+        <tbody><tr>${
+          g.cols.map(c=>{
+            const idx = header.indexOf(c);
+            const v   = idx>=0 ? String(row[idx]||'').trim() : '';
+            // 停車位置顯示文字，其餘欄位顯示時間（自動格式化）
+            return c==='車暫停位置'
+              ? `<td>${v||''}</td>`
+              : `<td>${v?formatSheetTime(v):''}</td>`;
+          }).join('')
+        }</tr></tbody>
+      </table>`;
+  });
+
+  box.innerHTML = html;
+  const close = openModal(box);
+  box.querySelector('.dash-close').onclick = close;
+}
+
+
+/* ====== 其餘舊有的「確認/修改時間」小視窗 ====== */
+function openConfirmDialog(msg, onOK){
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3>確認刪除</h3>
+    <div class="modal-msg" style="font-size:15px;line-height:1.6;margin:4px 0 8px;">${msg}</div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-del">確定</button>
+    </div>`;
+  const close = openModal(box);
+  const [btnCancel, btnOK] = box.querySelectorAll('button');
+  btnCancel.onclick = close;
+  btnOK.onclick = ()=>{ try{ onOK && onOK(); } finally{ close(); } };
+}
+function openEditTimeDialog(initialHHMMSS, onOK){
+  const [h0,m0,s0] = splitHMS(initialHHMMSS);
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3>修改時間</h3>
+    <div class="time-edit">
+      <input id="hh" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${h0}" aria-label="小時">
+      <span class="colon">:</span>
+      <input id="mm" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${m0}" aria-label="分鐘">
+      <span class="colon">:</span>
+      <input id="ss" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${s0}" aria-label="秒">
+    </div>
+    <div class="hint">請輸入 2 位數！下午兩點請輸入 14。</div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-edit">確定</button>
+    </div>`;
+  const close = openModal(box);
+  const hh = box.querySelector('#hh'), mm = box.querySelector('#mm'), ss = box.querySelector('#ss');
+  const [btnCancel, btnOK] = box.querySelectorAll('button');
+  setTimeout(()=>{ try{ hh.focus({ preventScroll:true }); }catch{} }, 80);
+
+  [hh,mm,ss].forEach(inp=>inp.addEventListener('input', ()=>{ inp.value = inp.value.replace(/\D/g,'').slice(0,2); }));
+  btnCancel.onclick = close;
+  btnOK.onclick = ()=>{
+    const H = pad2(hh.value||''), M = pad2(mm.value||''), S = pad2(ss.value||'');
+    if (!isValidHMS(H,M,S)){ showNotif('格式需為 HH(00–23) / MM(00–59) / SS(00–59)', true); return; }
+    try{ onOK(`${H}:${M}:${S}`); } finally{ close(); }
+  };
+}
+
+/* ================= 個別情報 ================= */
+let __indivInited__ = false;
+let INDIV_ROWS = []; // {tabKey, sheetOrder, areaSeq, plate, latest, stepsIn[], stepsOut[]}
+
+function indivNorm(v){ return String(v ?? '').trim(); }
+
+function initIndividual(){
+  // 首次掛 UI
+  indivMountUI();
+  // 載入四表資料
+  withLoading(indivLoadAllSheets, '讀取資料…').then(()=>{
+    indivFillTabOptions();
+    indivApplyFilter(); // 依目前選項（都是空）回填候選
+    __indivInited__ = true;
+  });
+  // 綁事件
+  ['indiv-sel-tab','indiv-sel-area','indiv-sel-plate'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', indivApplyFilter);
+  });
+  document.getElementById('indiv-btn-query').addEventListener('click', indivDoQuery);
+  document.getElementById('indiv-btn-reset').addEventListener('click', indivReset);
+}
+
+function indivMountUI(){
+  // 把四個 Tab 名稱先放到第一個下拉（其餘兩個等載入資料後回填）
+  const selTab = document.getElementById('indiv-sel-tab');
+  selTab.innerHTML = '<option value="">全部（四個Tab）</option>';
+  SHEET_CONFIGS.forEach(cfg=>{
+    const opt=document.createElement('option'); opt.value=cfg.key; opt.textContent=cfg.key; selTab.appendChild(opt);
+  });
+}
+
+async function indivLoadAllSheets(){
+  const results = await Promise.all(SHEET_CONFIGS.map(async (cfg, idx)=>{
+    const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+    const j = await r.json();
+    const values = j.values || [];
+    // 找表頭（只要有「編號 / 區域* / 車號」）
+    const headIdx = values.findIndex(row =>
+      Array.isArray(row) &&
+      indivNorm(row[0])==='編號' &&
+      indivNorm(row[1]).startsWith('區域') &&
+      indivNorm(row[2])==='車號'
+    );
+    if (headIdx < 0) return [];
+    const header = values[headIdx].map(indivNorm);
+    const rows = values.slice(headIdx+1).filter(r => indivNorm(r[0]) && indivNorm(r[1]) && indivNorm(r[2]));
+    const pack = [];
+    rows.forEach(row=>{
+      const area = indivNorm(row[1]);
+      const plate = indivNorm(row[2]);
+      // 最新狀態（用你原本的步驟順序回推）
+      let latest = '';
+      for (let i=cfg.steps.length-1;i>=0;i--){
+        const st = cfg.steps[i];
+        const ci = header.indexOf(st);
+        if (ci>=0 && indivNorm(row[ci])) { latest = (st==='車暫停位置') ? `車暫停位置：${indivNorm(row[ci])}` : st; break; }
+      }
+      // 進/退場步驟值（彈窗用）
+      const cut = cfg.steps.indexOf('車暫停位置');
+      const stepsIn = cfg.steps.slice(0, cut>=0 ? cut+1 : cfg.steps.length).map(name=>{
+        const i=header.indexOf(name); const val = i>=0 ? indivNorm(row[i]) : '';
+        return {name, val};
+      });
+      const stepsOut = (cut>=0 ? cfg.steps.slice(cut+1) : []).map(name=>{
+        const i=header.indexOf(name); const val = i>=0 ? indivNorm(row[i]) : '';
+        return {name, val};
+      });
+
+      pack.push({
+        tabKey: cfg.key,
+        sheetOrder: idx,
+        areaSeq: area,
+        plate,
+        latest,
+        stepsIn,
+        stepsOut
+      });
+    });
+    return pack;
+  }));
+
+  INDIV_ROWS = results.flat();
+}
+
+function indivCurrentFilter(){
+  const tab   = indivNorm(document.getElementById('indiv-sel-tab').value);
+  const area  = indivNorm(document.getElementById('indiv-sel-area').value);
+  const plate = indivNorm(document.getElementById('indiv-sel-plate').value);
+  return {tab, area, plate};
+}
+function indivFillTabOptions(){
+  // 已在 mount 放入，這裡預留如需動態更新
+}
+
+function indivApplyFilter(){
+  const selTab   = document.getElementById('indiv-sel-tab');
+  const selArea  = document.getElementById('indiv-sel-area');
+  const selPlate = document.getElementById('indiv-sel-plate');
+  const {tab, area, plate} = indivCurrentFilter();
+
+  // 依目前選擇做交集
+  const filtered = INDIV_ROWS.filter(r =>
+    (!tab   || r.tabKey  === tab) &&
+    (!area  || r.areaSeq === area) &&
+    (!plate || r.plate   === plate)
+  );
+
+  // 候選集合（自然排序，中文/數字友善）
+  const sortNat = (a,b)=> a.localeCompare(b,'zh-Hant-u-kn-true');
+  const areas  = [...new Set(filtered.map(r=>r.areaSeq))].sort(sortNat);
+  const plates = [...new Set(filtered.map(r=>r.plate))].sort(sortNat);
+
+  // 回填下拉（保留已選值）
+  const fill = (sel, items, ph, keep)=>{
+    const cur = keep || '';
+    sel.innerHTML = '';
+    const op0 = document.createElement('option'); op0.value=''; op0.textContent=ph; sel.appendChild(op0);
+    items.forEach(v=>{
+      const op=document.createElement('option'); op.value=v; op.textContent=v; if (v===cur) op.selected=true; sel.appendChild(op);
+    });
+  };
+  fill(selArea , areas , '全部區域車次編號', area );
+  fill(selPlate, plates, '全部車號'      , plate);
+
+  // 鎖定規則：選了「車號」或「區域車次編號」任一者 → 其他兩個鎖定
+  const lockByPlate = !!plate;
+  const lockByArea  = !!area;
+  selTab.disabled   = lockByPlate || lockByArea;
+  selArea.disabled  = lockByPlate || (lockByArea && !plate);
+  selPlate.disabled = lockByArea  || (lockByPlate && !area);
+}
+
+function indivDoQuery(){
+  const {tab, area, plate} = indivCurrentFilter();
+  const data = INDIV_ROWS
+    .filter(r =>
+      (!tab   || r.tabKey  === tab) &&
+      (!area  || r.areaSeq === area) &&
+      (!plate || r.plate   === plate)
+    )
+    .sort((a,b)=>{
+      if (a.sheetOrder !== b.sheetOrder) return a.sheetOrder - b.sheetOrder;
+      if (a.areaSeq !== b.areaSeq) return a.areaSeq.localeCompare(b.areaSeq,'zh-Hant-u-kn-true');
+      return a.plate.localeCompare(b.plate,'zh-Hant-u-kn-true');
+    });
+  indivRenderCards(data);
+}
+
+function indivRenderCards(list){
+  const box = document.getElementById('indiv-cards');
+  box.innerHTML = '';
+  if (!list.length){
+    box.innerHTML = `<div style="color:#64748b;padding:8px 2px;">（沒有符合的資料）</div>`;
+    return;
+  }
+  list.forEach(item=>{
+    const el = document.createElement('div');
+    el.className = 'indiv-card';
+    el.innerHTML = `
+      <div class="top"><span class="mini-badge">${item.tabKey}</span> <span style="margin-left:6px;">${item.areaSeq}</span></div>
+      <div class="mid">${item.plate}</div>
+      <div class="bot">${item.latest || '—'}</div>
+    `;
+    el.addEventListener('click', ()=> indivOpenDetail(item));
+    box.appendChild(el);
+  });
+}
+
+function indivOpenDetail(item){
+  // 以步驟切兩組：進場 / 退場
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3 style="margin:0 0 6px;">${item.tabKey}</h3>
+    <div style="margin-bottom:10px;"><b>${item.areaSeq}</b>　<span style="font-weight:900">${item.plate}</span></div>
+
+    <h4 style="margin:12px 0 6px;font-weight:800;">進場</h4>
+    <div class="step-grid" id="__in"></div>
+
+    <h4 style="margin:12px 0 6px;font-weight:800;">退場</h4>
+    <div class="step-grid" id="__out"></div>
+  `;
+  const close = openModal(box);
+
+  const fill = (wrapId, arr)=>{
+    const w = box.querySelector(wrapId);
+    arr.forEach(s=>{
+      const cell = document.createElement('div');
+      cell.className = 'step-cell';
+      const v = s.name==='車暫停位置' ? (s.val||'—') : (s.val ? formatSheetTime(s.val) : '—');
+      cell.innerHTML = `<div style="font-weight:700;margin-bottom:4px;">${s.name}</div><div>${v}</div>`;
+      w.appendChild(cell);
+    });
+  };
+  fill('#__in',  item.stepsIn  || []);
+  fill('#__out', item.stepsOut || []);
+}
+
+function indivReset(){
+  document.getElementById('indiv-sel-tab').value   = '';
+  document.getElementById('indiv-sel-area').value  = '';
+  document.getElementById('indiv-sel-plate').value = '';
+  document.getElementById('indiv-sel-tab').disabled   = false;
+  document.getElementById('indiv-sel-area').disabled  = false;
+  document.getElementById('indiv-sel-plate').disabled = false;
+  indivApplyFilter();
+  document.getElementById('indiv-cards').innerHTML = '';
+}
+// 只顯示：區域車次編號／車號／最新狀態；點卡片開詳情（沿用整體情報表格樣式）
+function buildSingleCard(cfg, header, row){
+  const area   = String(row[1]||'').trim();             // 區域車次編號
+  const car    = String(row[2]||'').trim();             // 車號
+  const latest = getLatestStatus(cfg, header, row);      // 最新狀態（已有的工具）
+
+  const card = document.createElement('div');
+  card.className = 'single-card';
+  card.innerHTML = `
+    <div class="single-line">${area}</div>
+    <div class="single-line">${car}</div>
+    <div class="single-line">${latest}</div>
+  `;
+  card.addEventListener('click', ()=> openDetailModal(cfg, row, header));
+  return card;
+}
+/* ======================= 個別情報（三選單 + 三行置中名片） ======================= */
+let SINGLE_INITTED = false;
+let SINGLE_ITEMS = [];  // 每筆：{ sheetKey, cfg, header, row }
+
+/* 動態塞入這頁專用樣式（只會插一次） */
+(function ensureSingleStyles(){
+  if (document.getElementById('singleCardStyles')) return;
+  const css = document.createElement('style');
+  css.id = 'singleCardStyles';
+  css.textContent = `
+    .single-controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .single-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+    .single-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .single-card{
+      border:1px solid var(--border);background:rgba(255,255,255,.9);
+      border-radius:12px;padding:14px;text-align:center;cursor:pointer;box-shadow:var(--shadow-card)
+    }
+    body.dark .single-card{background:rgba(15,23,42,.30)}
+    .single-card:hover{filter:brightness(1.015)}
+    .single-line{font-size:var(--fz-title);line-height:var(--lh-title);font-weight:var(--fw-title);color:var(--text-strong)}
+    .single-line + .single-line{margin-top:6px}
+  `;
+  document.head.appendChild(css);
+})();
+
+/* 初始化頁面（只做一次） */
+function initSinglePage(){
+  if (SINGLE_INITTED){ return; }
+  SINGLE_INITTED = true;
+
+  // 綁定事件
+  document.getElementById('btnQuery').addEventListener('click', onSingleQuery);
+  document.getElementById('btnReset').addEventListener('click', onSingleReset);
+  ['selSheet','selArea','selCar'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', rebuildSelectOptions);
+  });
+
+  // 載入四張表資料
+  withLoading(loadSingleData, '讀取資料…');
+}
+
+/* 讀四張表，整理為可篩選的 items */
 async function loadSingleData(){
   SINGLE_ITEMS = [];
   const results = await Promise.all(
@@ -1231,152 +1859,23 @@ async function loadSingleData(){
       const rows   = headerIdx>=0 ? values.slice(headerIdx+1)
                         .filter(r=>String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim())
                         : [];
-      // 讓 openDetailModal 也能用（即使沒去過整體情報）
+      // 確保 openDetailModal 也能用（若使用者沒先去整體情報）
       ALL_SHEETS[cfg.key] = { cfg, header, rows };
       rows.forEach(row => SINGLE_ITEMS.push({ sheetKey: cfg.key, cfg, header, row }));
       return { cfg, header, rows };
     })
   );
 
-  // 填入「Tab」選單
+  // 填入「Tab」選單（四張表）
   const selSheet = document.getElementById('selSheet');
+  selSheet.innerHTML = '<option value="">— 全部 Tab —</option>' +
+    SHEET_CONFIGS.map(s=>`<option value="${s.key}">${s.key}</option>`).join('');
 
-  selSheet.innerHTML =
-  '<option value="">— 全部 Tab —</option>' +
-  SHEET_CONFIGS.map(s=>`<option value="${s.key}">${s.key}</option>`).join('');
   // 依目前條件重建另外兩個選單
   rebuildSelectOptions();
 }
 
-function buildSingleIndexes(){
-  AREA_INDEX.clear(); CAR_INDEX.clear();
-  (SINGLE_ITEMS || []).forEach(it=>{
-    const area = String(it.row[1]||'').trim();
-    const car  = String(it.row[2]||'').trim();
-
-    if (!AREA_INDEX.has(area)) AREA_INDEX.set(area, new Map());
-    const m = AREA_INDEX.get(area);
-    if (!m.has(it.sheetKey)) m.set(it.sheetKey, new Set());
-    m.get(it.sheetKey).add(car);
-
-    if (!CAR_INDEX.has(car)) CAR_INDEX.set(car, []);
-    CAR_INDEX.get(car).push({ sheetKey: it.sheetKey, area });
-  });
-}
-
-function bindSingleEvents(){
-  const selSheet = document.getElementById('selSheet');
-  const selArea  = document.getElementById('selArea');
-  const selCar   = document.getElementById('selCar');
-
-  // Tab 改變 → 只更新另外兩個選單候選，絕不鎖定
-  selSheet.addEventListener('change', ()=>{
-  // 先重建候選
-  rebuildSelectOptions();
-
-  const area = (selArea.value || '').trim();
-  if (!area) return; // 沒選區域就不自動帶車號
-
-  // 計算「在目前 Tab + 該區域」之下的車號清單
-  const cars = new Set();
-  SINGLE_ITEMS.forEach(it=>{
-    const a = String(it.row[1]||'').trim();
-    const c = String(it.row[2]||'').trim();
-    if (a !== area) return;
-    if (selSheet.value && it.sheetKey !== selSheet.value) return;
-    cars.add(c);
-  });
-
-  const arr = [...cars].sort(localeCmp);
-  // 重繪車號下拉
-  selCar.innerHTML =
-    '<option value="">— 全部 車號 —</option>' +
-    arr.map(c=>`<option value="${c}">${c}</option>`).join('');
-
-  // 只有一個候選 → 自動選上
-  if (arr.length === 1) {
-    selCar.value = arr[0];
-  }
-});
-
-
-  // 區域改變 → 依目前 Tab 過濾車號；不鎖、不改寫 Tab 選項
-  selArea.addEventListener('change', ()=>{
-  const area = (selArea.value || '').trim();
-
-  // 依目前（可能有或沒有）Tab 篩出車號候選
-  const cars = new Set();
-  SINGLE_ITEMS.forEach(it=>{
-    const a = String(it.row[1]||'').trim();
-    const c = String(it.row[2]||'').trim();
-    if (area && a !== area) return;
-    if (selSheet.value && it.sheetKey !== selSheet.value) return; // 若已選 Tab，就只看該 Tab
-    cars.add(c);
-  });
-
-  const arrCars = [...cars].sort(localeCmp);
-  selCar.innerHTML =
-    '<option value="">— 全部 車號 —</option>' +
-    arrCars.map(c=>`<option value="${c}">${c}</option>`).join('');
-
-  // 只有一個車號 → 自動選車號
-  if (arrCars.length === 1) {
-    selCar.value = arrCars[0];
-  } else {
-    selCar.value = ''; // 多個候選就清空讓使用者選
-  }
-
-  // === 自動帶 Tab ===
-  // 以「已選區域 +（如果已自動選到）車號」來找對應的 Tab
-  const targetSheets = new Set();
-  SINGLE_ITEMS.forEach(it=>{
-    const a = String(it.row[1]||'').trim();
-    const c = String(it.row[2]||'').trim();
-    if (area && a !== area) return;
-    if (selCar.value && c !== selCar.value) return; // 若已選車號就一起過濾
-    targetSheets.add(it.sheetKey);
-  });
-
-  if (targetSheets.size === 1) {
-    const only = [...targetSheets][0];
-    if (selSheet.value !== only) {
-      // 自動帶入正確 Tab
-      selSheet.value = only;
-
-      // 依新的 Tab 再重建一次「車號」候選（確保車號在該 Tab 下仍唯一就直接帶上）
-      const cars2 = new Set();
-      SINGLE_ITEMS.forEach(it=>{
-        const a = String(it.row[1]||'').trim();
-        const c = String(it.row[2]||'').trim();
-        if (a !== area) return;
-        if (it.sheetKey !== only) return;
-        cars2.add(c);
-      });
-      const arr2 = [...cars2].sort(localeCmp);
-      selCar.innerHTML =
-        '<option value="">— 全部 車號 —</option>' +
-        arr2.map(c=>`<option value="${c}">${c}</option>`).join('');
-      if (arr2.length === 1) selCar.value = arr2[0];
-    }
-  }
-});
-
-
-  // 車號改變 → 若唯一對應，就「帶入」Tab/區域，但仍不 disable（不變灰）
-  selCar.addEventListener('change', ()=>{
-    const car = (selCar.value||'').trim();
-    if (!car) return;
-    const matches = (CAR_INDEX.get(car) || []);
-    if (matches.length === 1){
-      const { sheetKey, area } = matches[0];
-      selSheet.value = sheetKey; // 帶入但不鎖
-      selArea.value  = area;     // 帶入但不鎖
-    }
-  });
-}
-
-
-/* 依目前 Tab 值重建「區域/車號」候選（保留仍有效的選擇） */
+/* 依當前條件，重建三個選單的可選值（保留仍有效的既有選擇） */
 function rebuildSelectOptions(){
   const selSheet = document.getElementById('selSheet');
   const selArea  = document.getElementById('selArea');
@@ -1386,18 +1885,19 @@ function rebuildSelectOptions(){
   const keepArea  = selArea.value  || '';
   const keepCar   = selCar.value   || '';
 
-  const filtered = filterItems(keepSheet, '', '');
+  const filtered = filterItems(keepSheet, '', ''); // 先看目前選的 Tab，另外兩個先放寬
   const areas = uniq(filtered.map(it => String(it.row[1]||'').trim())).sort(localeCmp);
   const cars  = uniq(filtered.map(it => String(it.row[2]||'').trim())).sort(localeCmp);
 
   selArea.innerHTML = '<option value="">— 全部 區域車次編號 —</option>' + areas.map(a=>`<option value="${a}">${a}</option>`).join('');
   selCar.innerHTML  = '<option value="">— 全部 車號 —</option>' + cars.map(c=>`<option value="${c}">${c}</option>`).join('');
 
+  // 若舊選項仍在列表中就保留
   if (keepArea && areas.includes(keepArea)) selArea.value = keepArea;
   if (keepCar  && cars.includes(keepCar))   selCar.value  = keepCar;
 }
 
-/* 查詢 */
+/* 點「查詢」→ 渲染名片 */
 function onSingleQuery(){
   const sheet = document.getElementById('selSheet').value || '';
   const area  = document.getElementById('selArea').value  || '';
@@ -1406,6 +1906,7 @@ function onSingleQuery(){
   const items = filterItems(sheet, area, car)
     .slice()
     .sort((a,b)=>{
+      // 依每張表的「編號」欄位排序（升冪）
       const ai = parseInt(String(a.row?.[0]||''),10);
       const bi = parseInt(String(b.row?.[0]||''),10);
       if (isNaN(ai) && isNaN(bi)) return 0;
@@ -1417,13 +1918,8 @@ function onSingleQuery(){
   renderSingleCards(items);
 }
 
-/* 全部重設 */
+/* 點「全部重設」 */
 function onSingleReset(){
-  singleLockedBy = null;
-  document.getElementById('selSheet').disabled = false;
-  document.getElementById('selArea').disabled  = false;
-  document.getElementById('selCar').disabled   = false;
-
   document.getElementById('selSheet').value = '';
   document.getElementById('selArea').value  = '';
   document.getElementById('selCar').value   = '';
@@ -1440,7 +1936,7 @@ function filterItems(sheetKey, area, car){
   );
 }
 
-/* 渲染三行置中名片（區域/車號/最新狀態） */
+/* 渲染三行置中名片（只顯示：區域車次編號、車號、最新狀態） */
 function renderSingleCards(items){
   const box = document.getElementById('singleResults');
   box.innerHTML = '';
@@ -1448,10 +1944,12 @@ function renderSingleCards(items){
     box.innerHTML = '<div style="opacity:.6;text-align:center;padding:10px 0;">（沒有符合項目）</div>';
     return;
   }
+
   for (const it of items){
     const area = String(it.row?.[1]||'').trim();
     const car  = String(it.row?.[2]||'').trim();
-    const latest = getLatestStatus(it.cfg, it.header, it.row);
+    const latest = getLatestStatus(it.cfg, it.header, it.row); // 你原本已有的函式
+
     const card = document.createElement('div');
     card.className = 'single-card';
     card.innerHTML = `
@@ -1459,7 +1957,7 @@ function renderSingleCards(items){
       <div class="single-line">${car}</div>
       <div class="single-line">${latest}</div>
     `;
-    card.addEventListener('click', () => openDetailModal(it.cfg, it.row, it.header));
+    card.addEventListener('click', () => openDetailModal(it.sheetKey, it.row));
     box.appendChild(card);
   }
 }
@@ -1467,97 +1965,139 @@ function renderSingleCards(items){
 /* 小工具 */
 const uniq = arr => Array.from(new Set(arr.filter(Boolean)));
 const localeCmp = (a,b)=> a.localeCompare(b,'zh-Hant-u-nu-hanidec',{numeric:true, sensitivity:'base'});
-
 /* ======================= 個別情報 end ======================= */
+  
 
-/* ===== 安全版對話框／清單 Modal（可先用，之後換回你的完整版） ===== */
-function openConfirmDialog(message, onOK){
-  if (confirm(message || '確認？')) onOK && onOK();
+/* ===== 覆寫：個別情報 三選單最終規格（不改動任何 Web 呈現） ===== */
+
+/* 工具：依條件抓取 items */
+function _single_getItems(sheet, area, car){
+  return SINGLE_ITEMS.filter(it =>
+    (!sheet || it.sheetKey === sheet) &&
+    (!area  || String(it.row[1]||'').trim() === area) &&
+    (!car   || String(it.row[2]||'').trim() === car)
+  );
+}
+/* 工具：從 items 取唯一集合（以在地語系排序） */
+function _single_unique(items, pick){
+  const arr = Array.from(new Set(items.map(pick).filter(Boolean)));
+  return arr.sort((a,b)=> a.localeCompare(b,'zh-Hant-u-nu-hanidec',{numeric:true, sensitivity:'base'}));
+}
+/* 工具：建立 <option> 清單，盡量保留既有值；若只剩唯一候選則自動選取 */
+function _single_applyOptions(selectEl, candidates, placeholder, keepVal){
+  const oldVal = selectEl.value;
+  const options = ['<option value=\"\">' + placeholder + '</option>']
+    .concat(candidates.map(v=>`<option value="${v}">${v}</option>`));
+  selectEl.innerHTML = options.join('');
+
+  let newVal = '';
+  if (keepVal && candidates.includes(keepVal)) newVal = keepVal;
+  else if (candidates.length === 1) newVal = candidates[0]; // 唯一 → 自動帶入
+  // 否則維持空白（— 全部 —）
+
+  selectEl.value = newVal;
+  return oldVal !== newVal;
 }
 
-function openEditTimeDialog(initialHHMMSS, onSave){
-  const v = prompt('請輸入時間（HH:MM:SS）', initialHHMMSS || '');
-  if (!v) return;
-  // 簡單校驗
-  const ok = /^\d{2}:\d{2}:\d{2}$/.test(v);
-  if (!ok) { alert('請用 HH:MM:SS 格式'); return; }
-  onSave && onSave(v);
+/* 自動查詢：三者皆非空且唯一組合時觸發 */
+function _single_maybeAutoQuery(){
+  const s = document.getElementById('selSheet').value || '';
+  const a = document.getElementById('selArea').value  || '';
+  const c = document.getElementById('selCar').value   || '';
+  if (!s || !a || !c) return;
+  const items = _single_getItems(s,a,c);
+  if (items.length === 1){
+    try{ onSingleQuery(); }catch(e){ /* ignore */ }
+  }
 }
 
-/* Dashboard 用的清單跳窗（簡版）：列出符合的車輛 */
-function openListModal(sheetKey, stepName, type, locName){
-  try{
-    const sheet = ALL_SHEETS[sheetKey];
-    if (!sheet) { alert('尚無資料'); return; }
-    const { header, rows } = sheet;
-    let list = [];
-    if (type === 'loc' && locName){ // 停車位置
-      const col = header.indexOf('車暫停位置');
-      if (col < 0) { alert('此表沒有「車暫停位置」欄'); return; }
-      list = rows.filter(r => String(r[col]||'').trim() === locName);
-    } else {
-      const col = header.indexOf(stepName);
-      if (col < 0) { alert('找不到欄位：'+stepName); return; }
-      list = rows.filter(r => {
-        const v = r[col];
-        const done = v != null && String(v).trim() && String(v).trim()!=='—' && String(v).trim()!=='-';
-        return type === 'done' ? done : !done;
-      });
+/* 覆寫 rebuildSelectOptions：
+   — 三選單永不鎖定
+   — 候選依其它條件即時收斂
+   — 只剩唯一候選時自動選取
+   — 選車號→可唯一反帶 Tab/區域；選區域→可唯一反帶 Tab，且在該 Tab 下若車號唯一也自動帶入
+   — 任一時刻候選唯一皆自動帶入
+   — 三者落在唯一組合時自動查詢
+*/
+function rebuildSelectOptions(){
+  const selSheet = document.getElementById('selSheet');
+  const selArea  = document.getElementById('selArea');
+  const selCar   = document.getElementById('selCar');
+
+  // 讀取目前值
+  let sheet = selSheet.value || '';
+  let area  = selArea.value  || '';
+  let car   = selCar.value   || '';
+
+  let changed = true;
+  let guard = 0;
+  while (changed && guard < 5){  // 最多迭代 5 次以收斂
+    changed = false; guard++;
+
+    // 1) 選了「車號」→ 若唯一反帶 Tab/區域
+    if (car){
+      const carItems = _single_getItems('', '', car);
+      const uniqueSheets = _single_unique(carItems, it=>it.sheetKey);
+      const uniqueAreas  = _single_unique(carItems, it=>String(it.row[1]||'').trim());
+      if (uniqueSheets.length === 1 && sheet !== uniqueSheets[0]){ sheet = uniqueSheets[0]; changed = true; }
+      if (uniqueAreas.length  === 1 && area  !== uniqueAreas[0]) { area  = uniqueAreas[0];  changed = true; }
     }
 
-    const table = document.createElement('table');
-    table.className = 'detail-table';
-    table.innerHTML = `
-      <thead><tr><th>編號</th><th>區域</th><th>車號</th></tr></thead>
-      <tbody>${
-        list.map(r=>{
-          const no   = String(r[0]||'').trim();
-          const area = String(r[1]||'').trim();
-          const car  = String(r[2]||'').trim();
-          return `<tr><td>${no}</td><td>${area}</td><td>${car}</td></tr>`;
-        }).join('')
-      }</tbody>`;
-    const dlg = document.createElement('div');
-    dlg.innerHTML = `<h3 style="margin:0 0 8px">${sheetKey} · ${stepName}${type==='loc'?' · '+locName:''}</h3>`;
-    dlg.appendChild(table);
-    const close = openModal(dlg);
-    dlg.addEventListener('click', e=>{
-      // 點某列可打開細節
-      const tr = e.target.closest('tr'); if (!tr || tr.rowIndex===0) return;
-      const idx = tr.rowIndex - 1;
-      const row = list[idx];
-      close();
-      openDetailModal(ALL_SHEETS[sheetKey].cfg, row, header);
-    });
-  }catch(e){
-    console.error(e);
-    alert('清單顯示失敗');
+    // 2) 選了「區域」→ 若唯一反帶 Tab；在該/目前 Tab 下若車號唯一也帶入
+    if (area){
+      const areaItems = _single_getItems('', area, '');
+      const uniqueSheetsByArea = _single_unique(areaItems, it=>it.sheetKey);
+      if (uniqueSheetsByArea.length === 1 && sheet !== uniqueSheetsByArea[0]){ sheet = uniqueSheetsByArea[0]; changed = true; }
+
+      // 在決定後的 sheet 範圍內，如果車號唯一 → 自動選
+      const carInScope = _single_unique(_single_getItems(sheet, area, ''), it=>String(it.row[2]||'').trim());
+      if (!car && carInScope.length === 1){ car = carInScope[0]; changed = true; }
+    }
+
+    // 3) 一般收斂：根據 (sheet, area, car) 計算三選單候選並套用（唯一自動帶入）
+    const itemsScopeForSheet = _single_getItems('', area, car); // 受 area+car 限制
+    const itemsScopeForArea  = _single_getItems(sheet, '', car); // 受 sheet+car 限制
+    const itemsScopeForCar   = _single_getItems(sheet, area, ''); // 受 sheet+area 限制
+
+    const sheets = _single_unique(itemsScopeForSheet, it=>it.sheetKey);
+    const areas  = _single_unique(itemsScopeForArea,  it=>String(it.row[1]||'').trim());
+    const cars   = _single_unique(itemsScopeForCar,   it=>String(it.row[2]||'').trim());
+
+    const ch1 = _single_applyOptions(selSheet, sheets, '— 全部 Tab —', sheet);
+    const ch2 = _single_applyOptions(selArea,  areas,  '— 全部 區域車次編號 —', area);
+    const ch3 = _single_applyOptions(selCar,   cars,   '— 全部 車號 —', car);
+
+    // 同步回內存變數
+    sheet = selSheet.value || '';
+    area  = selArea.value  || '';
+    car   = selCar.value   || '';
+
+    if (ch1 || ch2 || ch3) changed = true;
   }
+
+  // 最終：如三者唯一組合 → 自動查詢
+  _single_maybeAutoQuery();
 }
 
-/* 單車詳細（簡版）：把每個步驟的時間列成表 */
-function openDetailModal(cfg, row, header){
-  try{
-    const area = String(row[1]||'').trim();
-    const car  = String(row[2]||'').trim();
-    const table = document.createElement('table');
-    table.className = 'detail-table';
-    const rowsHtml = cfg.steps.map(st=>{
-      const col = header.indexOf(st);
-      const val = col>=0 ? (row[col]||'') : '';
-      return `<tr><td>${st}</td><td>${formatSheetTime(val)}</td></tr>`;
-    }).join('');
-    table.innerHTML = `<thead><tr><th>步驟</th><th>時間</th></tr></thead><tbody>${rowsHtml}</tbody>`;
-    const dlg = document.createElement('div');
-    dlg.innerHTML = `<h3 style="margin:0 0 8px">${cfg.key}｜${area}｜${car}</h3>`;
-    dlg.appendChild(table);
-    openModal(dlg);
-  }catch(e){
-    console.error(e);
-    alert('詳細顯示失敗');
-  }
-}
-  
+/* 覆寫 initSinglePage：不改視覺，只綁定到新的 rebuildSelectOptions 流程 */
+(function(){
+  const _origInit = initSinglePage;
+  initSinglePage = function(){
+    // 先跑原本的，確保資料讀取與按鈕事件已綁定
+    try{ _origInit(); }catch(e){ /* ignore */ }
+    // 再把 change 事件都導向新的收斂器
+    ['selSheet','selArea','selCar'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('change', rebuildSelectOptions);
+    });
+    // 初始一次收斂（若資料已到）
+    try{ rebuildSelectOptions(); }catch(e){ /* ignore */ }
+  };
+})();
+
+/* ===== 覆寫結束 ===== */
+
 </script>
 </body>
 </html>

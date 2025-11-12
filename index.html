@@ -1598,7 +1598,7 @@ function initIndividual(){
   // 首次掛 UI
   indivMountUI();
   // 載入四表資料
-  withLoading(indivLoadAllSheets, '讀取中').then(()=>{
+  withLoading(indivLoadAllSheets, '讀取資料…').then(()=>{
     indivFillTabOptions();
     indivApplyFilter(); // 依目前選項（都是空）回填候選
     __indivInited__ = true;
@@ -1851,7 +1851,7 @@ function initSinglePage(){
   });
 
   // 載入四張表資料
-  withLoading(loadSingleData, '讀取中');
+  withLoading(loadSingleData, '讀取資料…');
 }
 
 /* 讀四張表，整理為可篩選的 items */

@@ -785,27 +785,14 @@ function openModal(element){
 
 /* ---------------- 打卡頁：載入資料 & 渲染 ---------------- */
 async function loadSheetData(key){
-
-const cfg = SHEET_CONFIGS.find(s=>s.key===key);
-try{
-  showLoading('讀取中');
+  const cfg = SHEET_CONFIGS.find(s=>s.key===key);
+  document.getElementById('vehList').textContent = '讀取中...';
   const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
   const j = await r.json();
-  if (j.error){
-    showNotif('載入失敗：' + j.error, true);
-    const box = document.getElementById('vehList');
-    if (box) box.textContent = '❌ ' + j.error;
-    return;
-  }
+  if (j.error){ document.getElementById('vehList').textContent = '❌ '+j.error; return; }
   sheetData = j.values || [];
   renderVehicles(cfg, sheetData);
-}catch(err){
-  showNotif('載入失敗：' + (err && err.message or err), true);
-}finally{
-  hideLoading();
 }
-}
-
 function isCompletedValue(v){ if (v==null) return false; const s=String(v).trim(); return !!s && s!=='—' && s!=='-'; }
 
 /* ====== 打卡頁 renderVehicles ====== */
@@ -1159,7 +1146,7 @@ results.forEach(({ cfg, header, rows }) => {
   };
 
   if (silent) { await work(); }
-  else { await withLoading(work, '讀取中'); }
+  else { await withLoading(work, '整理整體情報…'); }
 }
 
 /* =================== 個別情報：下拉/過濾/鎖定 =================== */

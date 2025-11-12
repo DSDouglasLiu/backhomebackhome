@@ -423,7 +423,7 @@ const REFRESH_PRESETS = [
 ];
 const REFRESH_STORAGE_KEY = 'dash_refresh_ms';
 let refreshMs = parseInt(localStorage.getItem(REFRESH_STORAGE_KEY) || '', 10);
-if (!Number.isFinite(refreshMs) || refreshMs <= 0) refreshMs = 2*60*1000; // 預設 30 秒
+if (!Number.isFinite(refreshMs) || refreshMs <= 0) refreshMs = 2*60*1000; // 預設 2分鐘
 
 /* 原本的 dashboard 計時器 */
 let dashTimer = null;
@@ -1179,8 +1179,7 @@ async function initSinglePage(){
   fillSheetOptions();
   bindSingleEvents();
 }
-
-function buildSingleSkeleton(){
+/*function buildSingleSkeleton(){
   const pane = document.getElementById('pane-single');
   pane.innerHTML = `
     <div class="card" style="padding-bottom:10px;">
@@ -1203,8 +1202,9 @@ function buildSingleSkeleton(){
     <div id="${SINGLE_IDS.result}" class="veh-list" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));"></div>
   `;
 }
+*/
 
-async function loadSingleData(){
+/*async function loadSingleData(){
   const results = await Promise.all(
     SHEET_CONFIGS.map(async cfg => {
       const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
@@ -1234,22 +1234,22 @@ async function loadSingleData(){
   );
   SINGLE_STORE = {};
   results.forEach(x => SINGLE_STORE[x.key] = x);
-}
+}*/
 
-function fillSheetOptions(){
+/*function fillSheetOptions(){
   const selSheet = document.getElementById(SINGLE_IDS.sheet);
   selSheet.innerHTML = `<option value="">— 全部分頁 —</option>` +
     SHEET_CONFIGS.map(s=>`<option value="${s.key}">${s.key}</option>`).join('');
   refreshAreaOptions();
   refreshCarOptions();
-}
+}*/
 
-function getActiveScope(){
+/*function getActiveScope(){
   const k = document.getElementById(SINGLE_IDS.sheet).value;
   return k ? [k] : SHEET_CONFIGS.map(s=>s.key);
-}
+}*/
 
-function refreshAreaOptions(keep=false){
+/*function refreshAreaOptions(keep=false){
   const selArea = document.getElementById(SINGLE_IDS.area);
   const selCar  = document.getElementById(SINGLE_IDS.car);
   const chosenCar = selCar.value;
@@ -1268,9 +1268,9 @@ function refreshAreaOptions(keep=false){
   selArea.innerHTML = `<option value="">— 區域車次編號 —</option>` +
     items.sort((x,y)=>x.a.localeCompare(y.a,'zh-Hant')).map(({k,a})=>`<option data-sheet="${k}" value="${a}">${a}</option>`).join('');
   if (keep && prev) selArea.value = prev;
-}
+}*/
 
-function refreshCarOptions(keep=false){
+/*function refreshCarOptions(keep=false){
   const selArea = document.getElementById(SINGLE_IDS.area);
   const selCar  = document.getElementById(SINGLE_IDS.car);
   const chosenArea = selArea.value;
@@ -1286,7 +1286,7 @@ function refreshCarOptions(keep=false){
   selCar.innerHTML = `<option value="">— 全部 車號 —</option>` +
     [...cars].sort((a,b)=>a.localeCompare(b,'zh-Hant')).map(c=>`<option value="${c}">${c}</option>`).join('');
   if (keep && prev) selCar.value = prev;
-}
+}*/
 
 function bindSingleEvents(){
   const selSheet = document.getElementById(SINGLE_IDS.sheet);
@@ -1825,7 +1825,7 @@ let SINGLE_ITEMS = [];  // 每筆：{ sheetKey, cfg, header, row }
   document.head.appendChild(css);
 })();
 
-/* 初始化頁面（只做一次） */
+/* 初始化頁面（只做一次） 
 function initSinglePage(){
   if (SINGLE_INITTED){ return; }
   SINGLE_INITTED = true;
@@ -1839,8 +1839,26 @@ function initSinglePage(){
 
   // 載入四張表資料
   withLoading(loadSingleData, '讀取資料…');
-}
+}*/
 
+function initSinglePage(){
+  if (SINGLE_INITTED) return;
+  SINGLE_INITTED = true;
+
+  // 綁查詢/重設
+  document.getElementById('btnQuery').addEventListener('click', onSingleQuery);
+  document.getElementById('btnReset').addEventListener('click', onSingleReset);
+
+  // 先讀資料 → 建索引 → 重建下拉 → 綁定「連動/鎖定」事件
+  withLoading(async ()=>{
+    await loadSingleData();     // 這版會填好 SINGLE_ITEMS & ALL_SHEETS
+    buildSingleIndexes();       // ★ 真的把 AREA_INDEX / CAR_INDEX 建起來
+    rebuildSelectOptions();     // 先依 Tab 產生區域/車號清單
+    bindSingleEvents();         // ★ 啟用「單選區域鎖 Tab」「單選車號反帶區域+Tab」
+  }, '讀取資料…');
+}
+  
+  
 let singleLockedBy = null; // 'area' | 'car' | null
 
 function bindSingleEvents(){

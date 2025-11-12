@@ -1295,37 +1295,32 @@ function bindSingleEvents(){
   };
 
   
+
 selArea.onchange = ()=>{
     if (singleLockedBy === 'car'){
       showNotif('已選定車號；要更換請點「全部重設」', true);
       return;
     }
-    // 選了區域 → 收斂車號；並自動收斂/鎖住分頁（Tab）避免錯配
     const areaVal = selArea.value.trim();
     if (areaVal){
-      // 找出該區域隸屬的分頁（通常唯一）
-      const candidates = SHEET_CONFIGS.map(s=>s.key).filter(k => {
-        const st = SINGLE_STORE[k];
-        return !!(st && st.byArea && st.byArea.has(areaVal));
-      });
-      if (candidates.length === 1){
-        selSheet.value = candidates[0];
-      } else if (candidates.length > 1){
-        // 若目前選到的分頁不在候選清單中，就選第一個候選
-        if (!candidates.includes(selSheet.value)) selSheet.value = candidates[0];
+      const opt = selArea.options[selArea.selectedIndex];
+      const k   = (opt && opt.dataset && opt.dataset.sheet) ? opt.dataset.sheet : '';
+      if (k){
+        selSheet.value   = k;        // 直接以選項攜帶的 sheet 收斂 Tab
+        selSheet.disabled= true;     // 鎖住 Tab 避免錯配
       } else {
-        // 沒找到：保留目前分頁（理論上不會發生）
+        selSheet.disabled= !!areaVal;
       }
-      selSheet.disabled = true;      // 鎖住分頁，避免錯配造成查無資料
-      refreshCarOptions(true);       // 依區域收斂車號（try keep previous car if valid）
-      singleLockedBy = 'area';       // 記錄目前由「區域」鎖住
+      refreshCarOptions(false);      // 依區域收斂車號（不強留舊值）
+      singleLockedBy = 'area';
     } else {
-      // 清掉區域 → 解鎖分頁
+      // 清掉區域 → 解鎖分頁與車號選項恢復
       selSheet.disabled = false;
       singleLockedBy = null;
       refreshCarOptions();           // 還原車號清單
     }
   };
+
 
 
   

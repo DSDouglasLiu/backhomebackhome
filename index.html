@@ -1307,8 +1307,13 @@ selArea.onchange = ()=>{
       const k   = (opt && opt.dataset && opt.dataset.sheet) ? opt.dataset.sheet : '';
       if (k){
         selSheet.value   = k;        // 直接以選項攜帶的 sheet 收斂 Tab
-        selSheet.disabled= true;     // 鎖住 Tab 避免錯配
-      } else {
+        selSheet.disabled= true;
+      // 重新以鎖定的 Tab 重建「區域」清單並保留目前選項
+      refreshAreaOptions(true);
+      // 清空車號，避免殘留不相符的值
+      selCar.value = '';
+    }
+    else {
         selSheet.disabled= !!areaVal;
       }
       refreshCarOptions(false);      // 依區域收斂車號（不強留舊值）

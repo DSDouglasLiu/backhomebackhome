@@ -1271,39 +1271,96 @@ function bindSingleEvents(){
 
   // Tab 改變 → 只更新另外兩個選單候選，絕不鎖定
   selSheet.addEventListener('change', ()=>{
-    rebuildSelectOptions();
-    // 若已選區域，依目前 Tab 再限縮車號
-    const area = (selArea.value||'').trim();
-    if (area){
-      const cars = new Set();
-      SINGLE_ITEMS.forEach(it=>{
-        const a = String(it.row[1]||'').trim();
-        const c = String(it.row[2]||'').trim();
-        if (a!==area) return;
-        if (selSheet.value && it.sheetKey !== selSheet.value) return;
-        cars.add(c);
-      });
-      selCar.innerHTML =
-        '<option value="">— 全部 車號 —</option>' +
-        [...cars].sort(localeCmp).map(c=>`<option value="${c}">${c}</option>`).join('');
-    }
+  // 先重建候選
+  rebuildSelectOptions();
+
+  const area = (selArea.value || '').trim();
+  if (!area) return; // 沒選區域就不自動帶車號
+
+  // 計算「在目前 Tab + 該區域」之下的車號清單
+  const cars = new Set();
+  SINGLE_ITEMS.forEach(it=>{
+    const a = String(it.row[1]||'').trim();
+    const c = String(it.row[2]||'').trim();
+    if (a !== area) return;
+    if (selSheet.value && it.sheetKey !== selSheet.value) return;
+    cars.add(c);
   });
+
+  const arr = [...cars].sort(localeCmp);
+  // 重繪車號下拉
+  selCar.innerHTML =
+    '<option value="">— 全部 車號 —</option>' +
+    arr.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+  // 只有一個候選 → 自動選上
+  if (arr.length === 1) {
+    selCar.value = arr[0];
+  }
+});
+
 
   // 區域改變 → 依目前 Tab 過濾車號；不鎖、不改寫 Tab 選項
   selArea.addEventListener('change', ()=>{
-    const area = (selArea.value||'').trim();
-    const cars = new Set();
-    SINGLE_ITEMS.forEach(it=>{
-      const a = String(it.row[1]||'').trim();
-      const c = String(it.row[2]||'').trim();
-      if (area && a!==area) return;
-      if (selSheet.value && it.sheetKey !== selSheet.value) return;
-      cars.add(c);
-    });
-    selCar.innerHTML =
-      '<option value="">— 全部 車號 —</option>' +
-      [...cars].sort(localeCmp).map(c=>`<option value="${c}">${c}</option>`).join('');
+  const area = (selArea.value || '').trim();
+
+  // 依目前（可能有或沒有）Tab 篩出車號候選
+  const cars = new Set();
+  SINGLE_ITEMS.forEach(it=>{
+    const a = String(it.row[1]||'').trim();
+    const c = String(it.row[2]||'').trim();
+    if (area && a !== area) return;
+    if (selSheet.value && it.sheetKey !== selSheet.value) return; // 若已選 Tab，就只看該 Tab
+    cars.add(c);
   });
+
+  const arrCars = [...cars].sort(localeCmp);
+  selCar.innerHTML =
+    '<option value="">— 全部 車號 —</option>' +
+    arrCars.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+  // 只有一個車號 → 自動選車號
+  if (arrCars.length === 1) {
+    selCar.value = arrCars[0];
+  } else {
+    selCar.value = ''; // 多個候選就清空讓使用者選
+  }
+
+  // === 自動帶 Tab ===
+  // 以「已選區域 +（如果已自動選到）車號」來找對應的 Tab
+  const targetSheets = new Set();
+  SINGLE_ITEMS.forEach(it=>{
+    const a = String(it.row[1]||'').trim();
+    const c = String(it.row[2]||'').trim();
+    if (area && a !== area) return;
+    if (selCar.value && c !== selCar.value) return; // 若已選車號就一起過濾
+    targetSheets.add(it.sheetKey);
+  });
+
+  if (targetSheets.size === 1) {
+    const only = [...targetSheets][0];
+    if (selSheet.value !== only) {
+      // 自動帶入正確 Tab
+      selSheet.value = only;
+
+      // 依新的 Tab 再重建一次「車號」候選（確保車號在該 Tab 下仍唯一就直接帶上）
+      const cars2 = new Set();
+      SINGLE_ITEMS.forEach(it=>{
+        const a = String(it.row[1]||'').trim();
+        const c = String(it.row[2]||'').trim();
+        if (a !== area) return;
+        if (it.sheetKey !== only) return;
+        cars2.add(c);
+      });
+      const arr2 = [...cars2].sort(localeCmp);
+      selCar.innerHTML =
+        '<option value="">— 全部 車號 —</option>' +
+        arr2.map(c=>`<option value="${c}">${c}</option>`).join('');
+      if (arr2.length === 1) selCar.value = arr2[0];
+    }
+  }
+});
+
 
   // 車號改變 → 若唯一對應，就「帶入」Tab/區域，但仍不 disable（不變灰）
   selCar.addEventListener('change', ()=>{

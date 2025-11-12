@@ -1841,6 +1841,81 @@ function initSinglePage(){
   withLoading(loadSingleData, '讀取資料…');
 }
 
+let singleLockedBy = null; // 'area' | 'car' | null
+
+function bindSingleEvents(){
+  const selSheet = document.getElementById('selSheet');
+  const selArea  = document.getElementById('selArea');
+  const selCar   = document.getElementById('selCar');
+
+  // Tab 改變（未鎖定時才動態重建）
+  selSheet.addEventListener('change', ()=>{
+    if (!singleLockedBy) rebuildSelectOptions();
+  });
+
+  // 區域 → 限縮車號，且若唯一 Tab 就鎖住 Tab
+  selArea.addEventListener('change', ()=>{
+    const area = (selArea.value||'').trim();
+    if (!area){ if (!singleLockedBy) rebuildSelectOptions(); return; }
+
+    const bySheet = AREA_INDEX.get(area); // Map(sheetKey -> Set(cars))
+    if (!bySheet){ return; }
+
+    // 處理 Tab：若該區域只存在於單一 Tab，直接選取並鎖定；若多個，將 Tab 選項限縮到這幾個
+    const keys = Array.from(bySheet.keys());
+    if (!selSheet.value || !bySheet.has(selSheet.value)){
+      if (keys.length === 1){
+        selSheet.innerHTML = `<option value="${keys[0]}">${keys[0]}</option>`;
+        selSheet.value = keys[0];
+        selSheet.disabled = true;
+        singleLockedBy = 'area';
+      }else{
+        selSheet.innerHTML = '<option value="">— 請先選 Tab —</option>' +
+                             keys.map(k=>`<option value="${k}">${k}</option>`).join('');
+        selSheet.disabled = false; // 多個可選，不鎖
+      }
+    }
+
+    // 限縮車號清單（若已鎖定 Tab，僅該 Tab 的車；否則合併所有車）
+    const cars = new Set();
+    if (selSheet.disabled && selSheet.value && bySheet.has(selSheet.value)){
+      bySheet.get(selSheet.value).forEach(c=>cars.add(c));
+    }else{
+      bySheet.forEach(set=>set.forEach(c=>cars.add(c)));
+    }
+    selCar.innerHTML = '<option value="">— 全部 車號 —</option>' +
+                       Array.from(cars).sort(localeCmp).map(c=>`<option value="${c}">${c}</option>`).join('');
+  });
+
+  // 車號 → 反向帶出正確的 Tab 與 區域，並鎖住
+  selCar.addEventListener('change', ()=>{
+    const car = (selCar.value||'').trim();
+    if (!car){ if (!singleLockedBy) rebuildSelectOptions(); return; }
+
+    const matches = CAR_INDEX.get(car) || [];
+    if (matches.length === 1){
+      const { sheetKey, area } = matches[0];
+      selSheet.innerHTML = `<option value="${sheetKey}">${sheetKey}</option>`;
+      selSheet.value = sheetKey; selSheet.disabled = true;
+      selArea.innerHTML  = `<option value="${area}">${area}</option>`;
+      selArea.value = area; selArea.disabled  = true;
+      singleLockedBy = 'car';
+    }else if (matches.length > 1){
+      // 同一車號分散在多個 Tab：請先選 Tab，再依 Tab 唯一化區域
+      const keys = Array.from(new Set(matches.map(m=>m.sheetKey)));
+      selSheet.innerHTML = '<option value="">— 請先選 Tab —</option>' +
+                           keys.map(k=>`<option value="${k}">${k}</option>`).join('');
+      selSheet.disabled = false;
+      selArea.innerHTML = '<option value="">— 待選 Tab 後顯示 —</option>';
+      singleLockedBy = 'car'; // 先鎖定：避免切到其他不相關的條件
+    }
+  });
+}
+
+// 在 initSinglePage() 完成骨架與資料後呼叫一次
+// buildSingleSkeleton(); await loadSingleData(); buildSingleIndexes(); bindSingleEvents();
+
+  
 /* 讀四張表，整理為可篩選的 items */
 async function loadSingleData(){
   SINGLE_ITEMS = [];
@@ -1875,6 +1950,26 @@ async function loadSingleData(){
   rebuildSelectOptions();
 }
 
+let AREA_INDEX = new Map(); // area -> Map(sheetKey -> Set(cars))
+let CAR_INDEX  = new Map(); // car  -> [{sheetKey, area}, …]
+
+function buildSingleIndexes(){
+  AREA_INDEX.clear(); CAR_INDEX.clear();
+  (SINGLE_ITEMS || []).forEach(it=>{
+    const area = String(it.row[1]||'').trim();
+    const car  = String(it.row[2]||'').trim();
+
+    if (!AREA_INDEX.has(area)) AREA_INDEX.set(area, new Map());
+    const m = AREA_INDEX.get(area);
+    if (!m.has(it.sheetKey)) m.set(it.sheetKey, new Set());
+    m.get(it.sheetKey).add(car);
+
+    if (!CAR_INDEX.has(car)) CAR_INDEX.set(car, []);
+    CAR_INDEX.get(car).push({ sheetKey: it.sheetKey, area });
+  });
+}
+  
+  
 /* 依當前條件，重建三個選單的可選值（保留仍有效的既有選擇） */
 function rebuildSelectOptions(){
   const selSheet = document.getElementById('selSheet');
@@ -1920,12 +2015,18 @@ function onSingleQuery(){
 
 /* 點「全部重設」 */
 function onSingleReset(){
+  singleLockedBy = null;
+  document.getElementById('selSheet').disabled = false;
+  document.getElementById('selArea').disabled  = false;
+  document.getElementById('selCar').disabled   = false;
+
   document.getElementById('selSheet').value = '';
   document.getElementById('selArea').value  = '';
   document.getElementById('selCar').value   = '';
   rebuildSelectOptions();
   renderSingleCards([]); // 清空顯示
 }
+
 
 /* 以條件篩選 items */
 function filterItems(sheetKey, area, car){

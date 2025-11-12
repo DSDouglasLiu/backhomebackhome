@@ -423,7 +423,7 @@ const REFRESH_PRESETS = [
 ];
 const REFRESH_STORAGE_KEY = 'dash_refresh_ms';
 let refreshMs = parseInt(localStorage.getItem(REFRESH_STORAGE_KEY) || '', 10);
-if (!Number.isFinite(refreshMs) || refreshMs <= 0) refreshMs = 2*60*1000; // 預設 30 秒
+if (!Number.isFinite(refreshMs) || refreshMs <= 0) refreshMs = 30*1000; // 預設 30 秒
 
 /* 原本的 dashboard 計時器 */
 let dashTimer = null;
@@ -440,7 +440,6 @@ window.onload = function(){
   // 啟動時鐘 & 建立更新頻率控制列
   startClock();
   buildRefreshControls();
-  updateRefreshControlsVisibility();
 
   const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
   if (saved) {
@@ -502,16 +501,6 @@ function buildRefreshControls(){
     else showNotif('切到「整體情報」即可看到最新資料', false);
   };
   box.appendChild(nowBtn);
-}
-
-/* ===== 只在「整體情報」顯示更新時間按鈕 ===== */
-function updateRefreshControlsVisibility(){
-  try{
-    const controls = document.getElementById('refreshControls');
-    if (!controls) return;
-    const show = isDashboardVisible() && !document.body.classList.contains('login');
-    controls.classList.toggle('hide', !show);
-  }catch(e){ /* noop */ }
 }
 
 function openRefreshSaveDialog(ms, label){
@@ -631,7 +620,6 @@ async function handleCredential(resp) {
   } catch (err) { showNotif('登入失敗：' + err.message, true); logout(); }
 }
 function finishLoginUI() {
-  updateRefreshControlsVisibility();
   document.body.classList.remove('login');
   document.getElementById('signin').classList.add('hide');
   const ui = document.getElementById('userInfo'); ui.classList.remove('hide');
@@ -687,7 +675,6 @@ function hideLoading(){ const el=document.getElementById('loading'); if(!el) ret
 async function withLoading(fn,msg='處理中…'){ showLoading(msg); try{ return await fn(); } finally{ hideLoading(); } }
 function showNotif(msg,isErr){ const box=document.getElementById('notif'); box.textContent=msg; box.style.background=isErr?'rgba(248,113,113,.9)':'rgba(15,23,42,.85)'; box.classList.add('show'); setTimeout(()=>box.classList.remove('show'), 2500); }
 function enterLoginView(){
-  updateRefreshControlsVisibility();
   // 標記為登入畫面
   document.body.classList.add('login');
 
@@ -986,8 +973,6 @@ function switchPane(targetId){
     if (el) el.classList.toggle('hide', id !== targetId);
   });
 
-  updateRefreshControlsVisibility();
-
   // 整體情報：啟動自動刷新；其他頁停掉
   if (targetId === 'pane-dashboard') {
     buildDashboardTabs();
@@ -1019,7 +1004,6 @@ function stopDashboardAutoRefresh() {
 }
 // 頁面可見性切換時自動暫停/恢復
 document.addEventListener('visibilitychange', () => {
-  updateRefreshControlsVisibility();
   if (document.hidden) stopDashboardAutoRefresh();
   else if (isDashboardVisible()) startDashboardAutoRefresh();
 });
@@ -1310,31 +1294,53 @@ function bindSingleEvents(){
     refreshCarOptions();
   };
 
-  selArea.onchange = ()=>{
+  
+selArea.onchange = ()=>{
     if (singleLockedBy === 'car'){
       showNotif('已選定車號；要更換請點「全部重設」', true);
       return;
     }
-    // 選了區域 → 車號收斂；且鎖住「分頁」
-    refreshCarOptions();
-    selSheet.disabled = !!selArea.value;
-    if (!selArea.value){
+    // 選了區域 → 收斂車號；並自動收斂/鎖住分頁（Tab）避免錯配
+    const areaVal = selArea.value.trim();
+    if (areaVal){
+      // 找出該區域隸屬的分頁（通常唯一）
+      const candidates = SHEET_CONFIGS.map(s=>s.key).filter(k => {
+        const st = SINGLE_STORE[k];
+        return !!(st && st.byArea && st.byArea.has(areaVal));
+      });
+      if (candidates.length === 1){
+        selSheet.value = candidates[0];
+      } else if (candidates.length > 1){
+        // 若目前選到的分頁不在候選清單中，就選第一個候選
+        if (!candidates.includes(selSheet.value)) selSheet.value = candidates[0];
+      } else {
+        // 沒找到：保留目前分頁（理論上不會發生）
+      }
+      selSheet.disabled = true;      // 鎖住分頁，避免錯配造成查無資料
+      refreshCarOptions(true);       // 依區域收斂車號（try keep previous car if valid）
+      singleLockedBy = 'area';       // 記錄目前由「區域」鎖住
+    } else {
+      // 清掉區域 → 解鎖分頁
       selSheet.disabled = false;
       singleLockedBy = null;
+      refreshCarOptions();           // 還原車號清單
     }
   };
 
-  selCar.onchange = ()=>{
+
+  
+selCar.onchange = ()=>{
     if (!selCar.value){
       // 清掉車 → 解除鎖定
       selArea.disabled = false;
       selSheet.disabled = !!selArea.value;
       singleLockedBy = null;
       refreshAreaOptions();
+      refreshCarOptions(); // 還原
       return;
     }
     // 選了車 → 反向收斂到該車所屬的唯一區域與分頁並鎖定
-    const keys = getActiveScope();
+    const keys = SHEET_CONFIGS.map(s=>s.key); // 跨表尋找，避免當前分頁不符
     let firstArea='', firstSheet='';
     keys.forEach(k=>{
       (SINGLE_STORE[k]?.byCar.get(selCar.value)||[]).forEach(a=>{
@@ -1346,11 +1352,15 @@ function bindSingleEvents(){
       selArea.disabled = true;
       selArea.value = firstArea;
       refreshAreaOptions(true);
+      refreshCarOptions(true);
     }
-    selSheet.value   = firstSheet;
+    if (firstSheet){
+      selSheet.value   = firstSheet;
+    }
     selSheet.disabled= true;
     singleLockedBy = 'car';
   };
+
 
   btnSearch.onclick = ()=> runSingleQuery();
   btnReset.onclick  = ()=> resetSingleUI();

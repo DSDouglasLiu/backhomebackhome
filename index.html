@@ -636,9 +636,14 @@ function finishLoginUI() {
   document.getElementById('signin').classList.add('hide');
   const ui = document.getElementById('userInfo'); ui.classList.remove('hide');
   ui.style.display = ''; // 還原由 CSS 控制
-  document.getElementById('userDisplay').innerHTML = `${currentUser.name||''} &lt;${currentUser.email}&gt; ｜ 權限：<b>${currentUser.permission}</b>`;
-  document.getElementById('tabs').classList.remove('hide');
-  document.getElementById('content').classList.remove('hide');
+const nameSafe  = escapeHtml(currentUser.name || '');
+const emailSafe = escapeHtml(currentUser.email || '');
+const permSafe  = escapeHtml(currentUser.permission || '');
+document.getElementById('userDisplay').innerHTML =
+  `${nameSafe} &lt;${emailSafe}&gt; ｜ 權限：<b>${permSafe}</b>`;
+document.getElementById('tabs').classList.remove('hide');
+document.getElementById('content').classList.remove('hide');
+
   if (currentUser.permission === '檢視') showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
   // ★ 進入後統一切回「登錄」頁，避免上次停在整體情報
   switchPane('pane-punch');
@@ -665,6 +670,16 @@ function logout() {
   showNotif('已登出', false);
 }
 
+/* ---------------- 工具 ---------------- */
+function escapeHtml(str){
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
 
 
 /* ---------------- 工具 ---------------- */
@@ -817,8 +832,14 @@ function renderVehicles(cfg, data) {
   rows.forEach((row, idx) => {
     const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim(); const baseRow = headerRowIdx+2+idx;
     const {completed,total} = computeCompletion(cfg, header, row);
-    const card = document.createElement('div'); card.className='veh-card';
-    card.innerHTML = `<div><div class="veh-title-main">${area}</div><div class="veh-title-sub">${car}</div></div>`;
+    const card = document.createElement('div');
+card.className = 'veh-card';
+card.innerHTML =
+  `<div>
+     <div class="veh-title-main">${escapeHtml(area)}</div>
+     <div class="veh-title-sub">${escapeHtml(car)}</div>
+   </div>`;
+
     // 讓名片上方標題區可點擊看詳情（採用整體情報樣式）
 const headWrap = card.querySelector(':scope > div:first-child');
 if (headWrap){
@@ -1430,15 +1451,16 @@ function runSingleQuery(){
       const car =String(r[2]||'').trim();
       if ((selArea && area!==selArea) || (selCar && car!==selCar)) return;
       const latest = getLatestStatus(st.cfg, st.header, r);
-      const card = document.createElement('div');
-      card.className = 'veh-card';
-      Object.assign(card.style,{display:'flex',alignItems:'center',justifyContent:'center',textAlign:'center'});
-      card.innerHTML = `
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <div class="veh-title-sub" style="font-weight:700;">${area}</div>
-          <div class="veh-title-sub" style="font-weight:700;">${car}</div>
-          <div class="veh-title-sub" style="font-weight:700;">${latest}</div>
-        </div>`;
+const card = document.createElement('div');
+card.className = 'veh-card';
+Object.assign(card.style,{display:'flex',alignItems:'center',justifyContent:'center',textAlign:'center'});
+card.innerHTML = `
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    <div class="veh-title-sub" style="font-weight:700;">${escapeHtml(area)}</div>
+    <div class="veh-title-sub" style="font-weight:700;">${escapeHtml(car)}</div>
+    <div class="veh-title-sub" style="font-weight:700;">${escapeHtml(latest)}</div>
+  </div>`;
+
       card.onclick = ()=> openDetailModal(k, r);
       items.push({k, idx: Number(r[0]||0), el:card});
     });
@@ -1477,6 +1499,7 @@ function getLatestStatus(cfg, header, row){
 }
 
 /* --------------- Overlay 1：清單 --------------- */
+/* --------------- Overlay 1：清單 --------------- */
 function openListModal(sheetKey, step, type, locValue){
   const {cfg, header, rows} = ALL_SHEETS[sheetKey];
   const list = [];
@@ -1494,10 +1517,13 @@ function openListModal(sheetKey, step, type, locValue){
 
   const box=document.createElement('div');
   box.className='modal';
-  const titleText = (type==='loc') ? `${sheetKey}：${step}＝${locValue}` : `${sheetKey}：${step}（${type==='done'?'完成':'未完成'}）`;
+  const titleText = (type==='loc')
+    ? `${sheetKey}：${step}＝${locValue}`
+    : `${sheetKey}：${step}（${type==='done'?'完成':'未完成'}）`;
+
   box.innerHTML = `
     <div class="dash-close">✕</div>
-    <h3 style="font-size:18px;margin:0 0 8px;">${titleText}</h3>
+    <h3 style="font-size:18px;margin:0 0 8px;">${escapeHtml(titleText)}</h3>
     <div style="max-height:70vh; overflow:auto; padding-right:6px;">
       ${list.length? '' : '<div style="opacity:.7">目前沒有資料</div>'}
     </div>
@@ -1507,13 +1533,15 @@ function openListModal(sheetKey, step, type, locValue){
 
   const scroller = box.querySelector('div[style*="overflow:auto"]');
   list.forEach(r=>{
-    const area=String(r[1]||'').trim(); const car=String(r[2]||'').trim();
+    const area  = String(r[1]||'').trim();
+    const car   = String(r[2]||'').trim();
     const latest = getLatestStatus(ALL_SHEETS[sheetKey].cfg, ALL_SHEETS[sheetKey].header, r);
+
     const row = document.createElement('div'); row.className='list-item';
     row.innerHTML = `
       <div class="list-left">
-        <div class="list-title">${area}　<span style="font-weight:900">${car}</span></div>
-        <div class="list-sub">最新狀態：${latest}</div>
+        <div class="list-title">${escapeHtml(area)}　<span style="font-weight:900">${escapeHtml(car)}</span></div>
+        <div class="list-sub">最新狀態：${escapeHtml(latest)}</div>
       </div>
       <div><button class="btn btn--primary btn--sm">詳細資料</button></div>
     `;
@@ -1522,10 +1550,11 @@ function openListModal(sheetKey, step, type, locValue){
   });
 }
 
+
 /* --------------- Overlay 2：單車詳情 --------------- */
-// 取代原本的 openDetailModal，支援兩種呼叫方式：
-// - openDetailModal(sheetKey, row)       // 供整體情報（用 ALL_SHEETS）
-// - openDetailModal(cfgObject, row, headerArray) // 供名片（打卡頁）直接帶 cfg 與 header
+/* --------------- Overlay 2：單車詳情 --------------- */
+// - openDetailModal(sheetKey, row)
+// - openDetailModal(cfgObject, row, headerArray)
 function openDetailModal(sheetOrKey, row, headerOverride){
   // 取得 cfg / header
   let cfg, header;
@@ -1552,27 +1581,26 @@ function openDetailModal(sheetOrKey, row, headerOverride){
     groups.push({ title:'狀態', cols: cfg.steps });
   }
 
-  // 組畫面（沿用整體情報用的表格樣式）
   const box = document.createElement('div');
   box.className = 'modal';
   let html = `
     <div class="dash-close">✕</div>
-    <div style="font-weight:900;margin-bottom:8px;">${cfg.key}</div>
-    <div style="margin-bottom:10px;"><b>${area}</b>　<span style="font-weight:900">${car}</span></div>
+    <div style="font-weight:900;margin-bottom:8px;">${escapeHtml(cfg.key)}</div>
+    <div style="margin-bottom:10px;"><b>${escapeHtml(area)}</b>　<span style="font-weight:900">${escapeHtml(car)}</span></div>
   `;
 
   groups.forEach(g=>{
-    html += `<div style="font-weight:800;margin:6px 0 4px;">${g.title}</div>
+    html += `<div style="font-weight:800;margin:6px 0 4px;">${escapeHtml(g.title)}</div>
       <table class="detail-table">
-        <thead><tr>${g.cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+        <thead><tr>${g.cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
         <tbody><tr>${
           g.cols.map(c=>{
             const idx = header.indexOf(c);
             const v   = idx>=0 ? String(row[idx]||'').trim() : '';
-            // 停車位置顯示文字，其餘欄位顯示時間（自動格式化）
-            return c==='車暫停位置'
-              ? `<td>${v||''}</td>`
-              : `<td>${v?formatSheetTime(v):''}</td>`;
+            const cellText = (c === '車暫停位置')
+              ? (v || '')
+              : (v ? formatSheetTime(v) : '');
+            return `<td>${escapeHtml(cellText)}</td>`;
           }).join('')
         }</tr></tbody>
       </table>`;
@@ -1582,6 +1610,7 @@ function openDetailModal(sheetOrKey, row, headerOverride){
   const close = openModal(box);
   box.querySelector('.dash-close').onclick = close;
 }
+
 
 
 /* ====== 其餘舊有的「確認/修改時間」小視窗 ====== */
@@ -2007,19 +2036,20 @@ function renderSingleCards(items){
   for (const it of items){
     const area = String(it.row?.[1]||'').trim();
     const car  = String(it.row?.[2]||'').trim();
-    const latest = getLatestStatus(it.cfg, it.header, it.row); // 你原本已有的函式
+    const latest = getLatestStatus(it.cfg, it.header, it.row);
 
     const card = document.createElement('div');
     card.className = 'single-card';
     card.innerHTML = `
-      <div class="single-line">${area}</div>
-      <div class="single-line">${car}</div>
-      <div class="single-line">${latest}</div>
+      <div class="single-line">${escapeHtml(area)}</div>
+      <div class="single-line">${escapeHtml(car)}</div>
+      <div class="single-line">${escapeHtml(latest)}</div>
     `;
     card.addEventListener('click', () => openDetailModal(it.sheetKey, it.row));
     box.appendChild(card);
   }
 }
+
 
 /* 小工具 */
 const uniq = arr => Array.from(new Set(arr.filter(Boolean)));

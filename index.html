@@ -787,12 +787,20 @@ function openModal(element){
 async function loadSheetData(key){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);
   document.getElementById('vehList').textContent = '讀取中...';
-  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+
+  const r = await fetch(
+    API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
+  );
   const j = await r.json();
-  if (j.error){ document.getElementById('vehList').textContent = '❌ '+j.error; return; }
+  if (j.error){
+    document.getElementById('vehList').textContent = '❌ ' + j.error;
+    return;
+  }
   sheetData = j.values || [];
   renderVehicles(cfg, sheetData);
 }
+
+  
 function isCompletedValue(v){ if (v==null) return false; const s=String(v).trim(); return !!s && s!=='—' && s!=='-'; }
 
 /* ====== 打卡頁 renderVehicles ====== */
@@ -1086,10 +1094,12 @@ async function buildDashboard(silent = false){
     const work = async () => {
     // 取回四張表
     const results = await Promise.all(
-      SHEET_CONFIGS.map(async cfg => {
-        const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
-        const j = await r.json();
-        const values = j.values || [];
+  SHEET_CONFIGS.map(async cfg => {
+    const r = await fetch(
+      API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
+    );
+    const j = await r.json();
+    const values = j.values || [];
         const headerIdx = values.findIndex(
           r => Array.isArray(r) &&
                String(r[0]||'').trim() === '編號' &&
@@ -1252,7 +1262,9 @@ function buildSingleSkeleton(){
 async function loadSingleData(){
   const results = await Promise.all(
     SHEET_CONFIGS.map(async cfg => {
-      const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+      const r = await fetch(
+        API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
+      );
       const j = await r.json();
       const values = j.values || [];
       const headerIdx = values.findIndex(
@@ -1890,8 +1902,10 @@ function initSinglePage(){
 async function loadSingleData(){
   SINGLE_ITEMS = [];
   const results = await Promise.all(
-    SHEET_CONFIGS.map(async cfg=>{
-      const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+    SHEET_CONFIGS.map(async cfg => {
+      const r = await fetch(
+        API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
+      );
       const j = await r.json();
       const values = j.values || [];
       const headerIdx = values.findIndex(

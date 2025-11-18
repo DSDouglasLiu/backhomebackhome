@@ -3,12 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- QUICK CSP (meta): immediate protection; still allows inline scripts for compatibility.
-       Long term: remove 'unsafe-inline' and 'unsafe-eval' after migrating inline JS to external files. -->
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self' https:; script-src 'self' https://accounts.google.com https://apis.google.com https://www.gstatic.com 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://oauth2.googleapis.com https://script.google.com https://accounts.google.com https://www.googleapis.com https://apis.google.com; frame-src https://accounts.google.com https://accounts.google.com/ https://accounts.google.com/o/ https://apis.google.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; object-src 'none'; base-uri 'self'; form-action 'self';">
-
   <title>車流人流退場情報</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
@@ -87,7 +81,7 @@ body.dark .tab, body.dark .btn-tab{background:transparent}
 body.dark .seg-btn{ background:transparent; }
 .seg-btn:hover{ background:rgba(31,111,229,.06); }
 .seg-btn.active{ background:var(--primary-600); color:#fff; border-color:var(--primary-600); }
-.seg-btn:focus-visible{ outline:2px solid var(--focus);outline-offset:2px; }
+.seg-btn:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
 .seg-btn[disabled]{ cursor:not-allowed; }
 
 /* =========== 原「登錄」頁卡片 =========== */
@@ -198,7 +192,7 @@ body.dark .stat-pill{ background:rgba(2,6,23,.5); }
 /* 停車位置卡片（單欄寬） */
 .loc-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-top:8px; }
 .loc-pill{ border:1px dashed var(--border); border-radius:12px; padding:10px; background:rgba(255,255,255,.85); display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
-body.dark .loc-pill{ background:rgba(15,23,42,0.28); }
+body.dark .loc-pill{ background:rgba(15,23,42,.28); }
 .loc-name{ font-weight:700; }
 .loc-num{ font-size:22px; font-weight:900; color:#2563eb; }
 
@@ -228,10 +222,77 @@ body.dark .loc-pill{ background:rgba(15,23,42,0.28); }
   align-items:center;
 }
 .topbar-grid .left-title{ grid-area: 1 / 1 / 2 / 2; }
-top of file... (rest omitted)
+.topbar-grid .left-tabs{  grid-area: 2 / 1 / 3 / 2; }
+.topbar-grid .right-user{
+  grid-area: 1 / 2 / 2 / 3;
+  display:flex; align-items:center; gap:12px; justify-content:flex-end;
+}
+.topbar-grid .right-refresh{ grid-area: 2 / 2 / 3 / 3; }
+
+/* 讓時鐘與頻率鈕靠右，間距更緊一些 */
+.refresh-bar{ margin:0; display:flex; gap:8px; align-items:center; justify-content:flex-end; }
+.clock{ font-weight:800; font-variant-numeric: tabular-nums; letter-spacing:.5px; }
+
+/* 登入頁不顯示右側的更新列，但保留標題 */
+body.login .right-refresh{ display:none !important; }
+
+/* Modal 版面安全高度與配色 */
+.modal{ max-height: calc(100dvh - 48px); overflow:auto; padding-right:44px !important; max-width:96vw !important; border-radius:12px; }
+@supports not (height: 100dvh){ .modal{ max-height: 90vh; } }
+.detail-table th{ background: var(--primary-700) !important; color:#fff; }
+body.dark .detail-table th{ background: var(--primary-600) !important; }
+.detail-table, .detail-table th, .detail-table td{ border-color: var(--border); }
+.detail-table thead th:first-child{ border-top-left-radius:10px; }
+.detail-table thead th:last-child{  border-top-right-radius:10px; }
+/* 登入模式：只留 Google 登入按鈕與大標題，其他一律隱藏 */
+body.login #mainTabs,
+body.login .right-refresh,
+body.login #userInfo,
+body.login #tabs,
+body.login #content,
+body.login .tab-pane {
+  display: none !important;
+}
+.user-info{ display:flex; align-items:center; gap:12px; font-size:.875rem; }
+
+/* ===== 個別情報樣式 ===== */
+.indiv-row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+.indiv-row select{ min-width:240px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+.indiv-row select[disabled]{ opacity:.6; cursor:not-allowed; }
+.indiv-actions .btn{ min-width:96px; }
+.indiv-cards-grid{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-top:8px; }
+.indiv-card{ border:1px solid var(--border); background:#fff; border-radius:12px; padding:12px; box-shadow:var(--shadow-card); cursor:pointer; }
+body.dark .indiv-card{ background:rgba(15,23,42,.30); }
+.indiv-card .top{ font-weight:600; margin-bottom:6px; }
+.mini-badge{ display:inline-block; font-size:12px; padding:2px 6px; border-radius:999px; background:#eef2ff; color:#3730a3; }
+.indiv-card .mid{ font-size:20px; font-weight:800; letter-spacing:.5px; margin-bottom:6px; }
+.indiv-card .bot{ color:#334155; font-size:14px; }
+.step-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.step-cell{ background:#1d4ed8; color:#fff; padding:8px; border-radius:8px; text-align:center; font-size:14px; }
+@media (max-width: 1200px){ .indiv-cards-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width: 680px){ .indiv-cards-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } .indiv-row select{ min-width:180px; } }
+/* 個別情報：精簡名片樣式（置中、三行同字級） */
+.single-list{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+.single-card{
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.9);
+  border-radius:12px; padding:14px;
+  box-shadow:var(--shadow-card);
+  text-align:center; cursor:pointer;
+}
+body.dark .single-card{ background:rgba(15,23,42,.30); }
+.single-card:hover{ filter:brightness(1.015); }
+.single-line{
+  font-size:var(--fz-title);
+  line-height:var(--lh-title);
+  font-weight:var(--fw-title);
+  color:var(--text-strong);
+}
+.single-line + .single-line{ margin-top:6px; }
+
+
 </style>
 </head>
-
 <body>
 <div class="wrap">
   <!-- 兩列兩欄的頂部排版 -->

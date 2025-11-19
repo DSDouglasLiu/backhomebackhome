@@ -436,43 +436,32 @@ const TOKEN_STORAGE_KEY = 'ddcc_user_token';
 let idToken = null;
 
 /* ---------------- 初始登入與頁籤 ---------------- */
-/* ---------------- 初始登入與頁籤 ---------------- */
 window.onload = function(){
   // 啟動時鐘 & 建立更新頻率控制列
   startClock();
   buildRefreshControls();
   updateRefreshControlsVisibility();
 
-  const saved = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+  const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
   if (saved) {
     idToken = saved;
-    fetch(API_BASE + '?action=verify', {
-      method: 'POST',
-      headers: { 'Content-Type':'text/plain;charset=utf-8' },
-      body: JSON.stringify({ idToken })
-    })
-    .then(r => r.json())
-    .then(j => {
+    fetch(API_BASE + '?action=verify', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken })})
+    .then(r=>r.json())
+    .then(j=>{
       if (j.error) throw new Error(j.error);
       currentUser = j;
       finishLoginUI();
       buildTabs();
       loadSheetData(currentSheetKey);
-    })
-    .catch(() => {
-      // token 失效就清掉並重新顯示登入
+    }).catch(()=>{
       logout();
       initGoogleSignIn();
     });
   } else {
-    // 沒有已儲存的 token，就顯示 Google 登入
     initGoogleSignIn();
   }
-
-  // 綁定登出按鈕
   document.getElementById('logoutBtn').addEventListener('click', logout);
 };
-
 
 /* ===== 時鐘（時區 +8、hh:mm:ss） ===== */
 function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }

@@ -974,14 +974,17 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
   try {
     await withLoading(async () => {
       // 同時帶 email + idToken，後端要用哪個驗證都可以
+
       const body = {
-        sheet:  cfg.sheet,
-        email:  currentUser.email || '',
-        idToken: (typeof idToken !== 'undefined' ? idToken : ''),
-        writes: [
-          { row: rowNumber, col: colIdx + 1, value: now }
-        ]
-      };
+  sheet:  cfg.sheet,
+  email:  currentUser.email || '',
+  idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+  mode: 'punch',   // ★ 告訴後端：這次是打卡行為
+  writes: [
+    { row: rowNumber, col: colIdx + 1, value: now }
+  ]
+};
+
 
       const r = await fetch(API_BASE + '?action=update', {
         method: 'POST',

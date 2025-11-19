@@ -442,26 +442,33 @@ window.onload = function(){
   buildRefreshControls();
   updateRefreshControlsVisibility();
 
-  const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
+  const saved = sessionStorage.getItem(TOKEN_STORAGE_KEY);
   if (saved) {
     idToken = saved;
-    fetch(API_BASE + '?action=verify', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken })})
-    .then(r=>r.json())
-    .then(j=>{
+    fetch(API_BASE + '?action=verify', {
+      method: 'POST',
+      headers: { 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify({ idToken })
+    })
+    .then(r => r.json())
+    .then(j => {
       if (j.error) throw new Error(j.error);
       currentUser = j;
       finishLoginUI();
       buildTabs();
       loadSheetData(currentSheetKey);
-    }).catch(()=>{
+    })
+    .catch(() => {
       logout();
       initGoogleSignIn();
     });
   } else {
     initGoogleSignIn();
   }
+
   document.getElementById('logoutBtn').addEventListener('click', logout);
 };
+
 
 /* ===== 時鐘（時區 +8、hh:mm:ss） ===== */
 function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
@@ -934,25 +941,41 @@ async function onStopSelect(cfg,rowNumber,header,st,value,span){
     const j=await r.json(); if(!j.ok) throw new Error(j.error||'unknown'); await sleep(200); await reloadSheet();
   },'更新中…'); span.textContent=value||''; showNotif(value?'已更新車暫停位置':'已清除車暫停位置',false);
 }
-async function onPunchClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl){
-  if (!currentUser) return alert('請先登入');
-  if (currentUser.permission!=='全功能') return alert('權限不足');
+// 打卡按鈕事件
+async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
+  if (!currentUser) {
+    alert('請先登入');
+    return;
+  }
+  if (currentUser.permission !== '全功能') {
+    alert('權限不足');
+    return;
+  }
 
   const colIdx = header.indexOf(st);
-  if (colIdx === -1) return alert('此欄位不存在：' + st);
+  if (colIdx === -1) {
+    alert('此欄位不存在：' + st);
+    return;
+  }
 
-  if (timeSpan.textContent && timeSpan.textContent.trim() && timeSpan.textContent.trim()!=='—'){
+  // 已經有時間就不允許再次打卡
+  if (
+    timeSpan.textContent &&
+    timeSpan.textContent.trim() &&
+    timeSpan.textContent.trim() !== '—'
+  ) {
     showNotif('此步驟已有時間，請用「修改」或「刪除」', true);
     return;
   }
 
+  // 取得目前台北時間 HH:mm:ss
   const now = getTaipeiHHMMSS();
 
   await withLoading(async () => {
-    // ★ 這裡改成帶 idToken，email 不再傳給後端當授權依據
+    // 這裡改成帶 idToken，讓後端用 idToken 驗證
     const body = {
       sheet: cfg.sheet,
-      idToken,  // <── 使用全域的 idToken（登入後就有了）
+      idToken,
       writes: [
         { row: rowNumber, col: colIdx + 1, value: now }
       ]
@@ -965,19 +988,24 @@ async function onPunchClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,bt
     });
 
     const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'unknown');
+    if (!j.ok) {
+      throw new Error(j.error || 'unknown');
+    }
 
+    // 稍微等一下，確保後端寫入完成再重載
     await sleep(200);
     await reloadSheet();
   }, '打卡中…');
 
+  // 前端即時更新畫面
   timeSpan.textContent = formatSheetTime(now);
   btnPunch.disabled = true;
-  btnEdit.disabled  = false;
-  btnDel.disabled   = false;
+  btnEdit.disabled = false;
+  btnDel.disabled = false;
   unlockNext(rowEl);
   showNotif('已打卡', false);
 }
+
 
 async function onEditTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl,currentVal){
   if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');

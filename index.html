@@ -470,6 +470,7 @@ window.onload = function(){
 };
 
 
+
 /* ===== 時鐘（時區 +8、hh:mm:ss） ===== */
 function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
 function startClock(){
@@ -942,6 +943,7 @@ async function onStopSelect(cfg,rowNumber,header,st,value,span){
   },'更新中…'); span.textContent=value||''; showNotif(value?'已更新車暫停位置':'已清除車暫停位置',false);
 }
 // 打卡按鈕事件
+// 打卡按鈕事件
 async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
   if (!currentUser) {
     alert('請先登入');
@@ -971,40 +973,55 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
   // 取得目前台北時間 HH:mm:ss
   const now = getTaipeiHHMMSS();
 
-  await withLoading(async () => {
-    // 這裡改成帶 idToken，讓後端用 idToken 驗證
-    const body = {
-      sheet: cfg.sheet,
-      idToken,
-      writes: [
-        { row: rowNumber, col: colIdx + 1, value: now }
-      ]
-    };
+  try {
+    await withLoading(async () => {
+      // 同時帶 email + idToken，後端不管用哪一個驗證都吃得到
+      const body = {
+        sheet:  cfg.sheet,
+        email:  currentUser.email || '',
+        idToken: idToken || '',
+        writes: [
+          { row: rowNumber, col: colIdx + 1, value: now }
+        ]
+      };
 
-    const r = await fetch(API_BASE + '?action=update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(body)
-    });
+      const r = await fetch(API_BASE + '?action=update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      });
 
-    const j = await r.json();
-    if (!j.ok) {
-      throw new Error(j.error || 'unknown');
-    }
+      let j;
+      try {
+        j = await r.json();
+      } catch (e) {
+        // 例如被 302 轉去一個 HTML（非 JSON）頁面
+        throw new Error('伺服器回傳不是 JSON，可能未登入 Apps Script 或權限設定有問題');
+      }
 
-    // 稍微等一下，確保後端寫入完成再重載
-    await sleep(200);
-    await reloadSheet();
-  }, '打卡中…');
+      if (!j.ok) {
+        throw new Error(j.error || '更新失敗');
+      }
 
-  // 前端即時更新畫面
-  timeSpan.textContent = formatSheetTime(now);
-  btnPunch.disabled = true;
-  btnEdit.disabled = false;
-  btnDel.disabled = false;
-  unlockNext(rowEl);
-  showNotif('已打卡', false);
+      // 稍微等一下，再重載資料
+      await sleep(200);
+      await reloadSheet();
+    }, '打卡中…');
+
+    // ✅ 後端成功更新後，才更新前端畫面
+    timeSpan.textContent = formatSheetTime(now);
+    btnPunch.disabled    = true;
+    btnEdit.disabled     = false;
+    btnDel.disabled      = false;
+    unlockNext(rowEl);
+    showNotif('已打卡', false);
+
+  } catch (err) {
+    console.error('打卡失敗：', err);
+    showNotif('打卡失敗：' + err.message, true);
+  }
 }
+
 
 
 async function onEditTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl,currentVal){

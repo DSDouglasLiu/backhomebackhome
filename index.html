@@ -943,8 +943,8 @@ async function onStopSelect(cfg,rowNumber,header,st,value,span){
   },'更新中…'); span.textContent=value||''; showNotif(value?'已更新車暫停位置':'已清除車暫停位置',false);
 }
 // 打卡按鈕事件
-// 打卡按鈕事件
 async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
+  // 基本權限檢查
   if (!currentUser) {
     alert('請先登入');
     return;
@@ -954,6 +954,7 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
     return;
   }
 
+  // 找到這個步驟在表頭中的欄位
   const colIdx = header.indexOf(st);
   if (colIdx === -1) {
     alert('此欄位不存在：' + st);
@@ -961,11 +962,8 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
   }
 
   // 已經有時間就不允許再次打卡
-  if (
-    timeSpan.textContent &&
-    timeSpan.textContent.trim() &&
-    timeSpan.textContent.trim() !== '—'
-  ) {
+  const nowText = (timeSpan.textContent || '').trim();
+  if (nowText && nowText !== '—') {
     showNotif('此步驟已有時間，請用「修改」或「刪除」', true);
     return;
   }
@@ -975,11 +973,11 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
 
   try {
     await withLoading(async () => {
-      // 同時帶 email + idToken，後端不管用哪一個驗證都吃得到
+      // 同時帶 email + idToken，後端要用哪個驗證都可以
       const body = {
         sheet:  cfg.sheet,
         email:  currentUser.email || '',
-        idToken: idToken || '',
+        idToken: (typeof idToken !== 'undefined' ? idToken : ''),
         writes: [
           { row: rowNumber, col: colIdx + 1, value: now }
         ]
@@ -995,24 +993,24 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
       try {
         j = await r.json();
       } catch (e) {
-        // 例如被 302 轉去一個 HTML（非 JSON）頁面
-        throw new Error('伺服器回傳不是 JSON，可能未登入 Apps Script 或權限設定有問題');
+        // 例如被 302 轉去 HTML 頁面（非 JSON）
+        throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
       }
 
       if (!j.ok) {
         throw new Error(j.error || '更新失敗');
       }
 
-      // 稍微等一下，再重載資料
+      // 稍微等一下，確保後端寫入完成再重載
       await sleep(200);
       await reloadSheet();
     }, '打卡中…');
 
     // ✅ 後端成功更新後，才更新前端畫面
     timeSpan.textContent = formatSheetTime(now);
-    btnPunch.disabled    = true;
-    btnEdit.disabled     = false;
-    btnDel.disabled      = false;
+    btnPunch.disabled = true;
+    btnEdit.disabled  = false;
+    btnDel.disabled   = false;
     unlockNext(rowEl);
     showNotif('已打卡', false);
 
@@ -1021,6 +1019,7 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
     showNotif('打卡失敗：' + err.message, true);
   }
 }
+
 
 
 

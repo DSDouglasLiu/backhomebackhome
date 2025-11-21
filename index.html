@@ -828,7 +828,7 @@ function isCompletedValue(v){ if (v==null) return false; const s=String(v).trim(
 
 /* ====== 打卡頁 renderVehicles ====== */
 function renderVehicles(cfg, data) {
-  const box = document.getElementById('vehList'); box.innerHTML = '';
+    const box = document.getElementById('vehList'); box.innerHTML = '';
   const canWrite = currentUser?.permission === '全功能';
   const headerRowIdx = data.findIndex(row => Array.isArray(row) && String(row[0]||'').trim()==='編號' && String(row[1]||'').trim().startsWith('區域') && String(row[2]||'').trim()==='車號');
   if (headerRowIdx === -1){ box.textContent='找不到表頭'; return; }
@@ -841,23 +841,23 @@ function renderVehicles(cfg, data) {
     const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim(); const baseRow = headerRowIdx+2+idx;
     const {completed,total} = computeCompletion(cfg, header, row);
     const card = document.createElement('div');
-card.className = 'veh-card';
-card.innerHTML =
-  `<div>
-     <div class="veh-title-main">${escapeHtml(area)}</div>
-     <div class="veh-title-sub">${escapeHtml(car)}</div>
-   </div>`;
+    card.className = 'veh-card';
+    card.innerHTML =
+      `<div>
+         <div class="veh-title-main">${escapeHtml(area)}</div>
+         <div class="veh-title-sub">${escapeHtml(car)}</div>
+       </div>`;
 
     // 讓名片上方標題區可點擊看詳情（採用整體情報樣式）
-const headWrap = card.querySelector(':scope > div:first-child');
-if (headWrap){
-  headWrap.style.cursor = 'pointer';
-  headWrap.setAttribute('title','點我看詳情');
-  headWrap.addEventListener('click', (e)=>{
-    // 用「cfg + header + row」直接呼叫新的 openDetailModal
-    openDetailModal(cfg, row, header);
-  });
-}
+    const headWrap = card.querySelector(':scope > div:first-child');
+    if (headWrap){
+      headWrap.style.cursor = 'pointer';
+      headWrap.setAttribute('title','點我看詳情');
+      headWrap.addEventListener('click', (e)=>{
+        // 用「cfg + header + row」直接呼叫新的 openDetailModal
+        openDetailModal(cfg, row, header);
+      });
+    }
 
     const stepsBox=document.createElement('div');
 
@@ -915,15 +915,58 @@ if (headWrap){
     let memoColIdx=header.indexOf('備註'); if (memoColIdx===-1) memoColIdx=header.length-1;
     memoTA.value=(memoColIdx!==-1 && row[memoColIdx]) ? String(row[memoColIdx]):'';
     const memoBtn=document.createElement('button'); memoBtn.className='btn btn--primary'; memoBtn.textContent='儲存'; memoBtn.disabled=!canWrite;
-    memoBtn.onclick=async()=>{ if(!canWrite) return; await withLoading(async()=>{
-      const body = {
-       sheet:  cfg.sheet,
-       idToken,
-       writes: [{ row: baseRow, col: memoColIdx+1, value: memoTA.value }]
-      };
-      const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-      const j=await r.json(); if(!j.ok) throw new Error(j.error||'unknown'); await sleep(250); await reloadSheet();
-    },'儲存備註…'); showNotif('備註已儲存',false); };
+
+    // 🔽 這裡是更新後的備註儲存邏輯
+    memoBtn.onclick = async () => {
+      if (!canWrite) return;
+
+      if (!currentUser) {
+        alert('請先登入');
+        return;
+      }
+      if (currentUser.permission !== '全功能') {
+        alert('權限不足');
+        return;
+      }
+
+      try {
+        await withLoading(async () => {
+          const body = {
+            sheet:  cfg.sheet,
+            email:  currentUser.email || '',
+            idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+            mode:   'memo',
+            writes: [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }]
+          };
+
+          const r = await fetch(API_BASE + '?action=update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(body)
+          });
+
+          let j;
+          try {
+            j = await r.json();
+          } catch (e) {
+            throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+          }
+
+          if (!j.ok) {
+            throw new Error(j.error || '備註更新失敗');
+          }
+
+          await sleep(250);
+          await reloadSheet();
+        }, '儲存備註…');
+
+        showNotif('備註已儲存', false);
+      } catch (err) {
+        console.error('備註儲存失敗：', err);
+        showNotif('備註儲存失敗：' + err.message, true);
+      }
+    };
+
     memoRow.appendChild(memoTA); memoRow.appendChild(memoBtn); memoWrap.appendChild(memoRow); card.appendChild(memoWrap);
 
     cards.push({ el:card, completed, total, origOrder:idx });
@@ -932,6 +975,8 @@ if (headWrap){
   cards.sort((a,b)=> (a.completed!==b.completed ? a.completed-b.completed : a.origOrder-b.origOrder));
   cards.forEach(c=>box.appendChild(c.el));
 }
+
+  
 function prevDone(cfg, header, row, st){ const idx=cfg.steps.indexOf(st); if (idx===0) return true; const prev=cfg.steps[idx-1]; const col=header.indexOf(prev); if (col===-1) return true; return !!row[col]; }
 async function onStopSelect(cfg,rowNumber,header,st,value,span){
   if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');

@@ -820,25 +820,32 @@ async function loadSheetData(key){
     return;
   }
   sheetData = j.values || [];
-  renderVehicles(cfg, sheetData);
+  (cfg, sheetData);
 }
 
   
 function isCompletedValue(v){ if (v==null) return false; const s=String(v).trim(); return !!s && s!=='—' && s!=='-'; }
 
-/* ====== 打卡頁 renderVehicles ====== */
+/* ====== 打卡頁  ====== */
+/* ====== 打卡頁  (修正版) ====== */
 /* ====== 打卡頁 renderVehicles (修正版) ====== */
 function renderVehicles(cfg, data) {
-  const box = document.getElementById('vehList'); box.innerHTML = '';
+  const box = document.getElementById('vehList'); 
+  box.innerHTML = '';
   const canWrite = currentUser?.permission === '全功能';
 
   // 1. 尋找表頭列
   const headerRowIdx = data.findIndex(row => Array.isArray(row) && String(row[0]||'').trim()==='編號' && String(row[1]||'').trim().startsWith('區域') && String(row[2]||'').trim()==='車號');
-  if (headerRowIdx === -1){ box.textContent='找不到表頭'; return; }
+  
+  if (headerRowIdx === -1){ 
+    box.textContent='找不到表頭'; 
+    return; 
+  }
+  
   const header = data[headerRowIdx].map(c=>String(c||'').trim());
 
-  // 2. 修正 Bug：先保留原始 Row Index，再進行 Filter
-  // 原始程式碼錯誤處：直接 filter 導致 idx 跑掉
+  // 2. ⭐ 修正 Bug 核心：先保留原始 Row Index，再進行 Filter
+  // 這樣即使中間有空行被濾掉，origIdx 依然會是 Google Sheet 中的原始行號 (0-based)
   const rows = data
     .map((row, i) => ({ row, origIdx: i })) // 把原始 index (i) 包進去
     .slice(headerRowIdx+1)
@@ -847,31 +854,33 @@ function renderVehicles(cfg, data) {
        return Array.isArray(r) && String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim();
     });
 
-  if (!rows.length){ box.textContent='(這張表目前沒有車輛資料)'; return; }
+  if (!rows.length){ 
+    box.textContent='(這張表目前沒有車輛資料)'; 
+    return; 
+  }
 
   const cards=[];
   
-  // 3. 遍歷資料 (改用解構取出 row 和 origIdx)
+  // 3. 遍歷資料 (解構取出 row 和 origIdx)
   rows.forEach(({ row, origIdx }, idx) => {
-    const area=String(row[1]||'').trim(); 
-    const car=String(row[2]||'').trim(); 
+    const area = String(row[1]||'').trim(); 
+    const car = String(row[2]||'').trim(); 
     
-    // ⭐ 修正後的行數計算：直接使用原始索引 + 1 (轉為 Sheet 的 1-based index)
+    // ⭐ 關鍵修正：直接使用原始索引 + 1 (轉為 Sheet 的 1-based index)
+    // 這是寫入資料庫(Google Sheet)時真正要用的行號
     const baseRow = origIdx + 1; 
 
-    const {completed,total} = computeCompletion(cfg, header, row);
+    const {completed, total} = computeCompletion(cfg, header, row);
     const card = document.createElement('div');
     card.className = 'veh-card';
+    
+    // 建立卡片標題與詳情點擊事件
     card.innerHTML =
       `<div>
          <div class="veh-title-main">${escapeHtml(area)}</div>
          <div class="veh-title-sub">${escapeHtml(car)}</div>
        </div>`;
 
-    // ... (中間的 UI 產生程式碼保持不變，省略以節省篇幅) ...
-    // 請保留原有的 headWrap click event, stepsBox, memoWrap 等邏輯
-    
-    // 這裡為了確保完整性，將關鍵的 click event 邏輯重述一次：
     const headWrap = card.querySelector(':scope > div:first-child');
     if (headWrap){
       headWrap.style.cursor = 'pointer';
@@ -879,52 +888,99 @@ function renderVehicles(cfg, data) {
       headWrap.addEventListener('click', ()=>{ openDetailModal(cfg, row, header); });
     }
 
-    const stepsBox=document.createElement('div');
-    cfg.steps.forEach(st=>{
-      const colIdx=header.indexOf(st);
-      const rawVal = (colIdx!==-1 && row[colIdx]!=null) ? String(row[colIdx]).trim(): '';
-      const displayVal = rawVal?formatSheetTime(rawVal):'';
-      const rowEl=document.createElement('div'); rowEl.className='step-row';
-      const labelEl=document.createElement('div'); labelEl.className='step-label'; labelEl.textContent=st; rowEl.appendChild(labelEl);
+    // 建立步驟列表
+    const stepsBox = document.createElement('div');
+    cfg.steps.forEach(st => {
+      const colIdx = header.indexOf(st);
+      const rawVal = (colIdx !== -1 && row[colIdx] != null) ? String(row[colIdx]).trim(): '';
+      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
+      
+      const rowEl = document.createElement('div'); 
+      rowEl.className = 'step-row';
+      
+      const labelEl = document.createElement('div'); 
+      labelEl.className = 'step-label'; 
+      labelEl.textContent = st; 
+      rowEl.appendChild(labelEl);
 
-      if (st==='車暫停位置'){
-        // ... (下拉選單邏輯不變) ...
-        const valueEl=document.createElement('div');
-        const sel=document.createElement('select'); sel.className='step-select select';
-        const optEmpty=document.createElement('option'); optEmpty.value=''; optEmpty.textContent='— 請選擇 —'; sel.appendChild(optEmpty);
-        STOP_OPTIONS.forEach(opt=>{ const o=document.createElement('option'); o.value=opt; o.textContent=opt; sel.appendChild(o); });
-        if (rawVal) sel.value=rawVal;
-        const ghost=document.createElement('span'); ghost.style.display='none';
-        valueEl.appendChild(sel); valueEl.appendChild(ghost); rowEl.appendChild(valueEl);
-        const btnG=document.createElement('div'); btnG.className='btn-group'; rowEl.appendChild(btnG);
+      //如果是「車暫停位置」下拉選單
+      if (st === '車暫停位置'){
+        const valueEl = document.createElement('div');
+        const sel = document.createElement('select'); 
+        sel.className = 'step-select select';
         
-        if (!canWrite){ sel.disabled=true; rowEl.classList.add('locked'); }
-        else {
-          const prevOk=prevDone(cfg, header, row, st); if (!prevOk && !rawVal) sel.disabled=true;
-          // ⭐ 這裡會使用修正後的 baseRow
-          sel.onchange=()=>onStopSelect(cfg, baseRow, header, st, sel.value, ghost);
+        const optEmpty = document.createElement('option'); 
+        optEmpty.value = ''; 
+        optEmpty.textContent = '— 請選擇 —'; 
+        sel.appendChild(optEmpty);
+        
+        STOP_OPTIONS.forEach(opt => { 
+            const o = document.createElement('option'); 
+            o.value = opt; 
+            o.textContent = opt; 
+            sel.appendChild(o); 
+        });
+        
+        if (rawVal) sel.value = rawVal;
+        
+        const ghost = document.createElement('span'); 
+        ghost.style.display = 'none';
+        valueEl.appendChild(sel); 
+        valueEl.appendChild(ghost); 
+        rowEl.appendChild(valueEl);
+        
+        const btnG = document.createElement('div'); 
+        btnG.className = 'btn-group'; 
+        rowEl.appendChild(btnG);
+        
+        if (!canWrite){ 
+            sel.disabled = true; 
+            rowEl.classList.add('locked'); 
+        } else {
+            const prevOk = prevDone(cfg, header, row, st); 
+            if (!prevOk && !rawVal) sel.disabled = true;
+            
+            // 使用 baseRow 綁定事件
+            sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value, ghost);
         }
-        stepsBox.appendChild(rowEl); return;
+        stepsBox.appendChild(rowEl); 
+        return;
       }
 
-      // ... (打卡按鈕邏輯) ...
-      const timeSpan=document.createElement('span'); timeSpan.className='step-time'; timeSpan.textContent=displayVal||'—'; rowEl.appendChild(timeSpan);
-      const btnG=document.createElement('div'); btnG.className='btn-group';
-      const btnPunch=document.createElement('button'); btnPunch.className='btn btn--primary btn--sm btn-punch'; btnPunch.textContent='打卡';
-      const btnEdit=document.createElement('button'); btnEdit.className='btn btn--success btn--sm btn-edit'; btnEdit.textContent='修改';
-      const btnDel=document.createElement('button'); btnDel.className='btn btn--danger btn--sm btn-del'; btnDel.textContent='刪除';
-      btnG.appendChild(btnPunch); btnG.appendChild(btnEdit); btnG.appendChild(btnDel); rowEl.appendChild(btnG);
+      // 一般打卡步驟
+      const timeSpan = document.createElement('span'); 
+      timeSpan.className = 'step-time'; 
+      timeSpan.textContent = displayVal || '—'; 
+      rowEl.appendChild(timeSpan);
+      
+      const btnG = document.createElement('div'); 
+      btnG.className = 'btn-group';
+      const btnPunch = document.createElement('button'); btnPunch.className = 'btn btn--primary btn--sm btn-punch'; btnPunch.textContent = '打卡';
+      const btnEdit = document.createElement('button'); btnEdit.className = 'btn btn--success btn--sm btn-edit'; btnEdit.textContent = '修改';
+      const btnDel = document.createElement('button'); btnDel.className = 'btn btn--danger btn--sm btn-del'; btnDel.textContent = '刪除';
+      
+      btnG.appendChild(btnPunch); 
+      btnG.appendChild(btnEdit); 
+      btnG.appendChild(btnDel); 
+      rowEl.appendChild(btnG);
 
-      if (!canWrite){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; rowEl.classList.add('locked'); }
-      else{
-        const prevOk=prevDone(cfg, header, row, st); const hasVal=!!rawVal;
-        if (!prevOk && !hasVal){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; }
-        else{
-          btnPunch.disabled=hasVal; btnEdit.disabled=btnDel.disabled=!hasVal;
-          // ⭐ 這裡會使用修正後的 baseRow
-          btnPunch.onclick=()=>onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
-          btnEdit.onclick =()=>onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
-          btnDel.onclick  =()=>onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+      if (!canWrite){ 
+          btnPunch.disabled = btnEdit.disabled = btnDel.disabled = true; 
+          rowEl.classList.add('locked'); 
+      } else {
+        const prevOk = prevDone(cfg, header, row, st); 
+        const hasVal = !!rawVal;
+        
+        if (!prevOk && !hasVal){ 
+            btnPunch.disabled = btnEdit.disabled = btnDel.disabled = true; 
+        } else {
+          btnPunch.disabled = hasVal; 
+          btnEdit.disabled = btnDel.disabled = !hasVal;
+          
+          // 使用 baseRow 綁定事件
+          btnPunch.onclick = () => onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+          btnEdit.onclick  = () => onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
+          btnDel.onclick   = () => onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
         }
       }
       stepsBox.appendChild(rowEl);
@@ -932,18 +988,31 @@ function renderVehicles(cfg, data) {
 
     card.appendChild(stepsBox);
 
-    // 備註
-    const memoWrap=document.createElement('div'); memoWrap.style.marginTop='8px';
-    const memoRow=document.createElement('div'); memoRow.style.cssText='display:flex;gap:8px;align-items:flex-start;';
-    const memoTA=document.createElement('textarea'); memoTA.className='textarea'; memoTA.placeholder='備註'; memoTA.style.flex='1';
-    let memoColIdx=header.indexOf('備註'); if (memoColIdx===-1) memoColIdx=header.length-1;
-    memoTA.value=(memoColIdx!==-1 && row[memoColIdx]) ? String(row[memoColIdx]):'';
-    const memoBtn=document.createElement('button'); memoBtn.className='btn btn--primary'; memoBtn.textContent='儲存'; memoBtn.disabled=!canWrite;
+    // 備註區塊
+    const memoWrap = document.createElement('div'); 
+    memoWrap.style.marginTop = '8px';
+    const memoRow = document.createElement('div'); 
+    memoRow.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
+    
+    const memoTA = document.createElement('textarea'); 
+    memoTA.className = 'textarea'; 
+    memoTA.placeholder = '備註'; 
+    memoTA.style.flex = '1';
+    
+    let memoColIdx = header.indexOf('備註'); 
+    if (memoColIdx === -1) memoColIdx = header.length - 1; // 若無備註欄，預設最後一欄
+    
+    memoTA.value = (memoColIdx !== -1 && row[memoColIdx]) ? String(row[memoColIdx]) : '';
+    
+    const memoBtn = document.createElement('button'); 
+    memoBtn.className = 'btn btn--primary'; 
+    memoBtn.textContent = '儲存'; 
+    memoBtn.disabled = !canWrite;
 
     memoBtn.onclick = async () => {
       if (!canWrite) return;
       try {
-        // ⭐ 這裡會使用修正後的 baseRow
+        // 使用 baseRow 進行更新
         await postUpdate(
           cfg,
           [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }],
@@ -956,14 +1025,17 @@ function renderVehicles(cfg, data) {
       }
     };
 
-    memoRow.appendChild(memoTA); memoRow.appendChild(memoBtn); memoWrap.appendChild(memoRow); card.appendChild(memoWrap);
+    memoRow.appendChild(memoTA); 
+    memoRow.appendChild(memoBtn); 
+    memoWrap.appendChild(memoRow); 
+    card.appendChild(memoWrap);
 
-    // 這裡的 origOrder 只是為了排序用，跟寫入無關
+    // origOrder 僅用於前端顯示排序
     cards.push({ el:card, completed, total, origOrder:idx });
   });
 
-  cards.sort((a,b)=> (a.completed!==b.completed ? a.completed-b.completed : a.origOrder-b.origOrder));
-  cards.forEach(c=>box.appendChild(c.el));
+  cards.sort((a,b)=> (a.completed !== b.completed ? a.completed - b.completed : a.origOrder - b.origOrder));
+  cards.forEach(c => box.appendChild(c.el));
 }
 // 共用：送出寫入請求（所有寫入都走這裡）
 async function postUpdate(cfg, writes, options = {}) {

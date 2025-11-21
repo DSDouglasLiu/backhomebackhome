@@ -827,18 +827,38 @@ async function loadSheetData(key){
 function isCompletedValue(v){ if (v==null) return false; const s=String(v).trim(); return !!s && s!=='—' && s!=='-'; }
 
 /* ====== 打卡頁 renderVehicles ====== */
+/* ====== 打卡頁 renderVehicles (修正版) ====== */
 function renderVehicles(cfg, data) {
-    const box = document.getElementById('vehList'); box.innerHTML = '';
+  const box = document.getElementById('vehList'); box.innerHTML = '';
   const canWrite = currentUser?.permission === '全功能';
+
+  // 1. 尋找表頭列
   const headerRowIdx = data.findIndex(row => Array.isArray(row) && String(row[0]||'').trim()==='編號' && String(row[1]||'').trim().startsWith('區域') && String(row[2]||'').trim()==='車號');
   if (headerRowIdx === -1){ box.textContent='找不到表頭'; return; }
   const header = data[headerRowIdx].map(c=>String(c||'').trim());
-  const rows = data.slice(headerRowIdx+1).filter(r => Array.isArray(r) && String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim());
+
+  // 2. 修正 Bug：先保留原始 Row Index，再進行 Filter
+  // 原始程式碼錯誤處：直接 filter 導致 idx 跑掉
+  const rows = data
+    .map((row, i) => ({ row, origIdx: i })) // 把原始 index (i) 包進去
+    .slice(headerRowIdx+1)
+    .filter(item => {
+       const r = item.row;
+       return Array.isArray(r) && String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim();
+    });
+
   if (!rows.length){ box.textContent='(這張表目前沒有車輛資料)'; return; }
 
   const cards=[];
-  rows.forEach((row, idx) => {
-    const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim(); const baseRow = headerRowIdx+2+idx;
+  
+  // 3. 遍歷資料 (改用解構取出 row 和 origIdx)
+  rows.forEach(({ row, origIdx }, idx) => {
+    const area=String(row[1]||'').trim(); 
+    const car=String(row[2]||'').trim(); 
+    
+    // ⭐ 修正後的行數計算：直接使用原始索引 + 1 (轉為 Sheet 的 1-based index)
+    const baseRow = origIdx + 1; 
+
     const {completed,total} = computeCompletion(cfg, header, row);
     const card = document.createElement('div');
     card.className = 'veh-card';
@@ -848,19 +868,18 @@ function renderVehicles(cfg, data) {
          <div class="veh-title-sub">${escapeHtml(car)}</div>
        </div>`;
 
-    // 讓名片上方標題區可點擊看詳情（採用整體情報樣式）
+    // ... (中間的 UI 產生程式碼保持不變，省略以節省篇幅) ...
+    // 請保留原有的 headWrap click event, stepsBox, memoWrap 等邏輯
+    
+    // 這裡為了確保完整性，將關鍵的 click event 邏輯重述一次：
     const headWrap = card.querySelector(':scope > div:first-child');
     if (headWrap){
       headWrap.style.cursor = 'pointer';
       headWrap.setAttribute('title','點我看詳情');
-      headWrap.addEventListener('click', (e)=>{
-        // 用「cfg + header + row」直接呼叫新的 openDetailModal
-        openDetailModal(cfg, row, header);
-      });
+      headWrap.addEventListener('click', ()=>{ openDetailModal(cfg, row, header); });
     }
 
     const stepsBox=document.createElement('div');
-
     cfg.steps.forEach(st=>{
       const colIdx=header.indexOf(st);
       const rawVal = (colIdx!==-1 && row[colIdx]!=null) ? String(row[colIdx]).trim(): '';
@@ -869,6 +888,7 @@ function renderVehicles(cfg, data) {
       const labelEl=document.createElement('div'); labelEl.className='step-label'; labelEl.textContent=st; rowEl.appendChild(labelEl);
 
       if (st==='車暫停位置'){
+        // ... (下拉選單邏輯不變) ...
         const valueEl=document.createElement('div');
         const sel=document.createElement('select'); sel.className='step-select select';
         const optEmpty=document.createElement('option'); optEmpty.value=''; optEmpty.textContent='— 請選擇 —'; sel.appendChild(optEmpty);
@@ -877,14 +897,17 @@ function renderVehicles(cfg, data) {
         const ghost=document.createElement('span'); ghost.style.display='none';
         valueEl.appendChild(sel); valueEl.appendChild(ghost); rowEl.appendChild(valueEl);
         const btnG=document.createElement('div'); btnG.className='btn-group'; rowEl.appendChild(btnG);
+        
         if (!canWrite){ sel.disabled=true; rowEl.classList.add('locked'); }
         else {
           const prevOk=prevDone(cfg, header, row, st); if (!prevOk && !rawVal) sel.disabled=true;
+          // ⭐ 這裡會使用修正後的 baseRow
           sel.onchange=()=>onStopSelect(cfg, baseRow, header, st, sel.value, ghost);
         }
         stepsBox.appendChild(rowEl); return;
       }
 
+      // ... (打卡按鈕邏輯) ...
       const timeSpan=document.createElement('span'); timeSpan.className='step-time'; timeSpan.textContent=displayVal||'—'; rowEl.appendChild(timeSpan);
       const btnG=document.createElement('div'); btnG.className='btn-group';
       const btnPunch=document.createElement('button'); btnPunch.className='btn btn--primary btn--sm btn-punch'; btnPunch.textContent='打卡';
@@ -898,6 +921,7 @@ function renderVehicles(cfg, data) {
         if (!prevOk && !hasVal){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; }
         else{
           btnPunch.disabled=hasVal; btnEdit.disabled=btnDel.disabled=!hasVal;
+          // ⭐ 這裡會使用修正後的 baseRow
           btnPunch.onclick=()=>onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
           btnEdit.onclick =()=>onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
           btnDel.onclick  =()=>onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
@@ -916,17 +940,15 @@ function renderVehicles(cfg, data) {
     memoTA.value=(memoColIdx!==-1 && row[memoColIdx]) ? String(row[memoColIdx]):'';
     const memoBtn=document.createElement('button'); memoBtn.className='btn btn--primary'; memoBtn.textContent='儲存'; memoBtn.disabled=!canWrite;
 
-    // 🔽 這裡是更新後的備註儲存邏輯
-        memoBtn.onclick = async () => {
+    memoBtn.onclick = async () => {
       if (!canWrite) return;
-
       try {
+        // ⭐ 這裡會使用修正後的 baseRow
         await postUpdate(
           cfg,
           [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }],
           { mode: 'memo', loadingText: '儲存備註…' }
         );
-
         showNotif('備註已儲存', false);
       } catch (err) {
         console.error('備註儲存失敗：', err);
@@ -934,9 +956,9 @@ function renderVehicles(cfg, data) {
       }
     };
 
-
     memoRow.appendChild(memoTA); memoRow.appendChild(memoBtn); memoWrap.appendChild(memoRow); card.appendChild(memoWrap);
 
+    // 這裡的 origOrder 只是為了排序用，跟寫入無關
     cards.push({ el:card, completed, total, origOrder:idx });
   });
 

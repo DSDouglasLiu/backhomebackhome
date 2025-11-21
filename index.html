@@ -1027,39 +1027,108 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
 
 
 async function onEditTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl,currentVal){
-  if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');
-  const colIdx=header.indexOf(st); if (colIdx===-1) return alert('此欄位不存在：'+st);
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission!=='全功能') return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx===-1) return alert('此欄位不存在：'+st);
+
   openEditTimeDialog(currentVal || timeSpan.textContent || getTaipeiHHMMSS(), async (newHHMMSS)=>{
-    await withLoading(async()=>{
-      const body = {
-       sheet:  cfg.sheet,
-       idToken,
-       writes: [{ row: rowNumber, col: colIdx+1, value: newHHMMSS }]
-      };
-      const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-      const j=await r.json(); if(!j.ok) throw new Error(j.error||'unknown'); await sleep(250); await reloadSheet();
-    },'儲存中…');
-    const wasEmpty=!timeSpan.textContent || timeSpan.textContent.trim()==='—';
-    timeSpan.textContent=formatSheetTime(newHHMMSS); if (wasEmpty) unlockNext(rowEl);
-    btnPunch.disabled=true; btnEdit.disabled=false; btnDel.disabled=false; showNotif('已修改時間',false);
+    try {
+      await withLoading(async()=>{
+        const body = {
+          sheet:  cfg.sheet,
+          email:  currentUser.email || '',
+          idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+          mode:   'edit',
+          writes: [{ row: rowNumber, col: colIdx+1, value: newHHMMSS }]
+        };
+
+        const r = await fetch(API_BASE+'?action=update',{
+          method: 'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(body)
+        });
+
+        let j;
+        try{
+          j = await r.json();
+        } catch(e){
+          throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+        }
+
+        if(!j.ok) throw new Error(j.error||'更新失敗');
+        await sleep(200);
+        await reloadSheet();
+      }, '儲存中…');
+
+      const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim()==='—';
+      timeSpan.textContent = formatSheetTime(newHHMMSS);
+      if (wasEmpty) unlockNext(rowEl);
+
+      btnPunch.disabled = true;
+      btnEdit.disabled  = false;
+      btnDel.disabled   = false;
+
+      showNotif('已修改時間', false);
+    } catch (err) {
+      console.error('修改時間失敗：', err);
+      showNotif('修改時間失敗：' + err.message, true);
+    }
   });
 }
+
+  
 async function onDeleteTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl){
-  if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');
-  const colIdx=header.indexOf(st); if (colIdx===-1) return alert('此欄位不存在：'+st);
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission!=='全功能') return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx===-1) return alert('此欄位不存在：'+st);
+
   openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
-    await withLoading(async()=>{
-      const body = {
-       sheet:  cfg.sheet,
-       idToken,
-       writes: [{ row: rowNumber, col: colIdx+1, value: '' }]
-      };
-      const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-      const j=await r.json(); if(!j.ok) throw new Error(j.error||'unknown'); await sleep(250); await reloadSheet();
-    },'刪除中…');
-    timeSpan.textContent=''; btnPunch.disabled=false; btnEdit.disabled=true; btnDel.disabled=true; lockFollowing(rowEl); showNotif('已刪除',false);
+    try {
+      await withLoading(async()=>{
+        const body = {
+          sheet:  cfg.sheet,
+          email:  currentUser.email || '',
+          idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+          mode:   'delete',
+          writes: [{ row: rowNumber, col: colIdx+1, value: '' }]
+        };
+
+        const r = await fetch(API_BASE+'?action=update',{
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(body)
+        });
+
+        let j;
+        try{
+          j = await r.json();
+        } catch(e){
+          throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+        }
+
+        if(!j.ok) throw new Error(j.error||'更新失敗');
+        await sleep(200);
+        await reloadSheet();
+      }, '刪除中…');
+
+      timeSpan.textContent = '';
+      btnPunch.disabled    = false;
+      btnEdit.disabled     = true;
+      btnDel.disabled      = true;
+      lockFollowing(rowEl);
+      showNotif('已刪除', false);
+    } catch (err) {
+      console.error('刪除時間失敗：', err);
+      showNotif('刪除時間失敗：' + err.message, true);
+    }
   });
 }
+
+  
 function reloadSheet(){ loadSheetData(currentSheetKey); }
 function unlockNext(rowEl){
   const nextRow=rowEl?.nextElementSibling; if(!nextRow) return;

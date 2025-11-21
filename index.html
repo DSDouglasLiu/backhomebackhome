@@ -820,165 +820,87 @@ async function loadSheetData(key){
     return;
   }
   sheetData = j.values || [];
-  (cfg, sheetData);
+  renderVehicles(cfg, sheetData);
 }
 
   
 function isCompletedValue(v){ if (v==null) return false; const s=String(v).trim(); return !!s && s!=='—' && s!=='-'; }
 
-/* ====== 打卡頁  ====== */
+/* ====== 打卡頁 renderVehicles ====== */
 function renderVehicles(cfg, data) {
-  const box = document.getElementById('vehList'); 
-  box.innerHTML = '';
+  const box = document.getElementById('vehList'); box.innerHTML = '';
   const canWrite = currentUser?.permission === '全功能';
-
-  // 1. 尋找表頭列
   const headerRowIdx = data.findIndex(row => Array.isArray(row) && String(row[0]||'').trim()==='編號' && String(row[1]||'').trim().startsWith('區域') && String(row[2]||'').trim()==='車號');
-  
-  if (headerRowIdx === -1){ 
-    box.textContent='找不到表頭'; 
-    return; 
-  }
-  
+  if (headerRowIdx === -1){ box.textContent='找不到表頭'; return; }
   const header = data[headerRowIdx].map(c=>String(c||'').trim());
-
-  // 2. ⭐ 修正 Bug 核心：先保留原始 Row Index，再進行 Filter
-  // 這樣即使中間有空行被濾掉，origIdx 依然會是 Google Sheet 中的原始行號 (0-based)
-  const rows = data
-    .map((row, i) => ({ row, origIdx: i })) // 把原始 index (i) 包進去
-    .slice(headerRowIdx+1)
-    .filter(item => {
-       const r = item.row;
-       return Array.isArray(r) && String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim();
-    });
-
-  if (!rows.length){ 
-    box.textContent='(這張表目前沒有車輛資料)'; 
-    return; 
-  }
+  const rows = data.slice(headerRowIdx+1).filter(r => Array.isArray(r) && String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim());
+  if (!rows.length){ box.textContent='(這張表目前沒有車輛資料)'; return; }
 
   const cards=[];
-  
-  // 3. 遍歷資料 (解構取出 row 和 origIdx)
-  rows.forEach(({ row, origIdx }, idx) => {
-    const area = String(row[1]||'').trim(); 
-    const car = String(row[2]||'').trim(); 
-    
-    // ⭐ 關鍵修正：直接使用原始索引 + 1 (轉為 Sheet 的 1-based index)
-    // 這是寫入資料庫(Google Sheet)時真正要用的行號
-    const baseRow = origIdx + 1; 
-
-    const {completed, total} = computeCompletion(cfg, header, row);
+  rows.forEach((row, idx) => {
+    const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim(); const baseRow = headerRowIdx+2+idx;
+    const {completed,total} = computeCompletion(cfg, header, row);
     const card = document.createElement('div');
-    card.className = 'veh-card';
-    
-    // 建立卡片標題與詳情點擊事件
-    card.innerHTML =
-      `<div>
-         <div class="veh-title-main">${escapeHtml(area)}</div>
-         <div class="veh-title-sub">${escapeHtml(car)}</div>
-       </div>`;
+card.className = 'veh-card';
+card.innerHTML =
+  `<div>
+     <div class="veh-title-main">${escapeHtml(area)}</div>
+     <div class="veh-title-sub">${escapeHtml(car)}</div>
+   </div>`;
 
-    const headWrap = card.querySelector(':scope > div:first-child');
-    if (headWrap){
-      headWrap.style.cursor = 'pointer';
-      headWrap.setAttribute('title','點我看詳情');
-      headWrap.addEventListener('click', ()=>{ openDetailModal(cfg, row, header); });
-    }
+    // 讓名片上方標題區可點擊看詳情（採用整體情報樣式）
+const headWrap = card.querySelector(':scope > div:first-child');
+if (headWrap){
+  headWrap.style.cursor = 'pointer';
+  headWrap.setAttribute('title','點我看詳情');
+  headWrap.addEventListener('click', (e)=>{
+    // 用「cfg + header + row」直接呼叫新的 openDetailModal
+    openDetailModal(cfg, row, header);
+  });
+}
 
-    // 建立步驟列表
-    const stepsBox = document.createElement('div');
-    cfg.steps.forEach(st => {
-      const colIdx = header.indexOf(st);
-      const rawVal = (colIdx !== -1 && row[colIdx] != null) ? String(row[colIdx]).trim(): '';
-      const displayVal = rawVal ? formatSheetTime(rawVal) : '';
-      
-      const rowEl = document.createElement('div'); 
-      rowEl.className = 'step-row';
-      
-      const labelEl = document.createElement('div'); 
-      labelEl.className = 'step-label'; 
-      labelEl.textContent = st; 
-      rowEl.appendChild(labelEl);
+    const stepsBox=document.createElement('div');
 
-      //如果是「車暫停位置」下拉選單
-      if (st === '車暫停位置'){
-        const valueEl = document.createElement('div');
-        const sel = document.createElement('select'); 
-        sel.className = 'step-select select';
-        
-        const optEmpty = document.createElement('option'); 
-        optEmpty.value = ''; 
-        optEmpty.textContent = '— 請選擇 —'; 
-        sel.appendChild(optEmpty);
-        
-        STOP_OPTIONS.forEach(opt => { 
-            const o = document.createElement('option'); 
-            o.value = opt; 
-            o.textContent = opt; 
-            sel.appendChild(o); 
-        });
-        
-        if (rawVal) sel.value = rawVal;
-        
-        const ghost = document.createElement('span'); 
-        ghost.style.display = 'none';
-        valueEl.appendChild(sel); 
-        valueEl.appendChild(ghost); 
-        rowEl.appendChild(valueEl);
-        
-        const btnG = document.createElement('div'); 
-        btnG.className = 'btn-group'; 
-        rowEl.appendChild(btnG);
-        
-        if (!canWrite){ 
-            sel.disabled = true; 
-            rowEl.classList.add('locked'); 
-        } else {
-            const prevOk = prevDone(cfg, header, row, st); 
-            if (!prevOk && !rawVal) sel.disabled = true;
-            
-            // 使用 baseRow 綁定事件
-            sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value, ghost);
+    cfg.steps.forEach(st=>{
+      const colIdx=header.indexOf(st);
+      const rawVal = (colIdx!==-1 && row[colIdx]!=null) ? String(row[colIdx]).trim(): '';
+      const displayVal = rawVal?formatSheetTime(rawVal):'';
+      const rowEl=document.createElement('div'); rowEl.className='step-row';
+      const labelEl=document.createElement('div'); labelEl.className='step-label'; labelEl.textContent=st; rowEl.appendChild(labelEl);
+
+      if (st==='車暫停位置'){
+        const valueEl=document.createElement('div');
+        const sel=document.createElement('select'); sel.className='step-select select';
+        const optEmpty=document.createElement('option'); optEmpty.value=''; optEmpty.textContent='— 請選擇 —'; sel.appendChild(optEmpty);
+        STOP_OPTIONS.forEach(opt=>{ const o=document.createElement('option'); o.value=opt; o.textContent=opt; sel.appendChild(o); });
+        if (rawVal) sel.value=rawVal;
+        const ghost=document.createElement('span'); ghost.style.display='none';
+        valueEl.appendChild(sel); valueEl.appendChild(ghost); rowEl.appendChild(valueEl);
+        const btnG=document.createElement('div'); btnG.className='btn-group'; rowEl.appendChild(btnG);
+        if (!canWrite){ sel.disabled=true; rowEl.classList.add('locked'); }
+        else {
+          const prevOk=prevDone(cfg, header, row, st); if (!prevOk && !rawVal) sel.disabled=true;
+          sel.onchange=()=>onStopSelect(cfg, baseRow, header, st, sel.value, ghost);
         }
-        stepsBox.appendChild(rowEl); 
-        return;
+        stepsBox.appendChild(rowEl); return;
       }
 
-      // 一般打卡步驟
-      const timeSpan = document.createElement('span'); 
-      timeSpan.className = 'step-time'; 
-      timeSpan.textContent = displayVal || '—'; 
-      rowEl.appendChild(timeSpan);
-      
-      const btnG = document.createElement('div'); 
-      btnG.className = 'btn-group';
-      const btnPunch = document.createElement('button'); btnPunch.className = 'btn btn--primary btn--sm btn-punch'; btnPunch.textContent = '打卡';
-      const btnEdit = document.createElement('button'); btnEdit.className = 'btn btn--success btn--sm btn-edit'; btnEdit.textContent = '修改';
-      const btnDel = document.createElement('button'); btnDel.className = 'btn btn--danger btn--sm btn-del'; btnDel.textContent = '刪除';
-      
-      btnG.appendChild(btnPunch); 
-      btnG.appendChild(btnEdit); 
-      btnG.appendChild(btnDel); 
-      rowEl.appendChild(btnG);
+      const timeSpan=document.createElement('span'); timeSpan.className='step-time'; timeSpan.textContent=displayVal||'—'; rowEl.appendChild(timeSpan);
+      const btnG=document.createElement('div'); btnG.className='btn-group';
+      const btnPunch=document.createElement('button'); btnPunch.className='btn btn--primary btn--sm btn-punch'; btnPunch.textContent='打卡';
+      const btnEdit=document.createElement('button'); btnEdit.className='btn btn--success btn--sm btn-edit'; btnEdit.textContent='修改';
+      const btnDel=document.createElement('button'); btnDel.className='btn btn--danger btn--sm btn-del'; btnDel.textContent='刪除';
+      btnG.appendChild(btnPunch); btnG.appendChild(btnEdit); btnG.appendChild(btnDel); rowEl.appendChild(btnG);
 
-      if (!canWrite){ 
-          btnPunch.disabled = btnEdit.disabled = btnDel.disabled = true; 
-          rowEl.classList.add('locked'); 
-      } else {
-        const prevOk = prevDone(cfg, header, row, st); 
-        const hasVal = !!rawVal;
-        
-        if (!prevOk && !hasVal){ 
-            btnPunch.disabled = btnEdit.disabled = btnDel.disabled = true; 
-        } else {
-          btnPunch.disabled = hasVal; 
-          btnEdit.disabled = btnDel.disabled = !hasVal;
-          
-          // 使用 baseRow 綁定事件
-          btnPunch.onclick = () => onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
-          btnEdit.onclick  = () => onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
-          btnDel.onclick   = () => onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+      if (!canWrite){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; rowEl.classList.add('locked'); }
+      else{
+        const prevOk=prevDone(cfg, header, row, st); const hasVal=!!rawVal;
+        if (!prevOk && !hasVal){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; }
+        else{
+          btnPunch.disabled=hasVal; btnEdit.disabled=btnDel.disabled=!hasVal;
+          btnPunch.onclick=()=>onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+          btnEdit.onclick =()=>onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
+          btnDel.onclick  =()=>onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
         }
       }
       stepsBox.appendChild(rowEl);
@@ -986,174 +908,115 @@ function renderVehicles(cfg, data) {
 
     card.appendChild(stepsBox);
 
-    // 備註區塊
-    // ====== 備註區塊 (修正版) ======
-    const memoWrap = document.createElement('div'); 
-    memoWrap.style.marginTop = '8px';
-    const memoRow = document.createElement('div'); 
-    memoRow.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
-    
-    const memoTA = document.createElement('textarea'); 
-    memoTA.className = 'textarea'; 
-    memoTA.placeholder = '備註'; 
-    memoTA.style.flex = '1';
-    
-    // ⭐ 改進：更嚴謹地尋找「備註」欄位
-    let memoColIdx = header.indexOf('備註');
-    // 如果完全相符找不到，嘗試尋找包含「備註」二字的欄位 (防止前後有空白)
-    if (memoColIdx === -1) {
-      memoColIdx = header.findIndex(h => h.includes('備註'));
-    }
-    
-    // 初始化內容 (如果找不到欄位，就保持空白，不要報錯以免影響畫面渲染)
-    memoTA.value = (memoColIdx !== -1 && row[memoColIdx]) ? String(row[memoColIdx]) : '';
-    
-    const memoBtn = document.createElement('button'); 
-    memoBtn.className = 'btn btn--primary'; 
-    memoBtn.textContent = '儲存'; 
-    memoBtn.disabled = !canWrite;
+    // 備註
+    const memoWrap=document.createElement('div'); memoWrap.style.marginTop='8px';
+    const memoRow=document.createElement('div'); memoRow.style.cssText='display:flex;gap:8px;align-items:flex-start;';
+    const memoTA=document.createElement('textarea'); memoTA.className='textarea'; memoTA.placeholder='備註'; memoTA.style.flex='1';
+    let memoColIdx=header.indexOf('備註'); if (memoColIdx===-1) memoColIdx=header.length-1;
+    memoTA.value=(memoColIdx!==-1 && row[memoColIdx]) ? String(row[memoColIdx]):'';
+    const memoBtn=document.createElement('button'); memoBtn.className='btn btn--primary'; memoBtn.textContent='儲存'; memoBtn.disabled=!canWrite;
+    memoBtn.onclick=async()=>{ if(!canWrite) return; await withLoading(async()=>{
+      const body = {
+       sheet:  cfg.sheet,
+       idToken,
+       writes: [{ row: baseRow, col: memoColIdx+1, value: memoTA.value }]
+      };
+      const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+      const j=await r.json(); if(!j.ok) throw new Error(j.error||'unknown'); await sleep(250); await reloadSheet();
+    },'儲存備註…'); showNotif('備註已儲存',false); };
+    memoRow.appendChild(memoTA); memoRow.appendChild(memoBtn); memoWrap.appendChild(memoRow); card.appendChild(memoWrap);
 
-    memoBtn.onclick = async () => {
-      if (!canWrite) return;
-      
-      // ⭐ 修正：如果真的找不到欄位，明確告知使用者，而不是寫入錯誤的欄位
-      if (memoColIdx === -1) {
-        alert('錯誤：在 Google Sheet 中找不到名稱為「備註」的欄位，無法儲存。\n請確認試算表表頭是否有「備註」欄。');
-        return;
-      }
-
-      try {
-        // 使用 baseRow 進行更新 (注意：col 是 1-based，所以要 +1)
-        await postUpdate(
-          cfg,
-          [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }],
-          { mode: 'memo', loadingText: '儲存備註…' }
-        );
-        showNotif('備註已儲存', false);
-      } catch (err) {
-        console.error('備註儲存失敗：', err);
-        // 顯示具體的錯誤訊息，方便除錯
-        showNotif('備註儲存失敗：' + err.message, true);
-      }
-    };
-
-    memoRow.appendChild(memoTA); 
-    memoRow.appendChild(memoBtn); 
-    memoWrap.appendChild(memoRow); 
-    card.appendChild(memoWrap);
-
-    // origOrder 僅用於前端顯示排序
     cards.push({ el:card, completed, total, origOrder:idx });
   });
 
-  cards.sort((a,b)=> (a.completed !== b.completed ? a.completed - b.completed : a.origOrder - b.origOrder));
-  cards.forEach(c => box.appendChild(c.el));
+  cards.sort((a,b)=> (a.completed!==b.completed ? a.completed-b.completed : a.origOrder-b.origOrder));
+  cards.forEach(c=>box.appendChild(c.el));
 }
-// 共用：送出寫入請求（所有寫入都走這裡）
-async function postUpdate(cfg, writes, options = {}) {
-  const { mode, loadingText } = options;
-
-  // 基本權限檢查（前端先擋一層，但真正決定權在後端）
+function prevDone(cfg, header, row, st){ const idx=cfg.steps.indexOf(st); if (idx===0) return true; const prev=cfg.steps[idx-1]; const col=header.indexOf(prev); if (col===-1) return true; return !!row[col]; }
+async function onStopSelect(cfg,rowNumber,header,st,value,span){
+  if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');
+  const colIdx=header.indexOf(st); if (colIdx===-1) return alert('此欄位不存在：'+st);
+  await withLoading(async()=>{
+    const body={sheet:cfg.sheet,email:currentUser.email,writes:[{row:rowNumber,col:colIdx+1,value}]};
+    const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+    const j=await r.json(); if(!j.ok) throw new Error(j.error||'unknown'); await sleep(200); await reloadSheet();
+  },'更新中…'); span.textContent=value||''; showNotif(value?'已更新車暫停位置':'已清除車暫停位置',false);
+}
+// 打卡按鈕事件
+async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
+  // 基本權限檢查
   if (!currentUser) {
     alert('請先登入');
-    throw new Error('not_logged_in');
+    return;
   }
   if (currentUser.permission !== '全功能') {
     alert('權限不足');
-    throw new Error('no_permission');
-  }
-  if (!idToken) {
-    alert('登入狀態已失效，請重新登入');
-    throw new Error('missing_idToken');
+    return;
   }
 
-  await withLoading(async () => {
-    const body = {
-      sheet: cfg.sheet,
-      email: currentUser.email || '',
-      idToken: idToken,
-      writes: writes
-    };
-    if (mode) body.mode = mode;   // 只有打卡等需要才帶 mode
-
-    const r = await fetch(API_BASE + '?action=update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(body)
-    });
-
-    let j;
-    try {
-      j = await r.json();
-    } catch (e) {
-      throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
-    }
-
-    if (!j.ok) {
-      throw new Error(j.error || '更新失敗');
-    }
-
-    await sleep(200);
-    await reloadSheet();
-  }, loadingText || '更新中…');
-}
-
-  
-function prevDone(cfg, header, row, st){ const idx=cfg.steps.indexOf(st); if (idx===0) return true; const prev=cfg.steps[idx-1]; const col=header.indexOf(prev); if (col===-1) return true; return !!row[col]; }
-
-async function onStopSelect(cfg, rowNumber, header, st, value, span) {
+  // 找到這個步驟在表頭中的欄位
   const colIdx = header.indexOf(st);
   if (colIdx === -1) {
     alert('此欄位不存在：' + st);
     return;
   }
 
-  try {
-    await postUpdate(
-      cfg,
-      [{ row: rowNumber, col: colIdx + 1, value }],
-      { mode: 'stop', loadingText: '更新車暫停位置…' }
-    );
-
-    // 後端成功後才更新畫面
-    span.textContent = value || '';
-    showNotif(value ? '已更新車暫停位置' : '已清除車暫停位置', false);
-  } catch (err) {
-    console.error('車暫停位置更新失敗：', err);
-    showNotif('車暫停位置更新失敗：' + err.message, true);
-  }
-}
-  
-  
-// 打卡按鈕事件
-async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
-  const colIdx = header.indexOf(st);
-  if (colIdx === -1) {
-    alert('此欄位不存在：' + st);
+  // 已經有時間就不允許再次打卡
+  const nowText = (timeSpan.textContent || '').trim();
+  if (nowText && nowText !== '—') {
+    showNotif('此步驟已有時間，請用「修改」或「刪除」', true);
     return;
   }
 
-  // 取得台北時間 HH:mm:ss
+  // 取得目前台北時間 HH:mm:ss
   const now = getTaipeiHHMMSS();
 
   try {
-    await postUpdate(
-      cfg,
-      [{ row: rowNumber, col: colIdx + 1, value: now }],
-      { mode: 'punch', loadingText: '打卡中…' }
-    );
+    await withLoading(async () => {
+      // 同時帶 email + idToken，後端要用哪個驗證都可以
 
-    // 後端寫入成功，更新 UI
-    const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim() === '—';
+      const body = {
+  sheet:  cfg.sheet,
+  email:  currentUser.email || '',
+  idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+  mode: 'punch',   // ★ 告訴後端：這次是打卡行為
+  writes: [
+    { row: rowNumber, col: colIdx + 1, value: now }
+  ]
+};
+
+
+      const r = await fetch(API_BASE + '?action=update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      });
+
+      let j;
+      try {
+        j = await r.json();
+      } catch (e) {
+        // 例如被 302 轉去 HTML 頁面（非 JSON）
+        throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+      }
+
+      if (!j.ok) {
+        throw new Error(j.error || '更新失敗');
+      }
+
+      // 稍微等一下，確保後端寫入完成再重載
+      await sleep(200);
+      await reloadSheet();
+    }, '打卡中…');
+
+    // ✅ 後端成功更新後，才更新前端畫面
     timeSpan.textContent = formatSheetTime(now);
     btnPunch.disabled = true;
     btnEdit.disabled  = false;
     btnDel.disabled   = false;
-    if (wasEmpty) {
-      unlockNext(rowEl);   // 解鎖下一步
-    }
-
+    unlockNext(rowEl);
     showNotif('已打卡', false);
+
   } catch (err) {
     console.error('打卡失敗：', err);
     showNotif('打卡失敗：' + err.message, true);
@@ -1163,29 +1026,45 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
 
 
 
+async function onEditTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl,currentVal){
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission!=='全功能') return alert('權限不足');
 
-async function onEditTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, currentVal) {
   const colIdx = header.indexOf(st);
-  if (colIdx === -1) {
-    alert('此欄位不存在：' + st);
-    return;
-  }
+  if (colIdx===-1) return alert('此欄位不存在：'+st);
 
-  const initial = currentVal || timeSpan.textContent || getTaipeiHHMMSS();
-
-  openEditTimeDialog(initial, async (newHHMMSS) => {
+  openEditTimeDialog(currentVal || timeSpan.textContent || getTaipeiHHMMSS(), async (newHHMMSS)=>{
     try {
-      await postUpdate(
-        cfg,
-        [{ row: rowNumber, col: colIdx + 1, value: newHHMMSS }],
-        { mode: 'edit', loadingText: '儲存中…' }
-      );
+      await withLoading(async()=>{
+        const body = {
+          sheet:  cfg.sheet,
+          email:  currentUser.email || '',
+          idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+          mode:   'edit',
+          writes: [{ row: rowNumber, col: colIdx+1, value: newHHMMSS }]
+        };
 
-      const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim() === '—';
+        const r = await fetch(API_BASE+'?action=update',{
+          method: 'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(body)
+        });
+
+        let j;
+        try{
+          j = await r.json();
+        } catch(e){
+          throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+        }
+
+        if(!j.ok) throw new Error(j.error||'更新失敗');
+        await sleep(200);
+        await reloadSheet();
+      }, '儲存中…');
+
+      const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim()==='—';
       timeSpan.textContent = formatSheetTime(newHHMMSS);
-      if (wasEmpty) {
-        unlockNext(rowEl);
-      }
+      if (wasEmpty) unlockNext(rowEl);
 
       btnPunch.disabled = true;
       btnEdit.disabled  = false;
@@ -1199,28 +1078,48 @@ async function onEditTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, b
   });
 }
 
+  
+async function onDeleteTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl){
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission!=='全功能') return alert('權限不足');
 
-async function onDeleteTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
   const colIdx = header.indexOf(st);
-  if (colIdx === -1) {
-    alert('此欄位不存在：' + st);
-    return;
-  }
+  if (colIdx===-1) return alert('此欄位不存在：'+st);
 
-  openConfirmDialog('確定要刪除時間資料嗎？', async () => {
+  openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
     try {
-      await postUpdate(
-        cfg,
-        [{ row: rowNumber, col: colIdx + 1, value: '' }],
-        { mode: 'delete', loadingText: '刪除中…' }
-      );
+      await withLoading(async()=>{
+        const body = {
+          sheet:  cfg.sheet,
+          email:  currentUser.email || '',
+          idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+          mode:   'delete',
+          writes: [{ row: rowNumber, col: colIdx+1, value: '' }]
+        };
+
+        const r = await fetch(API_BASE+'?action=update',{
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(body)
+        });
+
+        let j;
+        try{
+          j = await r.json();
+        } catch(e){
+          throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+        }
+
+        if(!j.ok) throw new Error(j.error||'更新失敗');
+        await sleep(200);
+        await reloadSheet();
+      }, '刪除中…');
 
       timeSpan.textContent = '';
-      btnPunch.disabled = false;
-      btnEdit.disabled  = true;
-      btnDel.disabled   = true;
+      btnPunch.disabled    = false;
+      btnEdit.disabled     = true;
+      btnDel.disabled      = true;
       lockFollowing(rowEl);
-
       showNotif('已刪除', false);
     } catch (err) {
       console.error('刪除時間失敗：', err);
@@ -1228,7 +1127,6 @@ async function onDeleteTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch,
     }
   });
 }
-
 
   
 function reloadSheet(){ loadSheetData(currentSheetKey); }

@@ -442,7 +442,8 @@ window.onload = function(){
   buildRefreshControls();
   updateRefreshControlsVisibility();
 
-  const saved = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+  const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
+
   if (saved) {
     idToken = saved;
     fetch(API_BASE + '?action=verify', {
@@ -914,16 +915,50 @@ if (headWrap){
     const memoTA=document.createElement('textarea'); memoTA.className='textarea'; memoTA.placeholder='備註'; memoTA.style.flex='1';
     let memoColIdx=header.indexOf('備註'); if (memoColIdx===-1) memoColIdx=header.length-1;
     memoTA.value=(memoColIdx!==-1 && row[memoColIdx]) ? String(row[memoColIdx]):'';
-    const memoBtn=document.createElement('button'); memoBtn.className='btn btn--primary'; memoBtn.textContent='儲存'; memoBtn.disabled=!canWrite;
-    memoBtn.onclick=async()=>{ if(!canWrite) return; await withLoading(async()=>{
-      const body = {
-       sheet:  cfg.sheet,
-       idToken,
-       writes: [{ row: baseRow, col: memoColIdx+1, value: memoTA.value }]
-      };
-      const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-      const j=await r.json(); if(!j.ok) throw new Error(j.error||'unknown'); await sleep(250); await reloadSheet();
-    },'儲存備註…'); showNotif('備註已儲存',false); };
+    const memoBtn = document.createElement('button');
+memoBtn.className = 'btn btn--primary';
+memoBtn.textContent = '儲存';
+memoBtn.disabled = !canWrite;
+
+memoBtn.onclick = async () => {
+  if (!canWrite) return;
+  if (!currentUser) {
+    alert('請先登入');
+    return;
+  }
+
+  await withLoading(async () => {
+    const body = {
+      sheet:  cfg.sheet,
+      email:  currentUser.email || '',
+      idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+      mode:   'memo', // 後端沒用到也沒關係，純標記這是備註更新
+      writes: [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }]
+    };
+
+    const r = await fetch(API_BASE + '?action=update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    });
+
+    let j;
+    try {
+      j = await r.json();
+    } catch (e) {
+      throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+    }
+
+    if (!j.ok) throw new Error(j.error || 'unknown');
+
+    await sleep(250);
+    await reloadSheet();
+  }, '儲存備註…');
+
+  showNotif('備註已儲存', false);
+};
+
+    
     memoRow.appendChild(memoTA); memoRow.appendChild(memoBtn); memoWrap.appendChild(memoRow); card.appendChild(memoWrap);
 
     cards.push({ el:card, completed, total, origOrder:idx });

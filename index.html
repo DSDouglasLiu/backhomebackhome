@@ -917,48 +917,15 @@ function renderVehicles(cfg, data) {
     const memoBtn=document.createElement('button'); memoBtn.className='btn btn--primary'; memoBtn.textContent='儲存'; memoBtn.disabled=!canWrite;
 
     // 🔽 這裡是更新後的備註儲存邏輯
-    memoBtn.onclick = async () => {
+        memoBtn.onclick = async () => {
       if (!canWrite) return;
 
-      if (!currentUser) {
-        alert('請先登入');
-        return;
-      }
-      if (currentUser.permission !== '全功能') {
-        alert('權限不足');
-        return;
-      }
-
       try {
-        await withLoading(async () => {
-          const body = {
-            sheet:  cfg.sheet,
-            email:  currentUser.email || '',
-            idToken: (typeof idToken !== 'undefined' ? idToken : ''),
-            mode:   'memo',
-            writes: [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }]
-          };
-
-          const r = await fetch(API_BASE + '?action=update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(body)
-          });
-
-          let j;
-          try {
-            j = await r.json();
-          } catch (e) {
-            throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
-          }
-
-          if (!j.ok) {
-            throw new Error(j.error || '備註更新失敗');
-          }
-
-          await sleep(250);
-          await reloadSheet();
-        }, '儲存備註…');
+        await postUpdate(
+          cfg,
+          [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }],
+          { mode: 'memo', loadingText: '儲存備註…' }
+        );
 
         showNotif('備註已儲存', false);
       } catch (err) {
@@ -966,6 +933,7 @@ function renderVehicles(cfg, data) {
         showNotif('備註儲存失敗：' + err.message, true);
       }
     };
+
 
     memoRow.appendChild(memoTA); memoRow.appendChild(memoBtn); memoWrap.appendChild(memoRow); card.appendChild(memoWrap);
 
@@ -975,93 +943,111 @@ function renderVehicles(cfg, data) {
   cards.sort((a,b)=> (a.completed!==b.completed ? a.completed-b.completed : a.origOrder-b.origOrder));
   cards.forEach(c=>box.appendChild(c.el));
 }
+// 共用：送出寫入請求（所有寫入都走這裡）
+async function postUpdate(cfg, writes, options = {}) {
+  const { mode, loadingText } = options;
 
-  
-function prevDone(cfg, header, row, st){ const idx=cfg.steps.indexOf(st); if (idx===0) return true; const prev=cfg.steps[idx-1]; const col=header.indexOf(prev); if (col===-1) return true; return !!row[col]; }
-async function onStopSelect(cfg,rowNumber,header,st,value,span){
-  if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');
-  const colIdx=header.indexOf(st); if (colIdx===-1) return alert('此欄位不存在：'+st);
-  await withLoading(async()=>{
-    const body={sheet:cfg.sheet,email:currentUser.email,writes:[{row:rowNumber,col:colIdx+1,value}]};
-    const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-    const j=await r.json(); if(!j.ok) throw new Error(j.error||'unknown'); await sleep(200); await reloadSheet();
-  },'更新中…'); span.textContent=value||''; showNotif(value?'已更新車暫停位置':'已清除車暫停位置',false);
-}
-// 打卡按鈕事件
-async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
-  // 基本權限檢查
+  // 基本權限檢查（前端先擋一層，但真正決定權在後端）
   if (!currentUser) {
     alert('請先登入');
-    return;
+    throw new Error('not_logged_in');
   }
   if (currentUser.permission !== '全功能') {
     alert('權限不足');
-    return;
+    throw new Error('no_permission');
+  }
+  if (!idToken) {
+    alert('登入狀態已失效，請重新登入');
+    throw new Error('missing_idToken');
   }
 
-  // 找到這個步驟在表頭中的欄位
+  await withLoading(async () => {
+    const body = {
+      sheet: cfg.sheet,
+      email: currentUser.email || '',
+      idToken: idToken,
+      writes: writes
+    };
+    if (mode) body.mode = mode;   // 只有打卡等需要才帶 mode
+
+    const r = await fetch(API_BASE + '?action=update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    });
+
+    let j;
+    try {
+      j = await r.json();
+    } catch (e) {
+      throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+    }
+
+    if (!j.ok) {
+      throw new Error(j.error || '更新失敗');
+    }
+
+    await sleep(200);
+    await reloadSheet();
+  }, loadingText || '更新中…');
+}
+
+  
+function prevDone(cfg, header, row, st){ const idx=cfg.steps.indexOf(st); if (idx===0) return true; const prev=cfg.steps[idx-1]; const col=header.indexOf(prev); if (col===-1) return true; return !!row[col]; }
+
+async function onStopSelect(cfg, rowNumber, header, st, value, span) {
   const colIdx = header.indexOf(st);
   if (colIdx === -1) {
     alert('此欄位不存在：' + st);
     return;
   }
 
-  // 已經有時間就不允許再次打卡
-  const nowText = (timeSpan.textContent || '').trim();
-  if (nowText && nowText !== '—') {
-    showNotif('此步驟已有時間，請用「修改」或「刪除」', true);
+  try {
+    await postUpdate(
+      cfg,
+      [{ row: rowNumber, col: colIdx + 1, value }],
+      { mode: 'stop', loadingText: '更新車暫停位置…' }
+    );
+
+    // 後端成功後才更新畫面
+    span.textContent = value || '';
+    showNotif(value ? '已更新車暫停位置' : '已清除車暫停位置', false);
+  } catch (err) {
+    console.error('車暫停位置更新失敗：', err);
+    showNotif('車暫停位置更新失敗：' + err.message, true);
+  }
+}
+  
+  
+// 打卡按鈕事件
+async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) {
+    alert('此欄位不存在：' + st);
     return;
   }
 
-  // 取得目前台北時間 HH:mm:ss
+  // 取得台北時間 HH:mm:ss
   const now = getTaipeiHHMMSS();
 
   try {
-    await withLoading(async () => {
-      // 同時帶 email + idToken，後端要用哪個驗證都可以
+    await postUpdate(
+      cfg,
+      [{ row: rowNumber, col: colIdx + 1, value: now }],
+      { mode: 'punch', loadingText: '打卡中…' }
+    );
 
-      const body = {
-  sheet:  cfg.sheet,
-  email:  currentUser.email || '',
-  idToken: (typeof idToken !== 'undefined' ? idToken : ''),
-  mode: 'punch',   // ★ 告訴後端：這次是打卡行為
-  writes: [
-    { row: rowNumber, col: colIdx + 1, value: now }
-  ]
-};
-
-
-      const r = await fetch(API_BASE + '?action=update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(body)
-      });
-
-      let j;
-      try {
-        j = await r.json();
-      } catch (e) {
-        // 例如被 302 轉去 HTML 頁面（非 JSON）
-        throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
-      }
-
-      if (!j.ok) {
-        throw new Error(j.error || '更新失敗');
-      }
-
-      // 稍微等一下，確保後端寫入完成再重載
-      await sleep(200);
-      await reloadSheet();
-    }, '打卡中…');
-
-    // ✅ 後端成功更新後，才更新前端畫面
+    // 後端寫入成功，更新 UI
+    const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim() === '—';
     timeSpan.textContent = formatSheetTime(now);
     btnPunch.disabled = true;
     btnEdit.disabled  = false;
     btnDel.disabled   = false;
-    unlockNext(rowEl);
-    showNotif('已打卡', false);
+    if (wasEmpty) {
+      unlockNext(rowEl);   // 解鎖下一步
+    }
 
+    showNotif('已打卡', false);
   } catch (err) {
     console.error('打卡失敗：', err);
     showNotif('打卡失敗：' + err.message, true);
@@ -1071,45 +1057,29 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
 
 
 
-async function onEditTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl,currentVal){
-  if (!currentUser) return alert('請先登入');
-  if (currentUser.permission!=='全功能') return alert('權限不足');
 
+async function onEditTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, currentVal) {
   const colIdx = header.indexOf(st);
-  if (colIdx===-1) return alert('此欄位不存在：'+st);
+  if (colIdx === -1) {
+    alert('此欄位不存在：' + st);
+    return;
+  }
 
-  openEditTimeDialog(currentVal || timeSpan.textContent || getTaipeiHHMMSS(), async (newHHMMSS)=>{
+  const initial = currentVal || timeSpan.textContent || getTaipeiHHMMSS();
+
+  openEditTimeDialog(initial, async (newHHMMSS) => {
     try {
-      await withLoading(async()=>{
-        const body = {
-          sheet:  cfg.sheet,
-          email:  currentUser.email || '',
-          idToken: (typeof idToken !== 'undefined' ? idToken : ''),
-          mode:   'edit',
-          writes: [{ row: rowNumber, col: colIdx+1, value: newHHMMSS }]
-        };
+      await postUpdate(
+        cfg,
+        [{ row: rowNumber, col: colIdx + 1, value: newHHMMSS }],
+        { mode: 'edit', loadingText: '儲存中…' }
+      );
 
-        const r = await fetch(API_BASE+'?action=update',{
-          method: 'POST',
-          headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body: JSON.stringify(body)
-        });
-
-        let j;
-        try{
-          j = await r.json();
-        } catch(e){
-          throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
-        }
-
-        if(!j.ok) throw new Error(j.error||'更新失敗');
-        await sleep(200);
-        await reloadSheet();
-      }, '儲存中…');
-
-      const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim()==='—';
+      const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim() === '—';
       timeSpan.textContent = formatSheetTime(newHHMMSS);
-      if (wasEmpty) unlockNext(rowEl);
+      if (wasEmpty) {
+        unlockNext(rowEl);
+      }
 
       btnPunch.disabled = true;
       btnEdit.disabled  = false;
@@ -1123,48 +1093,28 @@ async function onEditTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit
   });
 }
 
-  
-async function onDeleteTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl){
-  if (!currentUser) return alert('請先登入');
-  if (currentUser.permission!=='全功能') return alert('權限不足');
 
+async function onDeleteTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
   const colIdx = header.indexOf(st);
-  if (colIdx===-1) return alert('此欄位不存在：'+st);
+  if (colIdx === -1) {
+    alert('此欄位不存在：' + st);
+    return;
+  }
 
-  openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
+  openConfirmDialog('確定要刪除時間資料嗎？', async () => {
     try {
-      await withLoading(async()=>{
-        const body = {
-          sheet:  cfg.sheet,
-          email:  currentUser.email || '',
-          idToken: (typeof idToken !== 'undefined' ? idToken : ''),
-          mode:   'delete',
-          writes: [{ row: rowNumber, col: colIdx+1, value: '' }]
-        };
-
-        const r = await fetch(API_BASE+'?action=update',{
-          method:'POST',
-          headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body: JSON.stringify(body)
-        });
-
-        let j;
-        try{
-          j = await r.json();
-        } catch(e){
-          throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
-        }
-
-        if(!j.ok) throw new Error(j.error||'更新失敗');
-        await sleep(200);
-        await reloadSheet();
-      }, '刪除中…');
+      await postUpdate(
+        cfg,
+        [{ row: rowNumber, col: colIdx + 1, value: '' }],
+        { mode: 'delete', loadingText: '刪除中…' }
+      );
 
       timeSpan.textContent = '';
-      btnPunch.disabled    = false;
-      btnEdit.disabled     = true;
-      btnDel.disabled      = true;
+      btnPunch.disabled = false;
+      btnEdit.disabled  = true;
+      btnDel.disabled   = true;
       lockFollowing(rowEl);
+
       showNotif('已刪除', false);
     } catch (err) {
       console.error('刪除時間失敗：', err);
@@ -1172,6 +1122,7 @@ async function onDeleteTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEd
     }
   });
 }
+
 
   
 function reloadSheet(){ loadSheetData(currentSheetKey); }

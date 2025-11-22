@@ -2047,26 +2047,36 @@ function openListModal2(sheetKey, step, type, locValue){
 }  
 
 /* 執行快速打卡動作 */
-/* 執行快速打卡動作 */
-async function onQuickPunch(sheetKey, stepName, rowNum, area, car, closeListFn) {
+async function onQuickPunch(sheetKey, stepName, rowNumFromNumberCol, area, car, closeListFn) {
   if (!currentUser) return;
-  
   const cfg = SHEET_CONFIGS.find(s => s.key === sheetKey);
-  // 找出欄位 index
   const header = ALL_SHEETS[sheetKey].header;
   const colIdx = header.indexOf(stepName);
-  
-  if (colIdx === -1) { showNotif('欄位錯誤', true); return; }
+  if (colIdx === -1) {
+    showNotif('欄位錯誤', true);
+    return;
+  }
 
-  const nowTime = getTaipeiHHMMSS(); // 取得目前時間 HH:mm:ss
+  // 關鍵修正：算出真正的 Sheet 列號
+  const sheetInfo = ALL_SHEETS[sheetKey];
+  const dataStartRow = sheetInfo.headerIdx + 2;  // 資料第一筆的實際列號
+  const rowIndex = sheetInfo.rows.findIndex(r => 
+    String(r[1] || '').trim() === area && String(r[2] || '').trim() === car
+  );
+  const realRowNum = dataStartRow + rowIndex;
+
+  const nowTime = getTaipeiHHMMSS();
 
   await withLoading(async () => {
-    // ★ 修正處：移除 mode: 'punch' 欄位，讓它成為標準的單一儲存格更新請求
     const body = {
       sheet: cfg.sheet,
-      email: currentUser.email,
-      idToken: (typeof idToken !== 'undefined' ? idToken : ''),
-      writes: [{ row: rowNum, col: colIdx + 1, value: nowTime }]
+      idToken: idToken || '',
+      ifMatch: null,   // 建議加上，避免未來出錯
+      writes: [{
+        row: realRowNum,      // 這裡一定要用 realRowNum！
+        col: colIdx + 1,
+        value: nowTime
+      }]
     };
 
     const r = await fetch(API_BASE + '?action=update', {
@@ -2075,20 +2085,16 @@ async function onQuickPunch(sheetKey, stepName, rowNum, area, car, closeListFn) 
       body: JSON.stringify(body)
     });
 
-    const j = await r.json();
+    let j;
+    try { j = await r.json(); } 
+    catch (e) { throw new Error('伺服器錯誤（非JSON）'); }
+
     if (!j.ok) throw new Error(j.error || '更新失敗');
 
-    // API 成功後：
-    await sleep(200); 
-    // 1. 關閉原本的清單視窗
+    await sleep(200);
     if (closeListFn) closeListFn();
-    
-    // 2. 顯示「打卡成功」確認視窗 (依照您的圖片樣式)
     showPunchSuccessModal(area, car, nowTime, stepName);
-
-    // 3. 背景重新讀取資料，確保回到主頁時數據是最新的
-    buildDashboard2(true); // 靜默刷新
-    
+    buildDashboard2(true);   // 靜默刷新
   }, '打卡中…');
 }
 

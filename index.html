@@ -313,12 +313,24 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
 
     <!-- 左下：三個主頁籤 -->
     <div class="left-tabs">
-      <div id="mainTabs" class="main-tabs">
-  <button class="main-tab active" data-target="pane-punch">登錄</button>
-  <button class="main-tab" data-target="pane-dashboard">整體情報</button>
+      <div id="mainTabs" class="main-tabs" style="justify-content: space-between;">
+  <!-- 最左邊：最新狀態（原本的整體情報 II） -->
+  <button class="main-tab" data-target="pane-dashboard2">最新狀態</button>
+
+  <!-- 中間：個別情報（保留） -->
   <button class="main-tab" data-target="pane-single">個別情報</button>
-  <button class="main-tab" data-target="pane-dashboard2">整體情報 II</button>
+
+  <!-- 最右邊：登錄與修改（原本的登錄） -->
+  <button class="main-tab active" data-target="pane-punch">登錄與修改</button>
 </div>
+
+<!-- 完全隱藏原本的「整體情報」按鈕（不會出現在畫面上） -->
+<style>
+  /* 隱藏原本的整體情報按鈕（pane-dashboard） */
+  #mainTabs .main-tab[data-target="pane-dashboard"] {
+    display: none !important;
+  }
+</style>
     </div>
 
     <!-- 右下：時鐘 + 自動更新頻率 -->

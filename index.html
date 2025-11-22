@@ -2047,6 +2047,7 @@ function openListModal2(sheetKey, step, type, locValue){
 }  
 
 /* 執行快速打卡動作 */
+/* 執行快速打卡動作 */
 async function onQuickPunch(sheetKey, stepName, rowNum, area, car, closeListFn) {
   if (!currentUser) return;
   
@@ -2060,11 +2061,11 @@ async function onQuickPunch(sheetKey, stepName, rowNum, area, car, closeListFn) 
   const nowTime = getTaipeiHHMMSS(); // 取得目前時間 HH:mm:ss
 
   await withLoading(async () => {
+    // ★ 修正處：移除 mode: 'punch' 欄位，讓它成為標準的單一儲存格更新請求
     const body = {
       sheet: cfg.sheet,
       email: currentUser.email,
       idToken: (typeof idToken !== 'undefined' ? idToken : ''),
-      mode: 'punch',
       writes: [{ row: rowNum, col: colIdx + 1, value: nowTime }]
     };
 

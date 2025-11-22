@@ -515,9 +515,12 @@ function buildRefreshControls(){
   nowBtn.textContent = '立即更新';
   nowBtn.title = '立刻重新整理整體情報';
   nowBtn.onclick = ()=> {
-    if (isDashboardVisible()) buildDashboard(false);
-    else showNotif('切到「整體情報」即可看到最新資料', false);
-  };
+  if (isDashboardVisible()) {
+    buildDashboard(false);
+    buildDashboard2(true);
+    refreshAllActiveTodoModals();   // 加上這行
+  } else showNotif('切到「整體情報」即可看到最新資料', false);
+};
   box.appendChild(nowBtn);
 }
 
@@ -1317,6 +1320,7 @@ function startDashboardAutoRefresh() {
     // 檢查 II 是否開著
     if (!document.getElementById('pane-dashboard2').classList.contains('hide')) {
        buildDashboard2(true); // 呼叫 II 的靜默刷新
+       refreshAllActiveTodoModals();
     }
   }, refreshMs);
 }
@@ -1904,147 +1908,243 @@ function getLatestStatus(cfg, header, row){
   return '尚未開始';
 }
 
-/* --------------- Overlay 1：清單 --------------- */
-/* --------------- Overlay 1：清單 --------------- */
-function openListModal(sheetKey, step, type, locValue){
-  const {cfg, header, rows} = ALL_SHEETS[sheetKey];
+/* ============================= 需求二：停車位置彈窗新增車輛 ============================= */
+function openListModal(sheetKey, step, type, locValue) {
+  const { cfg, header, rows } = ALL_SHEETS[sheetKey];
   const list = [];
+  const stopCol = header.indexOf('車暫停位置');
+  const prevStepCol = header.indexOf('車前往排車隊');
 
-  if (type==='loc'){ // 停車位置
-    const c = header.indexOf('車暫停位置');
-    rows.forEach(r=>{ if (c>=0 && String(r[c]||'').trim()===locValue) list.push(r); });
-  } else if (type==='done' || type==='todo'){
-    const c = header.indexOf(step);
-    rows.forEach(r=>{
-      const v = c>=0 ? r[c] : '';
-      if ((type==='done' && isCompletedValue(v)) || (type==='todo' && !isCompletedValue(v))) list.push(r);
+  if (type === 'loc') {
+    rows.forEach(r => {
+      if (stopCol >= 0 && String(r[stopCol] || '').trim() === locValue) list.push(r);
     });
   }
 
-  const box=document.createElement('div');
-  box.className='modal';
-  const titleText = (type==='loc')
-    ? `${sheetKey}：${step}＝${locValue}`
-    : `${sheetKey}：${step}（${type==='done'?'完成':'未完成'}）`;
-
+  const box = document.createElement('div');
+  box.className = 'modal';
   box.innerHTML = `
     <div class="dash-close">✕</div>
-    <h3 style="font-size:18px;margin:0 0 8px;">${escapeHtml(titleText)}</h3>
-    <div style="max-height:70vh; overflow:auto; padding-right:6px;">
-      ${list.length? '' : '<div style="opacity:.7">目前沒有資料</div>'}
+    <h3 style="font-size:18px;margin:0 0 8px;">${escapeHtml(sheetKey)}：${step}＝${locValue}</h3>
+    <div style="max-height:60vh; overflow:auto; padding-right:6px;">
+      ${list.length ? '' : '<div style="opacity:.7">目前沒有車輛停在此處</div>'}
     </div>
+    ${stopCol >= 0 && ['地區專車退場（遊覽車平台）', '地區專車退場（禪堂平台）', '水陸專車退場'].includes(cfg.sheet) ? `
+      <div style="border-top:1px solid var(--border); margin-top:12px; padding-top:12px;">
+        <div style="font-weight:600; margin-bottom:8px;">新增此位置停車資訊</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="addStopCarSelect" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border);">
+            <option value="">請選擇車輛...</option>
+          </select>
+          <button id="btnAddStopCar" class="btn btn--primary" disabled>新增</button>
+        </div>
+      </div>` : ''}
   `;
+
   const close = openModal(box);
   box.querySelector('.dash-close').onclick = close;
 
-  const scroller = box.querySelector('div[style*="overflow:auto"]');
-  list.forEach(r=>{
-    const area  = String(r[1]||'').trim();
-    const car   = String(r[2]||'').trim();
-    const latest = getLatestStatus(ALL_SHEETS[sheetKey].cfg, ALL_SHEETS[sheetKey].header, r);
-
-    const row = document.createElement('div'); row.className='list-item';
-    row.innerHTML = `
+  const scroller = box.querySelector('div[style*="overflow"]');
+  list.forEach(r => {
+    const area = String(r[1] || '').trim();
+    const car = String(r[2] || '').trim();
+    const item = document.createElement('div');
+    item.className = 'list-item';
+    item.innerHTML = `
       <div class="list-left">
         <div class="list-title">${escapeHtml(area)}　<span style="font-weight:900">${escapeHtml(car)}</span></div>
-        <div class="list-sub">最新狀態：${escapeHtml(latest)}</div>
       </div>
       <div><button class="btn btn--primary btn--sm">詳細資料</button></div>
     `;
-    row.querySelector('button').onclick = ()=> openDetailModal(sheetKey, r);
-    scroller.appendChild(row);
+    item.querySelector('button').onclick = () => openDetailModal(sheetKey, r);
+    scroller.appendChild(item);
   });
+
+  // 新增車輛功能
+  if (stopCol >= 0 && box.querySelector('#addStopCarSelect')) {
+    const select = box.querySelector('#addStopCarSelect');
+    const btn = box.querySelector('#btnAddStopCar');
+
+    // 產生候選車輛
+    const candidates = rows.filter(r => {
+      const prevDone = prevStepCol >= 0 && isCompletedValue(r[prevStepCol]);
+      const noStop = !String(r[stopCol] || '').trim();
+      return prevDone && noStop;
+    });
+
+    if (candidates.length === 0) {
+      select.innerHTML = '<option value="">無可新增車輛</option>';
+    } else {
+      candidates.forEach(r => {
+        const area = String(r[1] || '').trim();
+        const car = String(r[2] || '').trim();
+        const opt = document.createElement('option');
+        opt.value = `${area}|${car}`;
+        opt.textContent = `${area} ${car}`;
+        select.appendChild(opt);
+      });
+    }
+
+    select.onchange = () => btn.disabled = !select.value;
+    btn.onclick = async () => {
+      if (!select.value) return;
+      const [area, car] = select.value.split('|');
+      const rowIndex = rows.findIndex(r =>
+        String(r[1] || '').trim() === area && String(r[2] || '').trim() === car
+      );
+      const realRowNum = ALL_SHEETS[sheetKey].headerIdx + 2 + rowIndex;
+
+      await withLoading(async () => {
+        const body = {
+          sheet: cfg.sheet,
+          idToken: idToken || '',
+          ifMatch: null,
+          writes: [{ row: realRowNum, col: stopCol + 1, value: locValue }]
+        };
+        const r = await fetch(API_BASE + '?action=update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(body)
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || '新增失敗');
+        showNotif('新增成功！', false);
+        close();
+        refreshAllActiveTodoModals();
+        buildDashboard2(true);
+      }, '新增中…');
+    };
+  }
 }
 
-/* 專用：整體情報 II 的清單彈窗（含快速打卡按鈕） */
-function openListModal2(sheetKey, step, type, locValue){
-  const {cfg, header, rows} = ALL_SHEETS[sheetKey];
+/* ============================= 需求一：強制步驟順序鎖 + 即時更新 ============================= */
+// 全局變數：儲存所有已開啟的未完成清單（用來即時刷新按鈕狀態）
+const activeTodoModals = new Set();
+
+function openListModal2(sheetKey, step, type, locValue) {
+  const { cfg, header, rows } = ALL_SHEETS[sheetKey];
   const list = [];
 
-  // 篩選資料邏輯 (與原本相同)
-  if (type==='loc'){ 
+  if (type === 'loc') {
     const c = header.indexOf('車暫停位置');
-    rows.forEach(r=>{ if (c>=0 && String(r[c]||'').trim()===locValue) list.push(r); });
-  } else if (type==='done' || type==='todo'){
+    rows.forEach(r => {
+      if (c >= 0 && String(r[c] || '').trim() === locValue) list.push(r);
+    });
+  } else {
     const c = header.indexOf(step);
-    rows.forEach(r=>{
-      const v = c>=0 ? r[c] : '';
-      if ((type==='done' && isCompletedValue(v)) || (type==='todo' && !isCompletedValue(v))) list.push(r);
+    rows.forEach(r => {
+      const v = c >= 0 ? r[c] : '';
+      if ((type === 'done' && isCompletedValue(v)) || (type === 'todo' && !isCompletedValue(v))) list.push(r);
     });
   }
 
-  // 建立彈窗
   const box = document.createElement('div');
   box.className = 'modal';
-  const titleText = (type==='loc')
+  const titleText = (type === 'loc')
     ? `${sheetKey}：${step}＝${locValue}`
-    : `${sheetKey}：${step}（${type==='done'?'完成':'未完成'}）`;
+    : `${sheetKey}：${step}（${type === 'done' ? '完成' : '未完成'}）`;
 
   box.innerHTML = `
     <div class="dash-close">✕</div>
     <h3 style="font-size:18px;margin:0 0 8px;">${escapeHtml(titleText)}</h3>
     <div style="max-height:70vh; overflow:auto; padding-right:6px;" id="modalListContent">
-      ${list.length? '' : '<div style="opacity:.7">目前沒有資料</div>'}
-    </div>
-  `;
+      ${list.length ? '' : '<div style="opacity:.7">目前沒有資料</div>'}
+    </div>`;
 
-  // 關閉彈窗函式（以此變數控制）
-  const closeList = openModal(box); 
-  box.querySelector('.dash-close').onclick = closeList;
+  const closeList = openModal(box);
+  box.querySelector('.dash-close').onclick = () => {
+    activeTodoModals.delete(box); // 關閉時移除追蹤
+    closeList();
+  };
 
   const scroller = box.querySelector('#modalListContent');
-  
-  // 逐列渲染
-  list.forEach(r=>{
-    const area  = String(r[1]||'').trim();
-    const car   = String(r[2]||'').trim();
-    const rowNum = Number(r[0]||0); // 取得列號
-    const latest = getLatestStatus(ALL_SHEETS[sheetKey].cfg, ALL_SHEETS[sheetKey].header, r);
+  const steps = cfg.steps;
 
-    const rowDiv = document.createElement('div'); 
+  list.forEach(r => {
+    const area = String(r[1] || '').trim();
+    const car = String(r[2] || '').trim();
+    const latest = getLatestStatus(cfg, header, r);
+
+    const rowDiv = document.createElement('div');
     rowDiv.className = 'list-item';
-    
-    // 判斷是否顯示「打卡」按鈕
-    // 條件：1.是未完成清單 2.不是車暫停位置 3.有全功能權限
-    let punchBtnHtml = '';
-    const showPunch = (type === 'todo' && step !== '車暫停位置' && currentUser && currentUser.permission === '全功能');
-    
+
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'list-left';
+    infoDiv.innerHTML = `
+      <div class="list-title">${escapeHtml(area)}　<span style="font-weight:900">${escapeHtml(car)}</span></div>
+      <div class="list-sub">最新狀態：${escapeHtml(latest)}</div>`;
+
     const actionsDiv = document.createElement('div');
     actionsDiv.style.display = 'flex';
     actionsDiv.style.gap = '8px';
 
-    // --- 打卡按鈕 (新增) ---
-    if (showPunch) {
-      const btnP = document.createElement('button');
-      btnP.className = 'btn btn--primary btn--sm';
-      btnP.textContent = '打卡';
-      btnP.onclick = () => {
-         // 呼叫打卡函式，傳入 closeList 以便成功後關閉此清單
-         onQuickPunch(sheetKey, step, rowNum, area, car, closeList);
+    // 詳細資料按鈕（永遠可點）
+    const btnDetail = document.createElement('button');
+    btnDetail.className = 'btn btn--secondary btn--sm';
+    btnDetail.textContent = '詳細資料';
+    btnDetail.onclick = () => openDetailModal(sheetKey, r);
+    actionsDiv.appendChild(btnDetail);
+
+    // 打卡按鈕（只有未完成 + 不是車暫停位置 + 順序允許才顯示）
+    if (type === 'todo' && step !== '車暫停位置' && currentUser?.permission === '全功能') {
+      const stepIndex = steps.indexOf(step);
+      const prevStep = stepIndex > 0 ? steps[stepIndex - 1] : null;
+      const prevCol = prevStep ? header.indexOf(prevStep) : -1;
+      const canPunch = !prevStep || (prevCol >= 0 && isCompletedValue(r[prevCol]));
+
+      const btnPunch = document.createElement('button');
+      btnPunch.className = `btn ${canPunch ? 'btn--primary' : 'btn--secondary'} btn--sm`;
+      btnPunch.textContent = '打卡';
+      btnPunch.disabled = !canPunch;
+      btnPunch.title = canPunch ? '' : `請先完成「${prevStep}」`;
+
+      btnPunch.onclick = () => {
+        if (!canPunch) return;
+        // 找到正確列號（用 area + car 精準定位）
+        const sheetInfo = ALL_SHEETS[sheetKey];
+        const rowIndex = sheetInfo.rows.findIndex(row =>
+          String(row[1] || '').trim() === area && String(row[2] || '').trim() === car
+        );
+        const realRowNum = sheetInfo.headerIdx + 2 + rowIndex;
+        onQuickPunch(sheetKey, step, realRowNum, area, car, closeList);
       };
-      actionsDiv.appendChild(btnP);
+      actionsDiv.appendChild(btnPunch);
     }
-
-    // --- 詳細資料按鈕 (原本的) ---
-    const btnD = document.createElement('button');
-    btnD.className = 'btn btn--secondary btn--sm'; // 改為次要樣式以突顯打卡
-    btnD.textContent = '詳細資料';
-    btnD.onclick = () => openDetailModal(sheetKey, r);
-    actionsDiv.appendChild(btnD);
-
-    // 組裝 HTML
-    const infoDiv = document.createElement('div');
-    infoDiv.className = 'list-left';
-    infoDiv.innerHTML = `
-        <div class="list-title">${escapeHtml(area)}　<span style="font-weight:900">${escapeHtml(car)}</span></div>
-        <div class="list-sub">最新狀態：${escapeHtml(latest)}</div>
-    `;
 
     rowDiv.appendChild(infoDiv);
     rowDiv.appendChild(actionsDiv);
     scroller.appendChild(rowDiv);
   });
-}  
+
+  // 註冊這個彈窗，方便後續即時刷新
+  activeTodoModals.add(box);
+}
+
+// 任何資料更新後，呼叫此函式即時刷新所有已開的清單
+async function refreshAllActiveTodoModals() {
+  if (activeTodoModals.size === 0) return;
+  await buildDashboard2(true); // 靜默更新 ALL_SHEETS
+  activeTodoModals.forEach(box => {
+    if (document.body.contains(box)) {
+      // 簡單粗暴：關掉重開（最穩、最快）
+      box.querySelector('.dash-close').click();
+      // 可選：延遲一點再重開，避免太快
+      setTimeout(() => {
+        const title = box.querySelector('h3').textContent;
+        const match = title.match(/：(.+?)[（＝]/);
+        if (match) {
+          const step = match[1].split('（')[0];
+          openListModal2(title.split('：')[0], step, title.includes('未完成') ? 'todo' : 'done');
+        }
+      }, 300);
+    }
+  });
+}
+
+// 所有會改變資料的地方，成功後都加這一行：
+/*
+  refreshAllActiveTodoModals();
+*/
 
 /* 執行快速打卡動作 */
 async function onQuickPunch(sheetKey, stepName, dummy, area, car, closeListFn) {
@@ -2115,6 +2215,7 @@ async function onQuickPunch(sheetKey, stepName, dummy, area, car, closeListFn) {
       if (closeListFn) closeListFn();
       showPunchSuccessModal(area, car, nowTime, stepName);
       buildDashboard2(true);
+      refreshAllActiveTodoModals();
     }, '打卡中…');
 
   } catch (err) {

@@ -1567,7 +1567,7 @@ async function buildDashboard2(silent = false){
             </div>`;
           
           card.querySelectorAll('.stat-pill').forEach(pill => {
-            pill.addEventListener('click', () => openListModal(cfg.key, st, pill.dataset.type));
+            pill.addEventListener('click', () => openListModal2(cfg.key, st, pill.dataset.type));
           });
           grid.appendChild(card);
         });
@@ -1956,8 +1956,168 @@ function openListModal(sheetKey, step, type, locValue){
   });
 }
 
+/* 專用：整體情報 II 的清單彈窗（含快速打卡按鈕） */
+function openListModal2(sheetKey, step, type, locValue){
+  const {cfg, header, rows} = ALL_SHEETS[sheetKey];
+  const list = [];
 
-/* --------------- Overlay 2：單車詳情 --------------- */
+  // 篩選資料邏輯 (與原本相同)
+  if (type==='loc'){ 
+    const c = header.indexOf('車暫停位置');
+    rows.forEach(r=>{ if (c>=0 && String(r[c]||'').trim()===locValue) list.push(r); });
+  } else if (type==='done' || type==='todo'){
+    const c = header.indexOf(step);
+    rows.forEach(r=>{
+      const v = c>=0 ? r[c] : '';
+      if ((type==='done' && isCompletedValue(v)) || (type==='todo' && !isCompletedValue(v))) list.push(r);
+    });
+  }
+
+  // 建立彈窗
+  const box = document.createElement('div');
+  box.className = 'modal';
+  const titleText = (type==='loc')
+    ? `${sheetKey}：${step}＝${locValue}`
+    : `${sheetKey}：${step}（${type==='done'?'完成':'未完成'}）`;
+
+  box.innerHTML = `
+    <div class="dash-close">✕</div>
+    <h3 style="font-size:18px;margin:0 0 8px;">${escapeHtml(titleText)}</h3>
+    <div style="max-height:70vh; overflow:auto; padding-right:6px;" id="modalListContent">
+      ${list.length? '' : '<div style="opacity:.7">目前沒有資料</div>'}
+    </div>
+  `;
+
+  // 關閉彈窗函式（以此變數控制）
+  const closeList = openModal(box); 
+  box.querySelector('.dash-close').onclick = closeList;
+
+  const scroller = box.querySelector('#modalListContent');
+  
+  // 逐列渲染
+  list.forEach(r=>{
+    const area  = String(r[1]||'').trim();
+    const car   = String(r[2]||'').trim();
+    const rowNum = Number(r[0]||0); // 取得列號
+    const latest = getLatestStatus(ALL_SHEETS[sheetKey].cfg, ALL_SHEETS[sheetKey].header, r);
+
+    const rowDiv = document.createElement('div'); 
+    rowDiv.className = 'list-item';
+    
+    // 判斷是否顯示「打卡」按鈕
+    // 條件：1.是未完成清單 2.不是車暫停位置 3.有全功能權限
+    let punchBtnHtml = '';
+    const showPunch = (type === 'todo' && step !== '車暫停位置' && currentUser && currentUser.permission === '全功能');
+    
+    const actionsDiv = document.createElement('div');
+    actionsDiv.style.display = 'flex';
+    actionsDiv.style.gap = '8px';
+
+    // --- 打卡按鈕 (新增) ---
+    if (showPunch) {
+      const btnP = document.createElement('button');
+      btnP.className = 'btn btn--primary btn--sm';
+      btnP.textContent = '打卡';
+      btnP.onclick = () => {
+         // 呼叫打卡函式，傳入 closeList 以便成功後關閉此清單
+         onQuickPunch(sheetKey, step, rowNum, area, car, closeList);
+      };
+      actionsDiv.appendChild(btnP);
+    }
+
+    // --- 詳細資料按鈕 (原本的) ---
+    const btnD = document.createElement('button');
+    btnD.className = 'btn btn--secondary btn--sm'; // 改為次要樣式以突顯打卡
+    btnD.textContent = '詳細資料';
+    btnD.onclick = () => openDetailModal(sheetKey, r);
+    actionsDiv.appendChild(btnD);
+
+    // 組裝 HTML
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'list-left';
+    infoDiv.innerHTML = `
+        <div class="list-title">${escapeHtml(area)}　<span style="font-weight:900">${escapeHtml(car)}</span></div>
+        <div class="list-sub">最新狀態：${escapeHtml(latest)}</div>
+    `;
+
+    rowDiv.appendChild(infoDiv);
+    rowDiv.appendChild(actionsDiv);
+    scroller.appendChild(rowDiv);
+  });
+}  
+
+/* 執行快速打卡動作 */
+async function onQuickPunch(sheetKey, stepName, rowNum, area, car, closeListFn) {
+  if (!currentUser) return;
+  
+  const cfg = SHEET_CONFIGS.find(s => s.key === sheetKey);
+  // 找出欄位 index
+  const header = ALL_SHEETS[sheetKey].header;
+  const colIdx = header.indexOf(stepName);
+  
+  if (colIdx === -1) { showNotif('欄位錯誤', true); return; }
+
+  const nowTime = getTaipeiHHMMSS(); // 取得目前時間 HH:mm:ss
+
+  await withLoading(async () => {
+    const body = {
+      sheet: cfg.sheet,
+      email: currentUser.email,
+      idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+      mode: 'punch',
+      writes: [{ row: rowNum, col: colIdx + 1, value: nowTime }]
+    };
+
+    const r = await fetch(API_BASE + '?action=update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    });
+
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '更新失敗');
+
+    // API 成功後：
+    await sleep(200); 
+    // 1. 關閉原本的清單視窗
+    if (closeListFn) closeListFn();
+    
+    // 2. 顯示「打卡成功」確認視窗 (依照您的圖片樣式)
+    showPunchSuccessModal(area, car, nowTime, stepName);
+
+    // 3. 背景重新讀取資料，確保回到主頁時數據是最新的
+    buildDashboard2(true); // 靜默刷新
+    
+  }, '打卡中…');
+}
+
+/* 顯示打卡成功確認視窗 (依照圖片樣式) */
+function showPunchSuccessModal(area, car, time, step) {
+  const box = document.createElement('div');
+  box.className = 'modal';
+  // 設定置中樣式
+  box.style.textAlign = 'center';
+  box.style.padding = '24px';
+  box.style.maxWidth = '320px'; // 窄版設計
+
+  box.innerHTML = `
+    <div style="font-size:22px; font-weight:700; color:var(--text-strong); margin-bottom:4px;">${escapeHtml(area)}</div>
+    <div style="font-size:20px; font-weight:700; color:var(--text-strong); margin-bottom:12px;">${escapeHtml(car)}</div>
+    
+    <div style="font-size:16px; color:#64748b; margin-bottom:2px;">[${time}]</div>
+    <div style="font-size:16px; font-weight:600; color:#334155; margin-bottom:16px;">[${escapeHtml(step)}]</div>
+    
+    <div style="font-size:20px; font-weight:800; color:var(--success-600); margin-bottom:24px;">打卡成功</div>
+    
+    <button id="btnSuccessConfirm" class="btn btn--primary btn--lg" style="width:100%;">確定</button>
+  `;
+
+  const close = openModal(box);
+  
+  // 點擊「確定」只單純關閉此視窗，畫面就停留在整體情報 II
+  document.getElementById('btnSuccessConfirm').onclick = close;
+}  
+
 /* --------------- Overlay 2：單車詳情 --------------- */
 // - openDetailModal(sheetKey, row)
 // - openDetailModal(cfgObject, row, headerArray)

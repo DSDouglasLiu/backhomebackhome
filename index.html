@@ -763,8 +763,8 @@ document.getElementById('tabs').classList.remove('hide');
 document.getElementById('content').classList.remove('hide');
 
   if (currentUser.permission === '檢視') showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
-  // ★ 進入後統一切回「登錄」頁，避免上次停在整體情報
-  switchPane('pane-punch');
+  // 預設直接開啟「最新狀態」（整體情報 II）
+  switchPane('pane-dashboard2');
 
   // （可選）恢復頁籤可聚焦
   document.querySelectorAll('#mainTabs .main-tab')
@@ -1330,7 +1330,7 @@ function computeCompletion(cfg, header, row) {
 const PANE_IDS=['pane-punch','pane-dashboard','pane-single', 'pane-dashboard2'];
 
 /* 新增這個變數：用來記錄 II 的 Tab 狀態，避免跟 I 互相影響 */
-let currentDashFilter2 = 'ALL';
+let currentDashFilter2 = 'ALL'; // 預設顯示「所有車輛」
   /* 取代原本的 switchPane 函式內容，或依照下方邏輯修改 */
 function switchPane(targetId){
   // 未登入就不要切換
@@ -1355,11 +1355,14 @@ function switchPane(targetId){
     buildDashboard(false);  // 載入 I 的資料
     startDashboardAutoRefresh();
   } 
-  else if (targetId === 'pane-dashboard2') { // ★ 新增 II 的邏輯
-    buildDashboardTabs2();  // 建構 II 的 Tabs (新函式)
-    buildDashboard2(false); // 載入 II 的資料 (新函式)
-    startDashboardAutoRefresh();
-  } 
+  
+  else if (targetId === 'pane-dashboard2') {
+  buildDashboardTabs2();
+  currentDashFilter2 = 'ALL';     // 強制預設所有車輛
+  updateDashTabActive2();         // 高亮「所有車輛」按鈕
+  buildDashboard2(false);
+  startDashboardAutoRefresh();
+  }
   else {
     stopDashboardAutoRefresh();
   }

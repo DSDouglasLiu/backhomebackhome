@@ -969,13 +969,35 @@ memoBtn.onclick = async () => {
 }
 function prevDone(cfg, header, row, st){ const idx=cfg.steps.indexOf(st); if (idx===0) return true; const prev=cfg.steps[idx-1]; const col=header.indexOf(prev); if (col===-1) return true; return !!row[col]; }
 async function onStopSelect(cfg,rowNumber,header,st,value,span){
-  if (!currentUser) return alert('請先登入'); if (currentUser.permission!=='全功能') return alert('權限不足');
-  const colIdx=header.indexOf(st); if (colIdx===-1) return alert('此欄位不存在：'+st);
+  if (!currentUser) return alert('請先登入'); 
+  if (currentUser.permission!=='全功能') return alert('權限不足');
+  
+  const colIdx=header.indexOf(st); 
+  if (colIdx===-1) return alert('此欄位不存在：'+st);
+
   await withLoading(async()=>{
-    const body={sheet:cfg.sheet,email:currentUser.email,writes:[{row:rowNumber,col:colIdx+1,value}]};
-    const r=await fetch(API_BASE+'?action=update',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-    const j=await r.json(); if(!j.ok) throw new Error(j.error||'unknown'); await sleep(200); await reloadSheet();
-  },'更新中…'); span.textContent=value||''; showNotif(value?'已更新車暫停位置':'已清除車暫停位置',false);
+    const body = {
+      sheet: cfg.sheet,
+      email: currentUser.email,
+      idToken: (typeof idToken !== 'undefined' ? idToken : ''), // ★ 補上這行
+      writes: [{row:rowNumber, col:colIdx+1, value}]
+    };
+    
+    const r = await fetch(API_BASE+'?action=update', {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(body)
+    });
+    
+    const j = await r.json(); 
+    if(!j.ok) throw new Error(j.error||'unknown'); 
+    
+    await sleep(200); 
+    await reloadSheet();
+  },'更新中…'); 
+  
+  span.textContent=value||''; 
+  showNotif(value?'已更新車暫停位置':'已清除車暫停位置',false);
 }
 // 打卡按鈕事件
 async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {

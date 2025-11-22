@@ -345,7 +345,25 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
     min-width: 180px;
   }
 }
-  
+/* ======================= 手機專屬：只保留「最新狀態」按鈕 ====================== */
+@media (max-width: 767px) {
+  /* 隱藏「登錄與修改」和「個別情報」按鈕 */
+  #mainTabs .main-tab[data-target="pane-punch"],
+  #mainTabs .main-tab[data-target="pane-single"] {
+    display: none !important;
+  }
+
+  /* 讓「最新狀態」按鈕在手機上更好看、更好按 */
+  #mainTabs .main-tab[data-target="pane-dashboard2"] {
+    flex: 1;
+    min-width: 0;
+    font-size: 17px !important;
+    padding: 16px !important;
+    background: var(--primary-600) !important;
+    color: white !important;
+    border-radius: 12px !important;
+  }
+}  
 </style>
 </head>
 <body>
@@ -764,8 +782,24 @@ document.getElementById('content').classList.remove('hide');
 
   if (currentUser.permission === '檢視') showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
   // 預設直接開啟「最新狀態」（整體情報 II）
-  switchPane('pane-dashboard2');
+  //switchPane('pane-dashboard2');
+    if (currentUser.permission === '檢視') showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
 
+  // ====== 關鍵修改：電腦預設「登錄與修改」，手機強制「最新狀態」======
+  if (window.innerWidth <= 767) {
+    // 手機：強制開「最新狀態」＋顯示「所有車輛」
+    switchPane('pane-dashboard2');
+    currentDashFilter2 = 'ALL';
+    if (typeof updateDashTabActive2 === 'function') updateDashTabActive2();
+  } else {
+    // 電腦：保持原本「登錄與修改」
+    switchPane('pane-punch');
+  }
+
+  // （可選）恢復頁籤可聚焦
+  document.querySelectorAll('#mainTabs .main-tab')
+    .forEach(b => { b.tabIndex = 0; b.removeAttribute('aria-disabled'); });
+}
   // （可選）恢復頁籤可聚焦
   document.querySelectorAll('#mainTabs .main-tab')
     .forEach(b => { b.tabIndex = 0; b.removeAttribute('aria-disabled'); });

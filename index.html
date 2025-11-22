@@ -345,7 +345,25 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
     min-width: 180px;
   }
 }
-  
+/* ======================= 手機專屬：只保留「最新狀態」按鈕 ====================== */
+@media (max-width: 767px) {
+  /* 隱藏「登錄與修改」和「個別情報」按鈕 */
+  #mainTabs .main-tab[data-target="pane-punch"],
+  #mainTabs .main-tab[data-target="pane-single"] {
+    display: none !important;
+  }
+
+  /* 讓「最新狀態」按鈕在手機上更好看、更好按 */
+  #mainTabs .main-tab[data-target="pane-dashboard2"] {
+    flex: 1;
+    min-width: 0;
+    font-size: 17px !important;
+    padding: 16px !important;
+    background: var(--primary-600) !important;
+    color: white !important;
+    border-radius: 12px !important;
+  }
+}  
 </style>
 </head>
 <body>
@@ -368,23 +386,37 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
 
     <!-- 左下：三個主頁籤 -->
     <div class="left-tabs">
-      <div id="mainTabs" class="main-tabs" style="justify-content: space-between;">
-  <!-- 最左邊：最新狀態（原本的整體情報 II） -->
-  <button class="main-tab" data-target="pane-dashboard2">最新狀態</button>
+      <div id="mainTabs" class="main-tabs">
+  <!-- 最新狀態（所有裝置都看得到，手機特別強化） -->
+  <button class="main-tab mobile-only-home" data-target="pane-dashboard2">最新狀態</button>
 
-  <!-- 中間：個別情報（保留） -->
-  <button class="main-tab" data-target="pane-single">個別情報</button>
+  <!-- 個別情報（電腦看得見，手機隱藏） -->
+  <button class="main-tab hidden-on-mobile" data-target="pane-single">個別情報</button>
 
-  <!-- 最右邊：登錄與修改（原本的登錄） -->
-  <button class="main-tab active" data-target="pane-punch">登錄與修改</button>
+  <!-- 登錄與修改（電腦看得見，手機隱藏） -->
+  <button class="main-tab hidden-on-mobile" data-target="pane-punch">登錄與修改</button>
 </div>
 
-<!-- 完全隱藏原本的「整體情報」按鈕（不會出現在畫面上） -->
+<!-- 手機專屬樣式：隱藏非最新狀態的按鈕，並讓最新狀態按鈕佔滿 -->
 <style>
-  /* 隱藏原本的整體情報按鈕（pane-dashboard） */
-  #mainTabs .main-tab[data-target="pane-dashboard"] {
+@media (max-width: 767px) {
+  .hidden-on-mobile {
     display: none !important;
   }
+  .mobile-only-home {
+    flex: 1 !important;
+    font-size: 18px !important;
+    padding: 18px !important;
+    background: var(--primary-600) !important;
+    color: white !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 20px rgba(31, 111, 229, 0.4);
+  }
+  /* 確保手機點擊能觸發 */
+  .mobile-only-home:active {
+    transform: scale(0.98);
+  }
+}
 </style>
     </div>
 
@@ -764,8 +796,24 @@ document.getElementById('content').classList.remove('hide');
 
   if (currentUser.permission === '檢視') showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
   // 預設直接開啟「最新狀態」（整體情報 II）
-  switchPane('pane-dashboard2');
+  //switchPane('pane-dashboard2');
+    if (currentUser.permission === '檢視') showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
 
+  // ====== 關鍵修改：電腦預設「登錄與修改」，手機強制「最新狀態」======
+  if (window.innerWidth <= 767) {
+    // 手機：強制開「最新狀態」＋顯示「所有車輛」
+    switchPane('pane-dashboard2');
+    currentDashFilter2 = 'ALL';
+    if (typeof updateDashTabActive2 === 'function') updateDashTabActive2();
+  } else {
+    // 電腦：保持原本「登錄與修改」
+    switchPane('pane-punch');
+  }
+
+  // （可選）恢復頁籤可聚焦
+  document.querySelectorAll('#mainTabs .main-tab')
+    .forEach(b => { b.tabIndex = 0; b.removeAttribute('aria-disabled'); });
+}
   // （可選）恢復頁籤可聚焦
   document.querySelectorAll('#mainTabs .main-tab')
     .forEach(b => { b.tabIndex = 0; b.removeAttribute('aria-disabled'); });

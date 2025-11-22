@@ -314,10 +314,11 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
     <!-- 左下：三個主頁籤 -->
     <div class="left-tabs">
       <div id="mainTabs" class="main-tabs">
-        <button class="main-tab active" data-target="pane-punch">登錄</button>
-        <button class="main-tab" data-target="pane-dashboard">整體情報</button>
-        <button class="main-tab" data-target="pane-single">個別情報</button>
-      </div>
+  <button class="main-tab active" data-target="pane-punch">登錄</button>
+  <button class="main-tab" data-target="pane-dashboard">整體情報</button>
+  <button class="main-tab" data-target="pane-single">個別情報</button>
+  <button class="main-tab" data-target="pane-dashboard2">整體情報 II</button>
+</div>
     </div>
 
     <!-- 右下：時鐘 + 自動更新頻率 -->
@@ -375,6 +376,13 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
   </div>
 </div>
 
+<div id="pane-dashboard2" class="tab-pane hide">
+  <div class="card" id="dashTabsBar2" style="padding-bottom:6px;">
+    <div class="sheet-tabs" id="dashboardTabs2"></div>
+  </div>
+  <div id="dashboard2"></div>
+</div>
+  
 </div>
 
 <div id="notif" class="notif"></div>
@@ -619,7 +627,7 @@ function buildDashboardTabs(){
 
   makeBtn('所有車輛', 'ALL');
   SHEET_CONFIGS.forEach(cfg => makeBtn(cfg.key, cfg.key));
-}
+}  
 
 function updateDashTabActive(){
   const box = document.getElementById('dashboardTabs');
@@ -629,6 +637,37 @@ function updateDashTabActive(){
   });
 }
 
+function buildDashboardTabs2(){
+  const box = document.getElementById('dashboardTabs2'); // 改抓 2
+  if (!box) return;
+  box.innerHTML = '';
+
+  const makeBtn = (label, key) => {
+    const btn = document.createElement('button');
+    // 判斷 currentDashFilter2
+    btn.className = 'btn-tab' + (currentDashFilter2 === key ? ' active' : '');
+    btn.textContent = label;
+    btn.dataset.key = key;
+    btn.onclick = () => {
+      if (currentDashFilter2 === key) return;
+      currentDashFilter2 = key; // 更新 2 的狀態
+      updateDashTabActive2();   // 更新 2 的樣式
+      buildDashboard2(false);   // 重繪 2
+    };
+    box.appendChild(btn);
+  };
+
+  makeBtn('所有車輛', 'ALL');
+  SHEET_CONFIGS.forEach(cfg => makeBtn(cfg.key, cfg.key));
+}
+
+function updateDashTabActive2(){
+  const box = document.getElementById('dashboardTabs2');
+  if (!box) return;
+  box.querySelectorAll('.btn-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.key === String(currentDashFilter2));
+  });
+}  
   
 async function handleCredential(resp) {
   idToken = resp.credential;
@@ -1217,7 +1256,12 @@ function computeCompletion(cfg, header, row) {
 }
 
 /* ===== 頂層三頁切換 ===== */
-const PANE_IDS=['pane-punch','pane-dashboard','pane-single'];
+/* 修改這裡：加入 'pane-dashboard2' */
+const PANE_IDS=['pane-punch','pane-dashboard','pane-single', 'pane-dashboard2'];
+
+/* 新增這個變數：用來記錄 II 的 Tab 狀態，避免跟 I 互相影響 */
+let currentDashFilter2 = 'ALL';
+  /* 取代原本的 switchPane 函式內容，或依照下方邏輯修改 */
 function switchPane(targetId){
   // 未登入就不要切換
   if (!currentUser) {
@@ -1235,32 +1279,48 @@ function switchPane(targetId){
 
   updateRefreshControlsVisibility();
 
-  // 整體情報：啟動自動刷新；其他頁停掉
+  // ★邏輯分支：判斷是 I 還是 II
   if (targetId === 'pane-dashboard') {
-    buildDashboardTabs();
-    buildDashboard(false);
+    buildDashboardTabs();   // 建構 I 的 Tabs
+    buildDashboard(false);  // 載入 I 的資料
     startDashboardAutoRefresh();
-  } else {
+  } 
+  else if (targetId === 'pane-dashboard2') { // ★ 新增 II 的邏輯
+    buildDashboardTabs2();  // 建構 II 的 Tabs (新函式)
+    buildDashboard2(false); // 載入 II 的資料 (新函式)
+    startDashboardAutoRefresh();
+  } 
+  else {
     stopDashboardAutoRefresh();
   }
 
-  // 個別情報：初始化（內部有 singleInitialized 防重複）
+  // 個別情報：初始化
   if (targetId === 'pane-single') {
     initSinglePage();
   }
 }
 
-
-
 function isDashboardVisible() {
-  return !document.getElementById('pane-dashboard').classList.contains('hide');
+  const p1 = document.getElementById('pane-dashboard');
+  const p2 = document.getElementById('pane-dashboard2');
+  // 只要其中一個沒有 hide class，就代表可見
+  return (p1 && !p1.classList.contains('hide')) || (p2 && !p2.classList.contains('hide'));
 }
+  
 function startDashboardAutoRefresh() {
   stopDashboardAutoRefresh();
   dashTimer = setInterval(() => {
-    if (isDashboardVisible()) buildDashboard(true); // 靜默刷新
+    // 檢查 I 是否開著
+    if (!document.getElementById('pane-dashboard').classList.contains('hide')) {
+       buildDashboard(true);
+    }
+    // 檢查 II 是否開著
+    if (!document.getElementById('pane-dashboard2').classList.contains('hide')) {
+       buildDashboard2(true); // 呼叫 II 的靜默刷新
+    }
   }, refreshMs);
 }
+  
 function stopDashboardAutoRefresh() {
   if (dashTimer) { clearInterval(dashTimer); dashTimer = null; }
 }
@@ -1397,6 +1457,126 @@ results.forEach(({ cfg, header, rows }) => {
   if (silent) { await work(); }
   else { await withLoading(work, '整理整體情報…'); }
 }
+
+async function buildDashboard2(silent = false){
+  if (!currentUser) return;
+  if (document.body.classList.contains('login')) return;
+
+  // ★ 改為抓 dashboard2 容器
+  const dash = document.getElementById('dashboard2');
+  dash.innerHTML = '';
+
+  const work = async () => {
+    // 這裡 logic 跟原本完全一樣，負責抓資料
+    const results = await Promise.all(
+      SHEET_CONFIGS.map(async cfg => {
+        const r = await fetch(
+          API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
+        );
+        const j = await r.json();
+        const values = j.values || [];
+        const headerIdx = values.findIndex(
+          r => Array.isArray(r) &&
+               String(r[0]||'').trim() === '編號' &&
+               String(r[1]||'').trim().startsWith('區域') &&
+               String(r[2]||'').trim() === '車號'
+        );
+        const header = headerIdx >= 0 ? values[headerIdx].map(c => String(c||'').trim()) : [];
+        const rows   = headerIdx >= 0 ? values.slice(headerIdx+1)
+                          .filter(r => String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim())
+                          : [];
+        return { key: cfg.key, cfg, headerIdx, header, rows };
+      })
+    );
+
+    // 更新全域資料 (共用即可，因為來源一樣)
+    ALL_SHEETS = {};
+    results.forEach(x => ALL_SHEETS[x.key] = x);
+
+    results.forEach(({ cfg, header, rows }) => {
+      // ★ 改用 currentDashFilter2
+      const filterKey = (typeof currentDashFilter2 === 'undefined' || !currentDashFilter2)
+        ? 'ALL'
+        : String(currentDashFilter2);
+      
+      if (filterKey !== 'ALL' && String(cfg.key) !== filterKey) return;
+
+      const sec   = document.createElement('section'); sec.className = 'dash-section card';
+      const title = document.createElement('div');     title.className = 'dash-title'; title.textContent = cfg.key;
+      sec.appendChild(title);
+
+      // 統計區塊 (邏輯不變)
+      const statWrap = document.createElement('div'); statWrap.className = 'stat-grid';
+      const stepsForCount = cfg.steps.filter(st => st !== '車暫停位置');
+      stepsForCount.forEach(st => {
+        const col = header.indexOf(st);
+        let done = 0, todo = 0;
+        rows.forEach(r => {
+          const v = col >= 0 ? r[col] : '';
+          isCompletedValue(v) ? done++ : todo++;
+        });
+
+        const card = document.createElement('div'); card.className = 'stat-card';
+        card.innerHTML = `
+          <div class="stat-head">${st}</div>
+          <div class="stat-row">
+            <div class="stat-pill" data-type="done">
+              <div class="stat-num done">${done}</div>
+              <div class="stat-label">完成</div>
+            </div>
+            <div class="stat-pill" data-type="todo">
+              <div class="stat-num todo">${todo}</div>
+              <div class="stat-label">未完成</div>
+            </div>
+          </div>`;
+        
+        card.querySelectorAll('.stat-pill').forEach(pill => {
+          pill.addEventListener('click', () => openListModal(cfg.key, st, pill.dataset.type));
+        });
+        statWrap.appendChild(card);
+      });
+      sec.appendChild(statWrap);
+
+      // 停車位置區塊 (邏輯不變)
+      const stopCol = header.indexOf('車暫停位置');
+      if (stopCol >= 0) {
+        const locTitle = document.createElement('div');
+        locTitle.className = 'dash-title';
+        locTitle.style.marginTop = '12px';
+        locTitle.textContent = '停車位置';
+        sec.appendChild(locTitle);
+
+        const locWrap = document.createElement('div'); locWrap.className = 'loc-grid';
+        const counter = new Map();
+        STOP_OPTIONS.forEach(n => counter.set(n, 0));
+
+        rows.forEach(r => {
+          const v = String(r[stopCol] || '').trim();
+          if (counter.has(v)) counter.set(v, counter.get(v) + 1);
+        });
+
+        STOP_OPTIONS.forEach(name => {
+          const n = counter.get(name) || 0;
+          const pill = document.createElement('div'); pill.className = 'loc-pill';
+          pill.innerHTML = `
+            <div class="loc-name">${name}</div>
+            <div class="loc-num">${n}</div>
+            <div class="stat-label">台</div>`;
+          pill.addEventListener('click', () =>
+            openListModal(cfg.key, '車暫停位置', 'loc', name)
+          );
+          locWrap.appendChild(pill);
+        });
+        sec.appendChild(locWrap);
+      }
+
+      dash.appendChild(sec);
+    });
+  };
+
+  if (silent) { await work(); }
+  else { await withLoading(work, '整理整體情報 II…'); }
+}  
 
 /* =================== 個別情報：下拉/過濾/鎖定 =================== */
 /* 需求：

@@ -1462,12 +1462,11 @@ async function buildDashboard2(silent = false){
   if (!currentUser) return;
   if (document.body.classList.contains('login')) return;
 
-  // ★ 改為抓 dashboard2 容器
   const dash = document.getElementById('dashboard2');
   dash.innerHTML = '';
 
   const work = async () => {
-    // 這裡 logic 跟原本完全一樣，負責抓資料
+    // 1. 抓取資料 (這部分與原本相同)
     const results = await Promise.all(
       SHEET_CONFIGS.map(async cfg => {
         const r = await fetch(
@@ -1489,69 +1488,116 @@ async function buildDashboard2(silent = false){
       })
     );
 
-    // 更新全域資料 (共用即可，因為來源一樣)
+    // 2. 準備全域資料
     ALL_SHEETS = {};
     results.forEach(x => ALL_SHEETS[x.key] = x);
 
+    // 3. 逐一產生卡片
     results.forEach(({ cfg, header, rows }) => {
-      // ★ 改用 currentDashFilter2
+      // 篩選 Tab
       const filterKey = (typeof currentDashFilter2 === 'undefined' || !currentDashFilter2)
         ? 'ALL'
         : String(currentDashFilter2);
-      
       if (filterKey !== 'ALL' && String(cfg.key) !== filterKey) return;
 
-      const sec   = document.createElement('section'); sec.className = 'dash-section card';
-      const title = document.createElement('div');     title.className = 'dash-title'; title.textContent = cfg.key;
+      // 建立外框
+      const sec = document.createElement('section'); 
+      sec.className = 'dash-section card';
+      
+      // 標題
+      const title = document.createElement('div'); 
+      title.className = 'dash-title'; 
+      title.textContent = cfg.key;
       sec.appendChild(title);
 
-      // 統計區塊 (邏輯不變)
-      const statWrap = document.createElement('div'); statWrap.className = 'stat-grid';
-      const stepsForCount = cfg.steps.filter(st => st !== '車暫停位置');
-      stepsForCount.forEach(st => {
-        const col = header.indexOf(st);
-        let done = 0, todo = 0;
-        rows.forEach(r => {
-          const v = col >= 0 ? r[col] : '';
-          isCompletedValue(v) ? done++ : todo++;
-        });
+      // === 定義分割邏輯 (上層步驟 vs 下層步驟) ===
+      let topSteps = [];
+      let botSteps = [];
+      const stopStep = '車暫停位置';
+      const stopColIdx = header.indexOf(stopStep);
 
-        const card = document.createElement('div'); card.className = 'stat-card';
-        card.innerHTML = `
-          <div class="stat-head">${st}</div>
-          <div class="stat-row">
-            <div class="stat-pill" data-type="done">
-              <div class="stat-num done">${done}</div>
-              <div class="stat-label">完成</div>
-            </div>
-            <div class="stat-pill" data-type="todo">
-              <div class="stat-num todo">${todo}</div>
-              <div class="stat-label">未完成</div>
-            </div>
-          </div>`;
+      if (cfg.key === '水陸專車退場') {
+        // ★ 特殊處理：水陸專車依照 PDF 新排列，強制指定上下層順序
+        // 上層：Call車排隊、已排好
+        topSteps = ['已 Call 車排車隊', '已排好車隊'];
+        // 下層：人員到齊、Call車上平台、車上平台、車離開
+        botSteps = ['退場人員已到齊', '已 Call 車上遊覽車平台', '車已上遊覽車平台', '車已離開遊覽車平台'];
+      } 
+      else if (cfg.steps.includes(stopStep)) {
+        // ★ 通用處理（遊覽車平台、禪堂平台）：以「車暫停位置」為界切割
+        const splitIndex = cfg.steps.indexOf(stopStep);
+        topSteps = cfg.steps.slice(0, splitIndex);
+        botSteps = cfg.steps.slice(splitIndex + 1);
+      } 
+      else {
+        // ★ 其他（如 288 法青）：沒有停車位置，全部放上層
+        topSteps = cfg.steps;
+        botSteps = [];
+      }
+
+      // === 內部小工具：渲染步驟 Grid ===
+      const renderGrid = (steps) => {
+        if (!steps || steps.length === 0) return;
+        const grid = document.createElement('div'); 
+        grid.className = 'stat-grid';
         
-        card.querySelectorAll('.stat-pill').forEach(pill => {
-          pill.addEventListener('click', () => openListModal(cfg.key, st, pill.dataset.type));
-        });
-        statWrap.appendChild(card);
-      });
-      sec.appendChild(statWrap);
+        steps.forEach(st => {
+          const col = header.indexOf(st);
+          // 容錯：如果該表真的沒有這個步驟(例如欄位被改名)，就跳過
+          if (col === -1 && cfg.key === '水陸專車退場') return; 
 
-      // 停車位置區塊 (邏輯不變)
-      const stopCol = header.indexOf('車暫停位置');
-      if (stopCol >= 0) {
+          let done = 0, todo = 0;
+          rows.forEach(r => {
+            const v = col >= 0 ? r[col] : '';
+            isCompletedValue(v) ? done++ : todo++;
+          });
+
+          const card = document.createElement('div'); card.className = 'stat-card';
+          card.innerHTML = `
+            <div class="stat-head">${st}</div>
+            <div class="stat-row">
+              <div class="stat-pill" data-type="done">
+                <div class="stat-num done">${done}</div>
+                <div class="stat-label">完成</div>
+              </div>
+              <div class="stat-pill" data-type="todo">
+                <div class="stat-num todo">${todo}</div>
+                <div class="stat-label">未完成</div>
+              </div>
+            </div>`;
+          
+          card.querySelectorAll('.stat-pill').forEach(pill => {
+            pill.addEventListener('click', () => openListModal(cfg.key, st, pill.dataset.type));
+          });
+          grid.appendChild(card);
+        });
+        sec.appendChild(grid);
+      };
+
+      // --- 1. 渲染上層步驟 ---
+      renderGrid(topSteps);
+
+      // --- 2. 渲染中層：停車位置 (如果有的話) ---
+      if (stopColIdx >= 0) {
+        // 加個分隔標題，視覺比較清楚（依照 PDF 邏輯）
         const locTitle = document.createElement('div');
         locTitle.className = 'dash-title';
-        locTitle.style.marginTop = '12px';
+        locTitle.style.marginTop = '16px';
+        locTitle.style.marginBottom = '6px';
+        locTitle.style.fontSize = '16px'; // 稍微小一點的副標
         locTitle.textContent = '停車位置';
         sec.appendChild(locTitle);
 
-        const locWrap = document.createElement('div'); locWrap.className = 'loc-grid';
+        const locWrap = document.createElement('div'); 
+        locWrap.className = 'loc-grid';
+        // 為了讓這區塊跟下面稍微有點距離
+        locWrap.style.marginBottom = '16px'; 
+
         const counter = new Map();
         STOP_OPTIONS.forEach(n => counter.set(n, 0));
 
         rows.forEach(r => {
-          const v = String(r[stopCol] || '').trim();
+          const v = String(r[stopColIdx] || '').trim();
           if (counter.has(v)) counter.set(v, counter.get(v) + 1);
         });
 
@@ -1570,13 +1616,20 @@ async function buildDashboard2(silent = false){
         sec.appendChild(locWrap);
       }
 
+      // --- 3. 渲染下層步驟 ---
+      // 如果有下層資料，且剛好有停車位置區塊，加個分隔線或間距會更好看
+      if (botSteps.length > 0 && stopColIdx >= 0) {
+         // 這裡不需要額外標題，直接接續顯示
+      }
+      renderGrid(botSteps);
+
       dash.appendChild(sec);
     });
   };
 
   if (silent) { await work(); }
   else { await withLoading(work, '整理整體情報 II…'); }
-}  
+}
 
 /* =================== 個別情報：下拉/過濾/鎖定 =================== */
 /* 需求：

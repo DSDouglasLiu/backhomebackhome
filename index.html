@@ -391,6 +391,50 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
     box-shadow: var(--shadow-card) !important; /* 與其他卡片完全一致 */
   }
 }
+
+/* ======================= 手機終極版：完全拿掉按鈕，變成標題列 ====================== */
+@media (max-width: 767px) {
+  /* 徹底隱藏原本所有按鈕 */
+  #mainTabs,
+  .topbar-grid .left-tabs,
+  .topbar-grid .right-refresh {
+    display: none !important;
+  }
+
+  /* 手機專用標題列（取代整個上方欄位） */
+  #mobileHeader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--primary-600);
+    color: white;
+    padding: 16px 20px;
+    text-align: center;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+
+  .mobile-title {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+
+  .mobile-subtitle {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-top: 4px;
+  }
+
+  /* 內容區自動往下墊，避免被標題蓋到 */
+  .wrap {
+    padding-top: 90px !important; /* 留出標題高度 */
+  }
+
+  /* 讓「所有車輛」切換時即時更新副標題 */
+  /* （你已經有 currentDashFilter2 變數，直接加這段 JS 即可） */
+}
   
 </style>
 </head>
@@ -414,16 +458,12 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
 
     <!-- 左下：三個主頁籤 -->
     <div class="left-tabs">
-      <div id="mainTabs" class="main-tabs" style="justify-content: space-between;">
-  <!-- 最左邊：最新狀態（原本的整體情報 II） -->
-  <button class="main-tab" data-target="pane-dashboard2">最新狀態</button>
 
-  <!-- 中間：個別情報（保留） -->
-  <button class="main-tab" data-target="pane-single">個別情報</button>
-
-  <!-- 最右邊：登錄與修改（原本的登錄） -->
-  <button class="main-tab active" data-target="pane-punch">登錄與修改</button>
-</div>
+    <!-- 手機專用：超簡潔「最新狀態」標題列（完全取代按鈕） -->
+<div id="mobileHeader" class="mobile-only-header">
+  <div class="mobile-title">最新狀態</div>
+  <div class="mobile-subtitle" id="mobileSubtitle">所有車輛</div>
+</div>  
 
 <!-- 完全隱藏原本的「整體情報」按鈕（不會出現在畫面上） -->
 <style>
@@ -3016,7 +3056,25 @@ function rebuildSelectOptions(){
   };
 })();
 
-/* ===== 覆寫結束 ===== */
+// 手機副標題即時更新（所有車輛 / 各分會）
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.innerWidth <= 767) {
+    const subtitle = document.getElementById('mobileSubtitle');
+    if (subtitle) {
+      const update = () => {
+        const tabs = document.querySelectorAll('#dashboardTabs2 .btn-tab');
+        const active = document.querySelector('#dashboardTabs2 .btn-tab.active');
+        subtitle.textContent = active ? active.textContent : '所有車輛';
+      };
+      // 監聽上方「所有車輛」分頁切換
+      const observer = new MutationObserver(update);
+      const container = document.getElementById('dashTabsBar2');
+      if (container) observer.observe(container, { childList: true, subtree: true });
+      // 首次載入也更新
+      setTimeout(update, 1000);
+    }
+  }
+});  
 
 </script>
 </body>

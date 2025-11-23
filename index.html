@@ -431,6 +431,17 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
   #mainTabs .main-tab[data-target="pane-dashboard"] {
     display: none !important;
   }
+
+/* 「完成」「未完成」「台」三個字 → 完全跟小標題（.stat-head）一樣大、一樣粗、一樣顏色 */
+.stat-label,
+.loc-pill .stat-label {
+  font-size: 14px !important;
+  font-weight: 800 !important;        /* 跟小標題一樣粗 */
+  color: var(--text-strong) !important; /* 跟小標題一樣黑 */
+  margin-top: 4px !important;
+  line-height: 1.4 !important;        /* 與小標題視覺一致 */
+}
+  
 </style>
     </div>
 

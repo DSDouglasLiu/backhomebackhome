@@ -346,25 +346,39 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
   }
 }
 
-/* 讓所有主要統計數字更大更好看（可選） */
-.stat-num {
-  font-size: 32px !important;     /* 原 26px → 32px */
-  font-weight: 900 !important;
-}
+/* ======================= 最終統一美化（數字更大 + 字體完全一致）======================= */
+/* 主要統計數字（完成/未完成 + 停車位置）全部放大、更粗 */
+.stat-num,
 .loc-num {
-  font-size: 32px !important;     /* 原 22px → 28px */
+  font-size: 32px !important;
   font-weight: 900 !important;
+  line-height: 1 !important;
 }
 
-/* ======================= 手機專屬：只保留「最新狀態」＋字體美化最終版 ====================== */
+/* 「完成」「未完成」「台」字統一：14px、非粗體 */
+.stat-label,
+.loc-pill .stat-label {
+  font-size: 14px !important;
+  font-weight: normal !important;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* 停車位置名稱稍微放大（手機更清楚） */
+.loc-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* 手機專屬：只保留「最新狀態」＋極致美化（與其他卡片陰影完全一致） */
 @media (max-width: 767px) {
-  /* 隱藏其他按鈕，只留最新狀態 */
+  /* 隱藏其他按鈕 */
   #mainTabs .main-tab[data-target="pane-punch"],
   #mainTabs .main-tab[data-target="pane-single"] {
     display: none !important;
   }
 
-  /* 最新狀態按鈕（手機專用超大超美） */
+  /* 最新狀態按鈕（手機終極版） */
   #mainTabs .main-tab[data-target="pane-dashboard2"] {
     flex: 1 !important;
     min-width: 0;
@@ -374,29 +388,9 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
     background: var(--primary-600) !important;
     color: white !important;
     border-radius: 16px !important;
-    box-shadow: 0 6px 20px rgba(31,111,229,0.4);
+    box-shadow: var(--shadow-card) !important; /* 與其他卡片完全一致 */
   }
-
-  /* —— 你要求的字體調整 —— */
-  /* 1. 「完成」「未完成」小字 → 跟停車位置名稱一樣大、非粗體 */
-  .stat-label {
-    font-size: 14px !important;   /* 原本 12px → 改成 14px */
-    font-weight: normal !important;
-  }
-
-  /* 2. 停車位置的「台」字 → 跟停車位置名稱一樣大、非粗體 */
-  .loc-pill .stat-label {
-    font-size: 14px !important;   /* 原本 12px → 改成 14px */
-    font-weight: normal !important;
-    margin-top: 4px;
-  }
-
-  /* 3. 停車位置名稱本身也稍微放大一點（可選，更清楚） */
-  .loc-name {
-    font-size: 15px !important;
-    font-weight: 700;
-  }
-}  
+}
   
 </style>
 </head>

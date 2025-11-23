@@ -298,7 +298,11 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
     justify-content: center !important;  /* 置中排列 */
     padding: 8px 12px;         /* 增加內距更好按 */
   }
-
+  <!-- 手機專用下拉選單（自動產生） -->
+<select id="mobileSheetSelector" class="mobile-sheet-selector">
+  <!-- 選項由 JS 自動產生 -->
+</select>
+  
   #mainTabs .main-tab {
     flex: 1;                   /* 平均分配寬度 */
     min-width: 120px;          /* 最小寬度避免太擠 */
@@ -3076,6 +3080,50 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });  
 
+// 手機專用下拉選單：完全自動從 SHEET_CONFIGS 產生 + 即時切換
+function initMobileSheetSelector() {
+  if (window.innerWidth > 767) return; // 只在手機執行
+
+  const select = document.getElementById('mobileSheetSelector');
+  if (!select) return;
+
+  // 清空並加入「所有車輛」（永遠第一個）
+  select.innerHTML = '<option value="ALL">所有車輛</option>';
+
+  // 自動從 SHEET_CONFIGS 產生選項
+  SHEET_CONFIGS.forEach(cfg => {
+    const option = document.createElement('option');
+    option.value = cfg.key;
+    option.textContent = cfg.key;
+    select.appendChild(option);
+  });
+
+  // 預設選「所有車輛」
+  select.value = 'ALL';
+
+  // 切換事件：完全同步原本的 currentDashFilter2 邏輯
+  select.onchange = () => {
+    const selectedKey = select.value;
+    currentDashFilter2 = selectedKey;           // 同步全域變數
+    updateDashTabActive2();                     // 更新上方按鈕高亮（電腦也會同步）
+    buildDashboard2(false);                     // 立即刷新內容
+  };
+
+  // 當其他地方切換時（例如電腦、自動更新），也同步下拉選單
+  const originalBuildDashboard2 = buildDashboard2;
+  buildDashboard2 = function(silent = false) {
+    originalBuildDashboard2(silent);
+    if (window.innerWidth <= 767 && select) {
+      select.value = currentDashFilter2;
+    }
+  };
+}
+
+// 頁面載入完成後執行
+document.addEventListener('DOMContentLoaded', initMobileSheetSelector);
+// 視窗大小改變時也重新檢查（橫豎屏切換）
+window.addEventListener('resize', initMobileSheetSelector);
+  
 </script>
 </body>
 </html>

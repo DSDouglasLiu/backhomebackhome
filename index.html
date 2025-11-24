@@ -32,7 +32,7 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
   position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
   background: #fff; height: 50px; display: flex;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  display: none; /* 預設隱藏，由 JS/CSS 控制 */
+  display: none; 
 }
 .m-nav-btn {
   flex: 1; border: none; background: transparent;
@@ -52,12 +52,10 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
   border: 1px solid var(--primary-600); border-radius: 10px;
   background: #fff; color: var(--primary-600); margin-bottom: 16px;
   appearance: none; -webkit-appearance: none;
-  /* 藍色箭頭 icon */
   background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%231f6fe5%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
   background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 12px auto;
 }
 
-/* 手機版極簡卡片 */
 .m-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-card); }
 .m-card-title { font-size: 18px; font-weight: 800; margin-bottom: 12px; color: var(--gray-900); border-bottom: 2px solid var(--gray-100); padding-bottom: 8px; }
 .m-stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--gray-200); }
@@ -93,14 +91,13 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
 .drawer-close { position: absolute; right: 16px; top: 20px; font-size: 24px; color: var(--gray-500); cursor: pointer; line-height: 1; }
 .drawer-content { overflow-y: auto; padding: 0 16px 30px; flex: 1; -webkit-overflow-scrolling: touch; }
 
-/* 抽屜內清單樣式 */
 .d-item { padding: 12px 0; border-bottom: 1px solid var(--gray-100); display: flex; justify-content: space-between; align-items: center; }
 .d-info { display: flex; flex-direction: column; gap: 2px; }
 .d-main { font-size: 16px; font-weight: 700; color: var(--gray-900); }
 .d-sub { font-size: 13px; color: var(--gray-500); }
 .d-action .btn { padding: 6px 12px; font-size: 13px; border-radius: 6px; }
 
-/* =========== Desktop & Web Mode Layout (電腦版介面) =========== */
+/* =========== Desktop & Web Mode Layout =========== */
 .topbar-grid { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 6px 12px; align-items: center; }
 .left-title { grid-area: 1 / 1 / 2 / 2; }
 .right-user { grid-area: 1 / 2 / 2 / 3; display: flex; gap: 12px; justify-content: flex-end; }
@@ -115,7 +112,7 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
 .seg-btn { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
 .seg-btn.active { background: var(--primary-600); color: #fff; }
 
-/* 統計卡片 (電腦版用) */
+/* 電腦版卡片 */
 .dash-title{ font-size:18px; font-weight:800; color:var(--text-strong); margin:0 0 8px; }
 .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
 .stat-card{ border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.9); padding:12px; box-shadow:var(--shadow-card); }
@@ -130,37 +127,32 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
 .loc-name{ font-weight:700; font-size:15px; }
 .loc-num{ font-size:32px; font-weight:900; color:#2563eb; line-height:1; }
 
-/* =========== RWD Logic (關鍵) =========== */
-
-/* 大螢幕 (≥ 768px)：完全隱藏手機元件 */
+/* =========== RWD Logic =========== */
+/* 電腦版 */
 @media (min-width: 768px) {
   #mobile-nav, #mobile-status-view, .drawer-backdrop, .bottom-drawer { display: none !important; }
   .topbar-grid { display: grid !important; }
   #main-content-wrap { display: block !important; }
 }
 
-/* 小螢幕 (≤ 767px) */
+/* 手機版 */
 @media (max-width: 767px) {
-  
-  /* 預設狀態 (Status Mode) */
+  /* 預設 (極簡模式) */
   body:not(.mode-web) #mobile-nav { display: flex; }
   body:not(.mode-web) #mobile-status-view { display: block; }
   body:not(.mode-web) .topbar-grid { display: none; }
   body:not(.mode-web) #main-content-wrap { display: none; }
   
-  /* 網頁版模式 (Web Mode) */
-  /* ★★★ 關鍵修正：隱藏手機導覽列，只顯示電腦版介面 ★★★ */
+  /* 網頁版模式 */
   body.mode-web #mobile-nav { display: none !important; } 
   body.mode-web .topbar-grid { display: grid !important; margin-top: 0; }
   body.mode-web #main-content-wrap { display: block !important; }
   body.mode-web #mobile-status-view { display: none !important; }
   
-  /* 手機網頁版模式下，調整 Tabs 以便觸控 */
   body.mode-web #mainTabs .main-tab { padding: 10px 5px; font-size: 14px; flex: 1; text-align: center; }
   body.mode-web .wrap { padding-top: 10px; }
 }
 
-/* Utility */
 .btn { background: var(--primary-600); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; }
 .btn--secondary { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); }
 .loading { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: none; align-items: center; justify-content: center; z-index: 20000; }
@@ -197,8 +189,7 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
     <div class="drawer-title" id="drawer-title">標題</div>
     <div class="drawer-close" onclick="closeDrawer()">✕</div>
   </div>
-  <div class="drawer-content" id="drawer-list">
-    </div>
+  <div class="drawer-content" id="drawer-list"></div>
 </div>
 
 <div class="wrap">
@@ -291,7 +282,14 @@ window.onload = function(){
       now.toLocaleTimeString('zh-TW', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
   }, 1000);
 
-  // 4. 登入檢查
+  // 4. ★★★ 關鍵修正：先載入資料，再慢慢驗證身分 ★★★
+  if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
+    onMobileSelectChange(); // 馬上載入，不等人！
+  } else {
+    loadAllSheetsForDesktop();
+  }
+
+  // 5. 驗證身分 (非同步執行，不會卡住畫面)
   const saved = localStorage.getItem('ddcc_user_token');
   if(saved) {
     idToken = saved;
@@ -300,7 +298,7 @@ window.onload = function(){
     initGoogleSignIn();
   }
   
-  // 5. 自動刷新
+  // 6. 自動刷新
   startAutoRefresh();
 };
 
@@ -326,7 +324,7 @@ async function forceRefreshMobile() {
 
 // 抓取單張表資料 (核心函式)
 async function fetchSingleSheet(targetKey) {
-  if(!currentUser) return;
+  // ★★★ 關鍵修正：移除 currentUser 檢查，未登入也能讀取 ★★★
   
   // 顯示局部 Loading (不要全螢幕遮擋)
   const container = document.getElementById('mobile-cards-container');
@@ -340,7 +338,8 @@ async function fetchSingleSheet(targetKey) {
   if(!cfg) return;
 
   try {
-    const r = await fetch(`${API_BASE}?action=get&idToken=${idToken}&sheet=${encodeURIComponent(cfg.sheet)}`);
+    // ★★★ 關鍵修正：移除 URL 中的 idToken，避免網址過長導致失敗 ★★★
+    const r = await fetch(`${API_BASE}?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
     const j = await r.json();
     
     if(j.error) {
@@ -391,9 +390,7 @@ function renderMobileStats() {
 
   const card = document.createElement('div');
   card.className = 'm-card';
-  // 標題列可省略，因下拉選單已顯示，或保留
-  // card.innerHTML = `<div class="m-card-title">${cfg.key}</div>`; 
-
+  
   steps.forEach(step => {
     const colIdx = header.indexOf(step);
     let done=0, todo=0;
@@ -485,12 +482,7 @@ async function verifyToken(token) {
     document.getElementById('userInfo').classList.remove('hide');
     document.getElementById('userDisplay').innerHTML = `${j.name} (${j.permission})`;
     
-    // 登入成功：如果是手機，載入當前選單的表；電腦則載入全部
-    if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
-      onMobileSelectChange();
-    } else {
-      loadAllSheetsForDesktop();
-    }
+    // 驗證成功，資料已經在背景載入了，這邊不用再載
     
   } catch(e) {
     console.error(e);
@@ -506,9 +498,9 @@ function logout() {
 
 /* ================= 電腦版邏輯 (一次載入全部) ================= */
 async function loadAllSheetsForDesktop() {
-  if(!currentUser) return;
-  // 如果快取都有了，就不重抓，除非按重新整理
-  // 這裡簡化：電腦版每次進來都抓一次最新的
+  // ★★★ 關鍵修正：電腦版也移除 currentUser 檢查，未登入先看資料 ★★★
+  // if(!currentUser) return; 
+  
   const reqs = SHEET_CONFIGS.map(c => fetchSingleSheet(c.key));
   await Promise.all(reqs);
   
@@ -614,7 +606,8 @@ function openDrawer(key, step, type, val) {
     
     let btnHtml = '';
     // 只有未完成且有權限才顯示打卡
-    if(type==='todo' && step!=='車暫停位置' && currentUser.permission==='全功能') {
+    // ★★★ 安全修正：檢查 currentUser 是否存在 ★★★
+    if(type==='todo' && step!=='車暫停位置' && currentUser && currentUser.permission==='全功能') {
       btnHtml = `<div class="d-action"><button class="btn" onclick="quickPunch('${key}','${step}','${area}','${car}',this)">打卡</button></div>`;
     }
     

@@ -1233,7 +1233,7 @@ async function onDeleteTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEd
   const colIdx = header.indexOf(st);
   if (colIdx===-1) return alert('此欄位不存在：'+st);
 
-  openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
+  openConfirmDialog('確認要刪除打卡時間嗎？', async ()=>{
     try {
       await withLoading(async()=>{
         const body = {
@@ -2377,7 +2377,7 @@ function openConfirmDialog(msg, onOK){
   const box = document.createElement('div');
   box.className = 'modal';
   box.innerHTML = `
-    <h3>確認刪除</h3>
+    <h3>刪除打卡時間</h3>
     <div class="modal-msg" style="font-size:15px;line-height:1.6;margin:4px 0 8px;">${msg}</div>
     <div class="actions">
       <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>

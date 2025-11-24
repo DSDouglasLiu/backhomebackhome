@@ -7,7 +7,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   
 <style>
-/* =========== Design Tokens =========== */
+/* =========== 共用變數 =========== */
 :root{
   --primary-600:#1f6fe5; --primary-700:#165bd1;
   --success-600:#22c55e; --danger-600:#ef4444;
@@ -20,128 +20,17 @@
   --border: rgba(148,163,184,0.35);
   --shadow-card:0 8px 24px rgba(0,0,0,.08);
 }
-
-/* =========== Base =========== */
 body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding-bottom: 40px; }
 .wrap{max-width:1080px;margin:0 auto;padding:16px;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
 .hide{ display:none !important; }
 
-/* =========== Login Page Specific =========== */
+/* 登入頁樣式 */
 body.login { display: grid; place-items: center; height: 100vh; overflow: hidden; }
 body.login #mobile-nav, body.login #mobile-status-view, body.login .topbar-grid, body.login #main-content-wrap { display: none !important; }
 body.login #signin-container { display: flex !important; flex-direction: column; align-items: center; gap: 20px; background: rgba(255,255,255,0.9); padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-width: 300px; z-index: 10000; }
 
-/* =========== Mobile Nav Bar =========== */
-#mobile-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: #fff; height: 50px; display: flex; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; }
-.m-nav-btn { flex: 1; border: none; background: transparent; font-size: 15px; font-weight: 700; color: var(--gray-500); border-right: 1px solid var(--gray-200); cursor: pointer; padding: 0; margin: 0; transition: background 0.2s, color 0.2s; white-space: nowrap; }
-.m-nav-btn:last-child { border-right: none; }
-.m-nav-btn.active { background: var(--primary-600); color: #fff; }
-
-/* =========== Mobile Content =========== */
-#mobile-status-view { display: none; margin-top: 50px; padding: 16px; }
-.m-select { width: 100%; padding: 12px; font-size: 16px; font-weight: 700; border: 1px solid var(--primary-600); border-radius: 10px; background: #fff; color: var(--primary-600); margin-bottom: 16px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%231f6fe5%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 12px auto; }
-.m-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-card); }
-.m-card-title { font-size: 18px; font-weight: 800; margin-bottom: 12px; color: var(--gray-900); border-bottom: 2px solid var(--gray-100); padding-bottom: 8px; }
-.m-stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--gray-200); }
-.m-stat-row:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
-.m-stat-label { font-size: 15px; font-weight: 700; color: var(--gray-800); flex: 1; }
-.m-stat-nums { display: flex; gap: 12px; }
-.m-pill { display: flex; flex-direction: column; align-items: center; min-width: 50px; cursor: pointer; padding: 4px 8px; border-radius: 8px; transition: background 0.1s; }
-.m-pill:active { background: var(--gray-100); }
-.m-num { font-size: 22px; font-weight: 900; line-height: 1.1; }
-.m-num.done { color: var(--primary-600); } .m-num.todo { color: var(--danger-600); }
-.m-sub { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
-
-/* =========== Bottom Drawer =========== */
-.drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-.drawer-backdrop.open { opacity: 1; pointer-events: auto; }
-.bottom-drawer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10001; background: #fff; border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.7, 0.1, 1); max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 -5px 25px rgba(0,0,0,0.15); }
-.bottom-drawer.open { transform: translateY(0); }
-.drawer-header { padding: 12px 16px; border-bottom: 1px solid var(--gray-200); flex-shrink: 0; text-align: center; position: relative; }
-.drawer-handle { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 0 auto 12px; }
-.drawer-title { font-size: 18px; font-weight: 800; color: var(--gray-900); }
-.drawer-close { position: absolute; right: 16px; top: 20px; font-size: 24px; color: var(--gray-500); cursor: pointer; line-height: 1; }
-.drawer-content { overflow-y: auto; padding: 0 16px 30px; flex: 1; -webkit-overflow-scrolling: touch; }
-.d-item { padding: 12px 0; border-bottom: 1px solid var(--gray-100); display: flex; justify-content: space-between; align-items: center; }
-.d-info { display: flex; flex-direction: column; gap: 2px; }
-.d-main { font-size: 16px; font-weight: 700; color: var(--gray-900); }
-.d-sub { font-size: 13px; color: var(--gray-500); }
-.d-action .btn { padding: 6px 12px; font-size: 13px; border-radius: 6px; }
-
-/* =========== Desktop Layout =========== */
-.topbar-grid { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; grid-template-areas: "title user" "tabs refresh"; gap: 10px 20px; align-items: center; margin-bottom: 16px; }
-.left-title { grid-area: title; }
-.right-user { grid-area: user; display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
-.right-user #signin { max-height: 44px; }
-.left-tabs { grid-area: tabs; }
-.right-refresh { grid-area: refresh; display: flex; justify-content: flex-end; align-items: center; }
-.main-tabs { display: flex; gap: 12px; }
-.main-tab { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 10px; padding: 8px 20px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-.main-tab.active { background: var(--primary-600); color: #fff; }
-.refresh-bar { display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
-.clock { font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 20px; letter-spacing: 0.5px; }
-.seg-btn { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
-.seg-btn.active { background: var(--primary-600); color: #fff; }
-
-/* Desktop Cards (還原 Grid) */
-.dash-title{ font-size:18px; font-weight:800; color:var(--text-strong); margin:0 0 8px; }
-.stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
-.stat-card{ border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.9); padding:12px; box-shadow:var(--shadow-card); }
-.stat-head{ font-weight:800; margin-bottom:8px; color:var(--text-strong); }
-.stat-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.stat-pill{ border:1px solid var(--border); border-radius:10px; padding:10px 4px; background:#fff; display:flex; flex-direction:column; align-items:center; cursor:pointer; }
-.stat-num{ font-size:32px; font-weight:900; line-height:1; }
-.stat-num.done{ color:#2563eb; } .stat-num.todo{ color:#ef4444; }
-.stat-label{ font-size:14px; color:var(--text-muted); margin-top:4px; font-weight: normal; }
-.loc-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:8px; }
-.loc-pill{ border:1px dashed var(--border); border-radius:12px; padding:10px; background:rgba(255,255,255,.85); display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
-.loc-name{ font-weight:700; font-size:15px; }
-.loc-num{ font-size:32px; font-weight:900; color:#2563eb; line-height:1; }
-
-/* Lists & Punch Cards */
-.veh-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
-.veh-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-card); }
-.veh-title-main { font-weight: 700; font-size: 18px; color: var(--text-strong); }
-.veh-title-sub { font-size: 14px; color: var(--text); }
-.step-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 4px; }
-.step-label { font-size: 14px; font-weight: 600; }
-.step-time { font-size: 14px; font-weight: bold; color: #2563eb; }
-.step-select { padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
-
-.single-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-.single-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: transform 0.2s; }
-.single-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.single-line { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-
-/* Modal internal */
-.time-edit { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 15px 0; }
-.time-input { width: 60px; text-align: center; padding: 8px; border-radius: 8px; border: 1px solid #ccc; font-size: 18px; }
-.modal h3 { margin-top: 0; }
-.modal .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-
-/* =========== RWD Logic =========== */
-@media (min-width: 768px) {
-  #mobile-nav, #mobile-status-view, .drawer-backdrop, .bottom-drawer { display: none !important; }
-  .topbar-grid { display: grid !important; }
-  #main-content-wrap { display: block !important; }
-}
-@media (max-width: 767px) {
-  body:not(.mode-web) #mobile-nav { display: flex; }
-  body:not(.mode-web) #mobile-status-view { display: block; }
-  body:not(.mode-web) .topbar-grid { display: none !important; }
-  body:not(.mode-web) #main-content-wrap { display: none !important; }
-  body.mode-web #mobile-nav { display: none !important; } 
-  body.mode-web .topbar-grid { display: grid !important; margin-top: 0; grid-template-columns: 1fr auto; }
-  body.mode-web #main-content-wrap { display: block !important; }
-  body.mode-web #mobile-status-view { display: none !important; }
-  body.mode-web #mainTabs .main-tab { padding: 10px 5px; font-size: 14px; flex: 1; text-align: center; }
-  body.mode-web .wrap { padding-top: 10px; }
-  body.mode-web .topbar-grid { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto; gap: 10px; grid-template-areas: "title" "user" "tabs" "refresh"; text-align: center; }
-  body.mode-web .right-user, body.mode-web .right-refresh { justify-content: center; }
-  body.mode-web .main-tabs { justify-content: center; }
-}
-
+/* 通用按鈕與工具 */
 .btn { background: var(--primary-600); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; }
 .btn--sm { padding: 4px 10px; font-size: 13px; }
 .btn--secondary { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); }
@@ -150,6 +39,128 @@ body.login #signin-container { display: flex !important; flex-direction: column;
 .loading.show { display: flex; }
 .spinner { width: 30px; height: 30px; border: 3px solid #e5e7eb; border-top-color: var(--primary-600); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* =========================================
+   【電腦版專用樣式】 (min-width: 768px)
+   完全還原您原始的 Grid 佈局與卡片樣式
+   ========================================= */
+@media (min-width: 768px) {
+  #mobile-nav, #mobile-status-view, .drawer-backdrop, .bottom-drawer { display: none !important; }
+  
+  /* 頂部導覽列 (還原) */
+  .topbar-grid { 
+    display: grid; 
+    grid-template-columns: 1fr auto; 
+    grid-template-rows: auto auto; 
+    grid-template-areas: "title user" "tabs refresh";
+    gap: 10px 20px; 
+    align-items: center; 
+    margin-bottom: 16px;
+  }
+  .left-title { grid-area: title; }
+  .left-title h1 { margin: 0; font-size: 28px; font-weight: 700; }
+  .right-user { grid-area: user; display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+  .left-tabs { grid-area: tabs; }
+  .right-refresh { grid-area: refresh; display: flex; justify-content: flex-end; align-items: center; }
+
+  /* 頁籤與按鈕 */
+  .main-tabs { display: flex; gap: 12px; }
+  .main-tab { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 10px; padding: 8px 20px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .main-tab.active { background: var(--primary-600); color: #fff; }
+  .refresh-bar { display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
+  .clock { font-weight: 900; font-variant-numeric: tabular-nums; font-size: 20px; }
+  .seg-btn { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+  .seg-btn.active { background: var(--primary-600); color: #fff; }
+
+  /* 卡片與列表 (還原) */
+  .dash-title{ font-size:18px; font-weight:800; color:var(--text-strong); margin:0 0 8px; }
+  .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+  .stat-card{ border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.9); padding:12px; box-shadow:var(--shadow-card); }
+  .stat-head{ font-weight:800; margin-bottom:8px; color:var(--text-strong); }
+  .stat-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .stat-pill{ border:1px solid var(--border); border-radius:10px; padding:10px 4px; background:#fff; display:flex; flex-direction:column; align-items:center; cursor:pointer; }
+  .stat-num{ font-size:32px; font-weight:900; line-height:1; }
+  .stat-num.done{ color:#2563eb; } .stat-num.todo{ color:#ef4444; }
+  .stat-label{ font-size:14px; color:var(--text-muted); margin-top:4px; font-weight: normal; }
+  
+  .veh-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .veh-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-card); }
+  .veh-title-main { font-weight: 700; font-size: 18px; }
+  .veh-title-sub { font-size: 14px; color: var(--text); }
+  .step-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 4px; }
+  .step-label { font-size: 14px; font-weight: 600; }
+  .step-time { font-size: 14px; font-weight: bold; color: #2563eb; }
+  .step-select { padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+
+  .single-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .single-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: transform 0.2s; }
+  .single-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .single-line { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+}
+
+/* =========================================
+   【手機版專用樣式】 (max-width: 767px)
+   極簡模式 + 網頁版模式切換
+   ========================================= */
+@media (max-width: 767px) {
+  /* A. 預設狀態 (極簡模式) */
+  body:not(.mode-web) #mobile-nav { display: flex; }
+  body:not(.mode-web) #mobile-status-view { display: block; }
+  body:not(.mode-web) .topbar-grid { display: none !important; }
+  body:not(.mode-web) #main-content-wrap { display: none !important; }
+
+  /* B. 網頁版模式 (顯示電腦版介面) */
+  body.mode-web #mobile-nav { display: none !important; } 
+  body.mode-web #mobile-status-view { display: none !important; }
+  body.mode-web #main-content-wrap { display: block !important; }
+  body.mode-web .topbar-grid { 
+    display: grid !important; 
+    margin-top: 0; 
+    grid-template-columns: 1fr; 
+    grid-template-rows: auto auto auto auto; 
+    gap: 10px; 
+    text-align: center;
+    grid-template-areas: "title" "user" "tabs" "refresh";
+  }
+  body.mode-web .right-user, body.mode-web .right-refresh, body.mode-web .main-tabs { justify-content: center; }
+  body.mode-web #mainTabs .main-tab { padding: 10px 5px; font-size: 14px; flex: 1; }
+  
+  /* 手機版元件樣式 */
+  #mobile-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: #fff; height: 50px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  .m-nav-btn { flex: 1; border: none; background: transparent; font-size: 15px; font-weight: 700; color: var(--gray-500); border-right: 1px solid var(--gray-200); cursor: pointer; padding: 0; margin: 0; }
+  .m-nav-btn.active { background: var(--primary-600); color: #fff; }
+  
+  #mobile-status-view { margin-top: 50px; padding: 16px; }
+  .m-select { width: 100%; padding: 12px; font-size: 16px; font-weight: 700; border: 1px solid var(--primary-600); border-radius: 10px; background: #fff; color: var(--primary-600); margin-bottom: 16px; }
+  .m-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-card); }
+  .m-card-title { font-size: 18px; font-weight: 800; margin-bottom: 12px; color: var(--text-strong); border-bottom: 2px solid var(--gray-200); padding-bottom: 8px; }
+  .m-stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--border); }
+  .m-stat-label { font-size: 15px; font-weight: 700; color: var(--text); flex: 1; }
+  .m-stat-nums { display: flex; gap: 12px; }
+  .m-pill { display: flex; flex-direction: column; align-items: center; min-width: 50px; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+  .m-num { font-size: 22px; font-weight: 900; }
+  .m-num.done { color: var(--primary-600); } .m-num.todo { color: var(--danger-600); }
+  .m-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  
+  /* 底部抽屜 */
+  .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+  .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+  .bottom-drawer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10001; background: #fff; border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform 0.3s; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 -5px 25px rgba(0,0,0,0.15); }
+  .bottom-drawer.open { transform: translateY(0); }
+  .drawer-header { padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; text-align: center; position: relative; }
+  .drawer-handle { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 0 auto 12px; }
+  .drawer-title { font-size: 18px; font-weight: 800; color: var(--text-strong); }
+  .drawer-close { position: absolute; right: 16px; top: 20px; font-size: 24px; cursor: pointer; }
+  .drawer-content { overflow-y: auto; padding: 0 16px 30px; flex: 1; }
+  .d-item { padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .d-main { font-size: 16px; font-weight: 700; color: var(--text-strong); }
+}
+
+/* Modal Common */
+.time-edit { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 15px 0; }
+.time-input { width: 60px; text-align: center; padding: 8px; border-radius: 8px; border: 1px solid #ccc; font-size: 18px; }
+.modal h3 { margin-top: 0; }
+.modal .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 </style>
 </head>
 <body>
@@ -284,10 +295,11 @@ window.onload = function(){
       now.toLocaleTimeString('zh-TW', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
   }, 1000);
 
-  buildRefreshControls();
+  buildRefreshControls(); // 電腦版頻率按鈕
 
   if (idToken) {
     verifyToken(idToken);
+    // 手機版預先載入
     if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
       onMobileSelectChange(); 
     }
@@ -297,6 +309,7 @@ window.onload = function(){
   
   startAutoRefresh();
   
+  // 綁定電腦版事件
   document.getElementById('btnQuery').onclick = runSingleQuery;
   document.getElementById('btnReset').onclick = resetSingleUI;
   ['selSheet','selArea','selCar'].forEach(id => {
@@ -304,27 +317,10 @@ window.onload = function(){
   });
 };
 
-async function onMobileSelectChange() {
-  const key = document.getElementById('mobile-sheet-select').value;
-  document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;"><div class="spinner" style="margin:0 auto 10px;"></div>正在讀取...</div>`;
-  if(!ALL_SHEETS[key]) await fetchSingleSheet(key);
-  renderMobileStats();
-}
-
-async function forceRefreshMobile() {
-  const key = document.getElementById('mobile-sheet-select').value;
-  if (!idToken) return showNotif('請先登入');
-  showNotif('正在更新...');
-  document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;"><div class="spinner" style="margin:0 auto 10px;"></div>更新中...</div>`;
-  await fetchSingleSheet(key);
-  renderMobileStats();
-}
-
+/* ============ 資料讀取核心 ============ */
 async function fetchSingleSheet(targetKey) {
   const container = document.getElementById('mobile-cards-container');
   if(!(window.innerWidth <= 767 && !document.body.classList.contains('mode-web'))) {
-    // Mobile quiet load
-  } else {
     showLoading();
   }
 
@@ -346,55 +342,73 @@ async function fetchSingleSheet(targetKey) {
 
     const vals = j.values || [];
     if (vals.length === 0) {
-      if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;padding:20px;">目前沒有資料 <br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
-      hideLoading(); return;
+      // 空白資料處理
+      ALL_SHEETS[targetKey] = { cfg, header: [], rows: [], hIdx: 0 };
+    } else {
+      let hIdx = vals.findIndex(r => Array.isArray(r) && (r.join('').includes('區域') || r.join('').includes('車號')));
+      if(hIdx === -1) hIdx = 0; // 保底
+
+      ALL_SHEETS[targetKey] = {
+        cfg, header: vals[hIdx].map(String),
+        rows: vals.slice(hIdx+1).filter(r => r[1]), 
+        hIdx
+      };
+      
+      // 同步更新個別情報查詢池
+      SINGLE_ITEMS = SINGLE_ITEMS.filter(item => item.sheetKey !== targetKey);
+      ALL_SHEETS[targetKey].rows.forEach(r => {
+          SINGLE_ITEMS.push({ sheetKey: targetKey, cfg, header: ALL_SHEETS[targetKey].header, row: r });
+      });
+      // 如果電腦版個別情報頁開啟中，即時更新下拉
+      if (document.getElementById('pane-single').classList.contains('hide') === false) rebuildSelectOptions();
     }
 
-    let hIdx = vals.findIndex(r => Array.isArray(r) && (r.join('').includes('區域') || r.join('').includes('車號')));
-    if(hIdx === -1) hIdx = 0;
-
-    ALL_SHEETS[targetKey] = {
-      cfg, header: vals[hIdx].map(String),
-      rows: vals.slice(hIdx+1).filter(r => r[1]), 
-      hIdx
-    };
-    
-    SINGLE_ITEMS = SINGLE_ITEMS.filter(item => item.sheetKey !== targetKey);
-    ALL_SHEETS[targetKey].rows.forEach(r => {
-        SINGLE_ITEMS.push({ sheetKey: targetKey, cfg, header: ALL_SHEETS[targetKey].header, row: r });
-    });
-    if (document.getElementById('pane-single').classList.contains('hide') === false) rebuildSelectOptions();
-
   } catch(e) {
-    if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">連線失敗<br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
     console.error(e);
   }
   hideLoading();
+}
+
+/* ============ 手機版邏輯 ============ */
+async function onMobileSelectChange() {
+  const key = document.getElementById('mobile-sheet-select').value;
+  document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;"><div class="spinner" style="margin:0 auto 10px;"></div>正在讀取...</div>`;
+  if(!ALL_SHEETS[key]) {
+      if (idToken) await fetchSingleSheet(key);
+      else document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:20px;">請先登入</div>`;
+  }
+  renderMobileStats();
+}
+
+async function forceRefreshMobile() {
+  const key = document.getElementById('mobile-sheet-select').value;
+  if (!idToken) return showNotif('請先登入');
+  showNotif('正在更新...');
+  document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;"><div class="spinner" style="margin:0 auto 10px;"></div>更新中...</div>`;
+  await fetchSingleSheet(key);
+  renderMobileStats();
 }
 
 function renderMobileStats() {
   const container = document.getElementById('mobile-cards-container');
   const key = document.getElementById('mobile-sheet-select').value;
   const data = ALL_SHEETS[key];
-  if(!data) {
-    if (!container.innerHTML.includes('錯誤'))
-        container.innerHTML = `<div style="text-align:center;padding:40px;">資料未載入<br><br><button class="btn" onclick="forceRefreshMobile()">載入資料</button></div>`;
-    return;
-  }
+  if(!data) { container.innerHTML = '<div style="text-align:center;padding:40px;">資料未載入</div>'; return; }
 
   container.innerHTML = '';
   const { cfg, header, rows } = data;
   const steps = cfg.steps.filter(s => s !== '車暫停位置');
-  const card = document.createElement('div'); card.className = 'm-card';
   
+  const card = document.createElement('div'); card.className = 'm-card';
   steps.forEach(step => {
     const colIdx = header.indexOf(step);
     let done=0, todo=0;
     if(colIdx!==-1) rows.forEach(r => { const v = r[colIdx]; (v && String(v).trim()!=='—' && String(v).trim()!=='-') ? done++ : todo++; });
+    
     const div = document.createElement('div'); div.className = 'm-stat-row';
     div.innerHTML = `<div class="m-stat-label">${step}</div><div class="m-stat-nums">
-    <div class="m-pill" onclick="openDrawer('${cfg.key}', '${step}', 'done')"><div class="m-num done">${done}</div><div class="m-sub">完成</div></div>
-    <div class="m-pill" onclick="openDrawer('${cfg.key}', '${step}', 'todo')"><div class="m-num todo">${todo}</div><div class="m-sub">未完成</div></div></div>`;
+      <div class="m-pill" onclick="openDrawer('${cfg.key}', '${step}', 'done')"><div class="m-num done">${done}</div><div class="m-sub">完成</div></div>
+      <div class="m-pill" onclick="openDrawer('${cfg.key}', '${step}', 'todo')"><div class="m-num todo">${todo}</div><div class="m-sub">未完成</div></div></div>`;
     card.appendChild(div);
   });
   
@@ -415,7 +429,7 @@ function renderMobileStats() {
   container.appendChild(card);
 }
 
-/* Auth */
+/* ============ Auth ============ */
 function initGoogleSignIn() {
   document.body.classList.add('login');
   document.getElementById('signin-container').style.display = 'flex';
@@ -447,7 +461,9 @@ async function verifyToken(token) {
     document.getElementById('signin-container').style.display = 'none';
     document.getElementById('userInfo').style.display = 'flex';
     document.getElementById('userDisplay').innerHTML = `${j.name} (${j.permission})`;
-    if(window.innerWidth > 767 || document.body.classList.contains('mode-web')) loadAllSheetsForDesktop();
+    if(window.innerWidth > 767 || document.body.classList.contains('mode-web')) {
+        if (Object.keys(ALL_SHEETS).length === 0) loadAllSheetsForDesktop();
+    }
   } catch(e) {
     localStorage.removeItem('ddcc_user_token');
     initGoogleSignIn();
@@ -459,7 +475,7 @@ function logout() {
   location.reload();
 }
 
-/* Desktop Logic (恢復完整版) */
+/* ============ 電腦版邏輯 (完全還原) ============ */
 async function loadAllSheetsForDesktop() {
   showLoading();
   const reqs = SHEET_CONFIGS.map(c => fetchSingleSheet(c.key));
@@ -468,36 +484,40 @@ async function loadAllSheetsForDesktop() {
   
   if (SINGLE_ITEMS.length > 0) rebuildSelectOptions();
   
+  // 根據當前 Tab 渲染
   const activeTab = document.querySelector('.main-tab.active');
-  if (activeTab && activeTab.dataset.target === 'pane-dashboard2') {
-      renderDashboard2();
+  if (activeTab && activeTab.dataset.target === 'pane-dashboard') {
+      renderDashboard2(); // 這裡就是原來的 Dashboard
   } else if (activeTab && activeTab.dataset.target === 'pane-punch') {
       loadSheetData(currentSheetKey);
   }
 }
 
+// 電腦版 Dashboard 渲染
 function renderDashboard2() {
-  const box = document.getElementById('dashboard2');
+  const box = document.getElementById('dashboard'); // 注意：這裡用的是 dashboard
   if(!box) return;
   box.innerHTML = '';
   if(Object.keys(ALL_SHEETS).length === 0) { box.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">無資料</div>'; return; }
 
   SHEET_CONFIGS.forEach(cfg => {
     const d = ALL_SHEETS[cfg.key]; if(!d) return; 
-    const card = document.createElement('div'); card.className = 'card';
+    const card = document.createElement('div'); card.className = 'dash-section card';
     card.innerHTML = `<div class="dash-title">${cfg.key}</div>`;
-    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">';
+    
+    let html = '<div class="stat-grid">';
     cfg.steps.filter(s=>s!=='車暫停位置').forEach(st => {
        const cIdx = d.header.indexOf(st); let done=0, todo=0;
        if(cIdx !== -1) d.rows.forEach(r => { const v = r[cIdx]; (v&&String(v).trim()!=='—'&&String(v).trim()!=='-')?done++:todo++; });
-       html += `<div style="border:1px solid #eee;padding:10px;border-radius:8px;text-align:center;">
-         <div style="font-weight:700;margin-bottom:4px;">${st}</div>
-         <div style="display:flex;justify-content:center;gap:10px;">
-           <span style="color:#2563eb;font-weight:900">${done}</span>
-           <span style="color:#ef4444;font-weight:900">${todo}</span>
+       html += `<div class="stat-card">
+         <div class="stat-head">${st}</div>
+         <div class="stat-row">
+           <div class="stat-pill"><div class="stat-num done">${done}</div><div class="stat-label">完成</div></div>
+           <div class="stat-pill"><div class="stat-num todo">${todo}</div><div class="stat-label">未完成</div></div>
          </div></div>`;
     });
     html += '</div>';
+    
     if(d.header.indexOf('車暫停位置') >= 0) {
        const sc = d.header.indexOf('車暫停位置'); const cc = {}; STOP_OPTIONS.forEach(x=>cc[x]=0);
        d.rows.forEach(r=>{ const v=String(r[sc]||'').trim(); if(cc[v]!==undefined) cc[v]++; });
@@ -509,7 +529,7 @@ function renderDashboard2() {
   });
 }
 
-/* Tab Switching */
+/* Tab 切換 */
 document.getElementById('mainTabs').addEventListener('click', (e)=>{
   const btn = e.target.closest('.main-tab');
   if(btn) {
@@ -517,8 +537,10 @@ document.getElementById('mainTabs').addEventListener('click', (e)=>{
     btn.classList.add('active');
     document.querySelectorAll('#main-content-wrap .tab-pane').forEach(p=>p.classList.add('hide'));
     const target = btn.dataset.target;
-    document.getElementById(target).classList.remove('hide');
-    if(target === 'pane-dashboard2') {
+    const el = document.getElementById(target);
+    if(el) el.classList.remove('hide');
+    
+    if(target === 'pane-dashboard') {
         if(Object.keys(ALL_SHEETS).length === 0) loadAllSheetsForDesktop(); else renderDashboard2();
     } else if(target === 'pane-punch') {
         loadSheetData(currentSheetKey);
@@ -526,12 +548,13 @@ document.getElementById('mainTabs').addEventListener('click', (e)=>{
   }
 });
 
-/* 登錄與修改 */
+/* 登錄與修改頁邏輯 */
 function loadSheetData(key) {
   currentSheetKey = key;
   document.getElementById('sheetTabs').innerHTML = SHEET_CONFIGS.map(c => 
     `<button class="btn ${c.key===key?'':'btn--secondary'} btn--sm" style="margin-right:5px" onclick="loadSheetData('${c.key}')">${c.key}</button>`
   ).join('');
+  
   const d = ALL_SHEETS[key];
   if(!d) {
       document.getElementById('vehList').innerHTML = '載入中...';
@@ -576,19 +599,20 @@ function renderVehicles(cfg, rows, header) {
   });
 }
 
-/* 個別情報 */
-function initSinglePage() { rebuildSelectOptions(); }
+/* 個別情報查詢邏輯 */
 function rebuildSelectOptions() {
     const selSheet = document.getElementById('selSheet');
     const selArea = document.getElementById('selArea');
     const selCar = document.getElementById('selCar');
     const sVal = selSheet.value; const aVal = selArea.value; const cVal = selCar.value;
+    
     let filtered = SINGLE_ITEMS.filter(i => 
         (!sVal || i.sheetKey === sVal) && (!aVal || String(i.row[1]).trim() === aVal) && (!cVal || String(i.row[2]).trim() === cVal)
     );
     const sheets = [...new Set(filtered.map(i => i.sheetKey))].sort();
     const areas = [...new Set(filtered.map(i => String(i.row[1]).trim()))].sort();
     const cars = [...new Set(filtered.map(i => String(i.row[2]).trim()))].sort();
+    
     updateSelect(selSheet, sheets, 'Tab', sVal);
     updateSelect(selArea, areas, '區域', aVal);
     updateSelect(selCar, cars, '車號', cVal);
@@ -627,7 +651,7 @@ function renderSingleCards(items) {
     });
 }
 
-/* Helpers */
+/* 通用邏輯 (打卡、修改、刪除) */
 async function quickPunch(key, step, area, car, btn, specificRow) {
   if(!currentUser || currentUser.permission !== '全功能') return alert('權限不足');
   if(!confirm(`確認幫 ${car} 打卡？`)) return;
@@ -643,11 +667,12 @@ async function quickPunch(key, step, area, car, btn, specificRow) {
   if(btn) { btn.textContent='...'; btn.disabled=true; }
   try {
     await fetch(API_BASE+'?action=update', { method: 'POST', body: JSON.stringify({ sheet:data.cfg.sheet, idToken, email:currentUser.email, writes:[{row:realRow, col, value:now}] }) });
-    if(btn) btn.parentElement.innerHTML = `<span style="color:green">${now}</span>`;
     await fetchSingleSheet(key);
-    if (!document.getElementById('pane-punch').classList.contains('hide')) loadSheetData(key);
+    // 根據當前頁面決定刷新哪裡
+    if (document.getElementById('pane-punch').classList.contains('hide') === false) loadSheetData(key);
     else if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) renderMobileStats();
     else renderDashboard2();
+    if(btn) btn.parentElement.innerHTML = `<span style="color:green">${now}</span>`;
   } catch(e) { alert('失敗'); if(btn) { btn.textContent='打卡'; btn.disabled=false; } }
 }
 async function onStopSelect(key, row, step, val) {
@@ -675,6 +700,8 @@ async function onDeleteTimeClick(key, row, step) {
        await fetchSingleSheet(key); loadSheetData(key);
    });
 }
+
+/* 其他工具 */
 function switchMobileMode(mode) {
   const btnStatus = document.getElementById('btn-m-status');
   const btnWeb = document.getElementById('btn-m-web');
@@ -686,7 +713,8 @@ function switchMobileMode(mode) {
     document.body.classList.add('mode-web');
     btnStatus.classList.remove('active'); btnWeb.classList.add('active');
     if(currentUser) loadAllSheetsForDesktop();
-    switchPane('pane-dashboard2');
+    // 切換到預設 Dashboard
+    switchPane('pane-dashboard');
   }
 }
 function startAutoRefresh() {
@@ -695,7 +723,7 @@ function startAutoRefresh() {
     if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
       const key = document.getElementById('mobile-sheet-select').value; fetchSingleSheet(key).then(renderMobileStats);
     } else { loadAllSheetsForDesktop(); }
-  }, REFRESH_INTERVAL);
+  }, refreshMs); // 使用全域變數 refreshMs
 }
 function openDrawer(key, step, type, val) {
   const data = ALL_SHEETS[key]; if(!data) return;
@@ -734,7 +762,7 @@ function closeDrawer() {
 }
 function showLoading(){document.getElementById('loading').classList.add('show');}
 function hideLoading(){document.getElementById('loading').classList.remove('show');}
-function showNotif(msg){ const n = document.getElementById('notif'); n.textContent = msg; n.style.opacity = 1; setTimeout(()=>n.style.opacity=0, 2000); }
+function showNotif(msg, isErr){ const n = document.getElementById('notif'); n.textContent = msg; n.style.opacity = 1; setTimeout(()=>n.style.opacity=0, 2000); }
 function formatSheetTime(v){ return (v&&v.match)?(v.match(/\d{1,2}:\d{2}/)||[''])[0]:v; }
 function openDetailModal(key, row) {
    const d = ALL_SHEETS[key];

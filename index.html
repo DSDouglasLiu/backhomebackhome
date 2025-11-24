@@ -322,10 +322,11 @@ async function forceRefreshMobile() {
   renderMobileStats();
 }
 
-// 抓取單張表資料 (強力容錯版)
+// 抓取單張表資料 (核心函式 - 強力容錯版)
 async function fetchSingleSheet(targetKey) {
-  // 顯示局部 Loading
   const container = document.getElementById('mobile-cards-container');
+  
+  // 顯示局部 Loading
   if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
     container.innerHTML = `<div style="text-align:center;padding:40px;color:#666;">
       <div class="spinner" style="margin:0 auto 10px;"></div>
@@ -336,15 +337,11 @@ async function fetchSingleSheet(targetKey) {
   }
 
   const cfg = SHEET_CONFIGS.find(c => c.key === targetKey);
-  if(!cfg) {
-    container.innerHTML = `<div style="text-align:center;padding:20px;color:red;">設定錯誤：找不到 ${targetKey}</div>`;
-    hideLoading();
-    return;
-  }
+  if(!cfg) return;
 
   try {
-    // 呼叫 API
-    const r = await fetch(`${API_BASE}?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+    // ★★★ 強制不快取：加入時間戳記 &_t=... ★★★
+    const r = await fetch(`${API_BASE}?action=get&sheet=${encodeURIComponent(cfg.sheet)}&_t=${new Date().getTime()}`);
     
     // 先讀成文字，避免 JSON 解析失敗導致程式當掉
     const text = await r.text();
@@ -352,23 +349,23 @@ async function fetchSingleSheet(targetKey) {
     try {
       j = JSON.parse(text);
     } catch(e) {
-      throw new Error("伺服器回傳格式錯誤 (非 JSON)，可能是 Apps Script 部署問題。");
+      throw new Error("伺服器忙碌中，請稍後再試");
     }
     
     if(j.error) {
-      container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">讀取錯誤: ${j.error}</div>`;
+      container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">讀取錯誤: ${j.error} <br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
       hideLoading();
       return;
     }
 
     const vals = j.values || [];
     if (vals.length === 0) {
-      container.innerHTML = `<div style="text-align:center;padding:20px;">此工作表目前沒有資料</div>`;
+      container.innerHTML = `<div style="text-align:center;padding:20px;">此工作表目前沒有資料 <br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
       hideLoading();
       return;
     }
 
-    // ★★★ 強力表頭搜尋：搜尋整列，不限欄位 ★★★
+    // ★★★ 強力表頭搜尋：搜尋整列，只要有「區域」和「車號」就算對 ★★★
     const hIdx = vals.findIndex(r => {
       if (!Array.isArray(r)) return false;
       const rowStr = r.join('').replace(/\s/g, ''); // 移除空白後串接
@@ -377,7 +374,8 @@ async function fetchSingleSheet(targetKey) {
     
     if(hIdx === -1) {
       container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">
-        <b>找不到表頭</b><br>請確認 Excel 內是否有「區域」與「車號」欄位
+        <b>找不到表頭</b><br>請確認表單內是否有「區域」與「車號」欄位
+        <br><button class="btn" onclick="forceRefreshMobile()">重新載入</button>
       </div>`;
       hideLoading();
       return;
@@ -393,7 +391,8 @@ async function fetchSingleSheet(targetKey) {
 
   } catch(e) {
     container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">
-      <b>連線失敗</b><br>${e.message}
+      <b>連線失敗</b><br>請檢查網路訊號
+      <br><br><button class="btn" onclick="forceRefreshMobile()">重新載入</button>
     </div>`;
     console.error(e);
   }
@@ -408,8 +407,11 @@ function renderMobileStats() {
   const data = ALL_SHEETS[key];
 
   if(!data) {
-    // 防呆：如果程式跑到這但沒資料，自動觸發下載
-    fetchSingleSheet(key).then(() => renderMobileStats());
+    // ★★★ 防止無限迴圈：如果沒資料，不再自動重試，顯示按鈕讓使用者點 ★★★
+    container.innerHTML = `<div style="text-align:center;padding:40px;">
+      資料未載入<br><br>
+      <button class="btn" onclick="forceRefreshMobile()">載入資料</button>
+    </div>`;
     return;
   }
 
@@ -511,7 +513,8 @@ async function verifyToken(token) {
     document.getElementById('userInfo').classList.remove('hide');
     document.getElementById('userDisplay').innerHTML = `${j.name} (${j.permission})`;
     
-    // 驗證成功，資料已經在背景載入了，這邊不用再載
+    // 登入成功，靜默更新一下所有資料
+    if(window.innerWidth > 767) loadAllSheetsForDesktop();
     
   } catch(e) {
     console.error(e);
@@ -527,13 +530,8 @@ function logout() {
 
 /* ================= 電腦版邏輯 (一次載入全部) ================= */
 async function loadAllSheetsForDesktop() {
-  // ★★★ 關鍵修正：電腦版也移除 currentUser 檢查，未登入先看資料 ★★★
-  // if(!currentUser) return; 
-  
   const reqs = SHEET_CONFIGS.map(c => fetchSingleSheet(c.key));
   await Promise.all(reqs);
-  
-  // 渲染電腦版 Dashboard
   renderDashboard2();
 }
 

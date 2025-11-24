@@ -207,12 +207,6 @@ body.dark .loc-pill{ background:rgba(15,23,42,.28); }
 .detail-table th, .detail-table td{ border:1px solid var(--border); padding:8px 10px; text-align:center; }
 .detail-table th{ background:#0f172a; color:#fff; }
 
-/* RWD */
-@media(max-width:768px){
-  .veh-list{ grid-template-columns:1fr; }
-  .sheet-tabs{ gap:10px; }
-}
-
 /* ====== 頂部兩列排版（標題/分頁 ←→ 使用者/時鐘+更新） ====== */
 .topbar-grid{
   display:grid;
@@ -269,9 +263,6 @@ body.dark .indiv-card{ background:rgba(15,23,42,.30); }
 .indiv-card .bot{ color:#334155; font-size:14px; }
 .step-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
 .step-cell{ background:#1d4ed8; color:#fff; padding:8px; border-radius:8px; text-align:center; font-size:14px; }
-@media (max-width: 1200px){ .indiv-cards-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
-@media (max-width: 680px){ .indiv-cards-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } .indiv-row select{ min-width:180px; } }
-/* 個別情報：精簡名片樣式（置中、三行同字級） */
 .single-list{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
 .single-card{
   border:1px solid var(--border);
@@ -290,61 +281,6 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
 }
 .single-line + .single-line{ margin-top:6px; }
 
-/* ======================= 響應式主按鈕佈局（手機超友善）======================= */
-@media (max-width: 768px) {
-  #mainTabs.main-tabs {
-    flex-wrap: wrap;           /* 小螢幕自動換行 */
-    gap: 10px;                 /* 按鈕間距 */
-    justify-content: center !important;  /* 置中排列 */
-    padding: 8px 12px;         /* 增加內距更好按 */
-  }
-
-  #mainTabs .main-tab {
-    flex: 1;                   /* 平均分配寬度 */
-    min-width: 120px;          /* 最小寬度避免太擠 */
-    max-width: 45%;            /* 每行最多放兩個 */
-    padding: 12px 8px;         /* 上下加大，按鈕更好按 */
-    font-size: 15px;           /* 字稍微放大 */
-    font-weight: 700;
-  }
-
-  /* 手機上「最新狀態」和「登錄與修改」永遠最大、最顯眼 */
-  #mainTabs .main-tab[data-target="pane-dashboard2"],
-  #mainTabs .main-tab[data-target="pane-punch"] {
-    flex: 1 1 100% !important; /* 強制佔滿整行 */
-    max-width: 100% !important;
-    order: -1;                 /* 確保「最新狀態」在最上面 */
-    background: var(--primary-600) !important;
-    color: white !important;
-    font-size: 17px !important;
-    padding: 16px !important;
-    border-radius: 12px !important;
-  }
-
-  /* 「登錄與修改」預設開啟時特別突出 */
-  #mainTabs .main-tab[data-target="pane-punch"].active {
-    background: var(--success-600) !important;
-    box-shadow: 0 4px 12px rgba(34,197,94,0.4);
-  }
-}
-
-/* 平板（769px ~ 1024px）三顆橫排 */
-@media (min-width: 769px) and (max-width: 1024px) {
-  #mainTabs .main-tab {
-    flex: 1;
-    padding: 14px 12px;
-    font-size: 16px;
-  }
-}
-
-/* 電腦（>1024px）保持原來 space-between 佈局，但字更大更好按 */
-@media (min-width: 1025px) {
-  #mainTabs .main-tab {
-    padding: 14px 24px;
-    font-size: 17px;
-    min-width: 180px;
-  }
-}
 
 /* ======================= 最終統一美化（數字更大 + 字體完全一致）======================= */
 /* 主要統計數字（完成/未完成 + 停車位置）全部放大、更粗 */
@@ -369,29 +305,7 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
   font-size: 15px;
   font-weight: 700;
 }
-
-/* 手機專屬：只保留「最新狀態」＋極致美化（與其他卡片陰影完全一致） */
-@media (max-width: 767px) {
-  /* 隱藏其他按鈕 */
-  #mainTabs .main-tab[data-target="pane-punch"],
-  #mainTabs .main-tab[data-target="pane-single"] {
-    display: none !important;
-  }
-
-  /* 最新狀態按鈕（手機終極版） */
-  #mainTabs .main-tab[data-target="pane-dashboard2"] {
-    flex: 1 !important;
-    min-width: 0;
-    font-size: 18px !important;
-    font-weight: 700 !important;
-    padding: 18px !important;
-    background: var(--primary-600) !important;
-    color: white !important;
-    border-radius: 16px !important;
-    box-shadow: var(--shadow-card) !important; /* 與其他卡片完全一致 */
-  }
-}
-  
+ 
 </style>
 </head>
 <body>
@@ -809,21 +723,31 @@ function finishLoginUI() {
   updateRefreshControlsVisibility();
   document.body.classList.remove('login');
   document.getElementById('signin').classList.add('hide');
-  const ui = document.getElementById('userInfo'); ui.classList.remove('hide');
+  const ui = document.getElementById('userInfo'); 
+  ui.classList.remove('hide');
   ui.style.display = ''; // 還原由 CSS 控制
-const nameSafe  = escapeHtml(currentUser.name || '');
-const emailSafe = escapeHtml(currentUser.email || '');
-const permSafe  = escapeHtml(currentUser.permission || '');
-document.getElementById('userDisplay').innerHTML =
-  `${nameSafe} &lt;${emailSafe}&gt; ｜ 權限：<b>${permSafe}</b>`;
-document.getElementById('tabs').classList.remove('hide');
-document.getElementById('content').classList.remove('hide');
 
-  if (currentUser.permission === '檢視') showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
-  // 預設直接開啟「最新狀態」（整體情報 II）
-  switchPane('pane-dashboard2');
+  const nameSafe  = escapeHtml(currentUser.name || '');
+  const emailSafe = escapeHtml(currentUser.email || '');
+  const permSafe  = escapeHtml(currentUser.permission || '');
+  document.getElementById('userDisplay').innerHTML =
+    `${nameSafe} &lt;${emailSafe}&gt; ｜ 權限：<b>${permSafe}</b>`;
 
-  // （可選）恢復頁籤可聚焦
+  document.getElementById('tabs').classList.remove('hide');
+  document.getElementById('content').classList.remove('hide');
+
+  if (currentUser.permission === '檢視') 
+    showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
+
+  // === 關鍵：登入後預設開啟「登錄與修改」頁面 ===
+  switchPane('pane-punch');
+
+  // 讓「登錄與修改」這個 tab 高亮
+  document.querySelectorAll('#mainTabs .main-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.target === 'pane-punch');
+  });
+
+  // 恢復 tab 可聚焦
   document.querySelectorAll('#mainTabs .main-tab')
     .forEach(b => { b.tabIndex = 0; b.removeAttribute('aria-disabled'); });
 }
@@ -1395,7 +1319,11 @@ function switchPane(targetId){
     showNotif('請先登入', true);
     return;
   }
-
+function switchPane(id) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hide'));
+  const target = document.getElementById(id);
+  if (target) target.classList.remove('hide');
+}
   // 切換 tab 樣式與顯示對應面板
   document.querySelectorAll('#mainTabs .main-tab')
     .forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));

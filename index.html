@@ -2,745 +2,3022 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>車流人流退場情報</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  
+
 <style>
-/* =========== Design Tokens =========== */
+/* =========== Design Tokens（Preferred 版） =========== */
 :root{
-  --primary-600:#1f6fe5; --primary-700:#165bd1;
-  --success-600:#22c55e; --danger-600:#ef4444;
-  --gray-100:#f1f5f9; --gray-200:#e5e7eb; --gray-500:#64748b;
-  --gray-800:#1f2937; --gray-900:#0f172a;
-  --surface: rgba(255,255,255,.95);
+  /* 半徑 */
+  --radius-xs:6px;  --radius-sm:8px;  --radius-md:10px; --radius-lg:12px;
+
+  /* 色票（light） */
+  --primary-600:#1f6fe5; --primary-700:#165bd1; --primary-800:#1249ad;
+  --success-600:#22c55e; --success-700:#16a34a; --success-800:#15803d;
+  --danger-600:#ef4444;  --danger-700:#dc2626;  --danger-800:#b91c1c;
+  --gray-50:#f8fafc;  --gray-100:#f1f5f9; --gray-200:#e5e7eb;
+  --gray-300:#cbd5e1; --gray-400:#94a3b8; --gray-500:#64748b;
+  --gray-600:#475569; --gray-700:#334155; --gray-800:#1f2937; --gray-900:#0f172a;
+
+  --surface: rgba(255,255,255,.78);
   --page-bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
   --text-strong: var(--gray-900);
   --text: var(--gray-800);
+  --text-muted: var(--gray-600);
   --border: rgba(148,163,184,0.35);
+  --focus:#93c5fd;
+
+  /* 字級（px/line-height, weight） */
+  --fz-display:28px; --lh-display:36px; --fw-display:700;  /* 頁面大標題 */
+  --fz-title:18px;   --lh-title:24px;   --fw-title:700;   /* 卡片主標 */
+  --fz-sub:14px;     --lh-sub:20px;     --fw-sub:600;     /* 車牌/副標 */
+  --fz-label:14px;   --lh-label:20px;   --fw-label:600;   /* 步驟/表頭 */
+  --fz-body:14px;    --lh-body:20px;    --fw-body:400;    /* 內文/按鈕 */
+  --fz-note:12px;    --lh-note:16px;    --fw-note:400;    /* 備註提示 */
+
   --shadow-card:0 8px 24px rgba(0,0,0,.08);
+}
+body.dark{
+  --surface: rgba(15,23,42,.55);
+  --page-bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
+  --text-strong:#e5eaf3; --text:#e2e8f0; --text-muted:#93a3b5;
+  --border: rgba(148,163,184,0.25);
+  --shadow-card:0 8px 24px rgba(0,0,0,.35);
 }
 
 /* =========== Base =========== */
-body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding-bottom: 40px; }
-.wrap{max-width:1080px;margin:0 auto;padding:16px;}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
+body{
+  margin:0; min-height:100vh;
+  background:var(--page-bg); color:var(--text);
+  font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
+h1{margin:0 0 16px;font-size:var(--fz-display);line-height:var(--lh-display);font-weight:var(--fw-display);color:var(--text-strong);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
 .hide{ display:none !important; }
 
-/* =========== Mobile Nav Bar (手機置頂列) =========== */
-#mobile-nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
-  background: #fff; height: 50px; display: flex;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  /* 預設由 JS/Media Query 控制顯示 */
-  display: none; 
+/* =========== Segmented Tabs（上方工作表） =========== */
+.sheet-tabs{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:flex-start; }
+.tab,.btn-tab{
+  background:#fff;color:var(--primary-600);
+  border:1px solid var(--primary-600);border-radius:var(--radius-lg);
+  padding:6px 18px;font-size:var(--fz-body);font-weight:600;cursor:pointer;min-width:170px;text-align:center;
 }
-.m-nav-btn {
-  flex: 1; border: none; background: transparent;
-  font-size: 15px; font-weight: 700; color: var(--gray-500);
-  border-right: 1px solid var(--gray-200);
-  cursor: pointer; padding: 0; margin: 0;
-  transition: background 0.2s, color 0.2s;
-  white-space: nowrap;
+body.dark .tab, body.dark .btn-tab{background:transparent}
+.tab:hover,.btn-tab:hover{background:rgba(31,111,229,.06)}
+.tab.active,.btn-tab.active{background:var(--primary-600);color:#fff;border-color:var(--primary-600)}
+.tab:focus-visible,.btn-tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* ======= 上方時鐘 + 更新頻率 ======= */
+.refresh-bar{ display:flex; gap:10px; align-items:center; justify-content:flex-end; margin:4px 0 6px; }
+.clock{ font-weight:900; letter-spacing:.5px; font-variant-numeric: tabular-nums; }
+.seg-group{ display:flex; gap:8px; flex-wrap:wrap; }
+.seg-btn{
+  background:#fff; color:var(--primary-600);
+  border:1px solid var(--primary-600); border-radius:var(--radius-lg);
+  padding:6px 14px; font-size:var(--fz-body); font-weight:700; cursor:pointer; min-width:72px; text-align:center;
 }
-.m-nav-btn:last-child { border-right: none; }
-.m-nav-btn.active { background: var(--primary-600); color: #fff; }
+body.dark .seg-btn{ background:transparent; }
+.seg-btn:hover{ background:rgba(31,111,229,.06); }
+.seg-btn.active{ background:var(--primary-600); color:#fff; border-color:var(--primary-600); }
+.seg-btn:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+.seg-btn[disabled]{ cursor:not-allowed; }
 
-/* =========== Mobile Minimal Content (極簡模式內容) =========== */
-#mobile-status-view { display: none; margin-top: 50px; padding: 16px; }
-.m-select {
-  width: 100%; padding: 12px; font-size: 16px; font-weight: 700;
-  border: 1px solid var(--primary-600); border-radius: 10px;
-  background: #fff; color: var(--primary-600); margin-bottom: 16px;
-  appearance: none; -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%231f6fe5%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-  background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 12px auto;
+/* =========== 原「登錄」頁卡片 =========== */
+.veh-list{display:grid;grid-template-columns:repeat(auto-fit, minmax(480px,1fr));gap:12px;margin-top:16px;}
+.veh-card{background:rgba(255,255,255,0.85);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px;}
+body.dark .veh-card{background:rgba(15,23,42,0.28);}
+.veh-title-main{font-weight:700;font-size:var(--fz-title);line-height:var(--lh-title);color:var(--text-strong);}
+.veh-title-sub{font-size:var(--fz-sub);line-height:var(--lh-sub);color:var(--text-muted);}
+.step-row{display:grid;grid-template-columns:180px 1fr auto;align-items:center;gap:10px;margin-bottom:6px;}
+.step-time{font-size:var(--fz-label);line-height:var(--lh-label);font-weight:600;color:rgba(15,23,42,.75);text-align:right;min-width:70px;font-feature-settings:"tnum" 1, "lnum" 1; font-variant-numeric:tabular-nums lining-nums;}
+body.dark .step-time{color:#cbd5e1}
+.step-select{min-width:170px;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;font-size:var(--fz-body);}
+.step-select:disabled{background:#e2e8f0;cursor:not-allowed;}
+.textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;background:#fff;font-size:var(--fz-body);}
+.textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* =========== Buttons =========== */
+.btn,.step-btn{
+  border:0;border-radius:var(--radius-md);padding:8px 14px;
+  background:#0f6efc;color:#fff;font-size:var(--fz-body);font-weight:600;cursor:pointer;
+  transition:background-color .12s ease,border-color .12s ease,filter .12s ease;
+  min-width:64px;text-align:center;
 }
+.btn--sm{padding:6px 12px}
+.btn--lg{padding:10px 18px;font-size:15px}
+.btn:focus-visible,.step-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+.btn[disabled],.step-btn[disabled]{background:var(--gray-300)!important;color:var(--gray-700)!important;cursor:not-allowed}
+.btn--primary{background:var(--primary-600);} .btn--primary:hover{background:var(--primary-700);} .btn--primary:active{background:var(--primary-800);}
+.btn--success{background:var(--success-600);} .btn--success:hover{background:var(--success-700);} .btn--success:active{background:var(--success-800);}
+.btn--danger{background:var(--danger-600);}  .btn--danger:hover{background:var(--danger-700);}  .btn--danger:active{background:var(--danger-800);}
+.btn--secondary{background:#fff;color:var(--primary-600);border:1px solid var(--primary-600);} 
+body.dark .btn--secondary{background:transparent}
+.btn--secondary:hover{background:rgba(31,111,229,.06)}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
 
-.m-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-card); }
-.m-card-title { font-size: 18px; font-weight: 800; margin-bottom: 12px; color: var(--gray-900); border-bottom: 2px solid var(--gray-100); padding-bottom: 8px; }
-.m-stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--gray-200); }
-.m-stat-row:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
-.m-stat-label { font-size: 15px; font-weight: 700; color: var(--gray-800); flex: 1; }
-.m-stat-nums { display: flex; gap: 12px; }
-.m-pill { display: flex; flex-direction: column; align-items: center; min-width: 50px; cursor: pointer; padding: 4px 8px; border-radius: 8px; transition: background 0.1s; }
-.m-pill:active { background: var(--gray-100); }
-.m-num { font-size: 22px; font-weight: 900; line-height: 1.1; }
-.m-num.done { color: var(--primary-600); }
-.m-num.todo { color: var(--danger-600); }
-.m-sub { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+/* 通知 & Modal & Loading */
+.notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;z-index:9990;}
+.notif.show{opacity:1;transform:translateY(0);}
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: block; }
+.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 16px; border-radius: 12px; min-width: 280px; max-width: 90vw; box-shadow: 0 10px 30px rgba(0,0,0,0.25); z-index: 10001; display: block; }
+body.dark .modal{ background:#0b1325; color:#e2e8f0 }
+.modal h3{ margin:0 0 10px; font-size:16px }
+.modal .row{ display:flex; gap:8px; align-items:center; margin:8px 0 }
+.modal input{ width:56px; padding:6px 8px; border:1px solid var(--border); border-radius:8px }
+.modal .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px }
+.modal .time-edit{ display:flex; align-items:center; justify-content:center; gap:10px; margin:8px 0 4px; }
+.modal .time-input{ width:64px; text-align:center; padding:6px 8px; border:1px solid var(--border); border-radius:10px; font-weight:600; }
+.modal .colon{ font-size:20px; line-height:1; opacity:.5; margin:0 2px; user-select:none; }
+.modal .hint{ font-size:.9rem; line-height:1.6; opacity:.8; margin:2px 0; }
+body.modal-open{ overflow:hidden; touch-action:none; }
 
-/* =========== Bottom Drawer (底部抽屜) =========== */
-.drawer-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10000;
-  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+/* Loading Overlay */
+#loading.loading{ position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); z-index: 2147483000; }
+#loading.loading.show{ display: flex; }
+.loading-box{ display:flex; align-items:center; gap:10px; background: var(--surface); color: var(--text); border:1px solid var(--border); border-radius:12px; padding:12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); backdrop-filter: blur(8px); }
+.spinner{ width:20px; height:20px; border-radius:50%; border:2.5px solid #cbd5e1; border-top-color: var(--primary-600); animation: spin 1s linear infinite; }
+@keyframes spin{ to{ transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce){ .spinner{ animation: none; border-top-color:#cbd5e1; } }
+body.loading-open{ overflow:hidden; touch-action:none; overscroll-behavior: contain; }
+@supports (height: 100dvh){ .modal-backdrop{ height: 100dvh; } }
+
+/* ===== 登入畫面（不再覆蓋 .wrap > div:first-child） ===== */
+body.login{ height: 100dvh; overflow: hidden; }
+body.login .wrap{ height: 100%; display: grid; place-items: center; }
+body.login #tabs, body.login #content, body.login #userInfo{ display: none !important; }
+body.login #signin{ display:block; }
+body.login .topbar-grid{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 12px;
+  align-items:center;
+  justify-items:center;     /* 讓登入按鈕置中 */
+  text-align:center;
 }
-.drawer-backdrop.open { opacity: 1; pointer-events: auto; }
-
-.bottom-drawer {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 10001;
-  background: #fff; border-radius: 20px 20px 0 0;
-  transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
-  max-height: 85vh; display: flex; flex-direction: column;
-  box-shadow: 0 -5px 25px rgba(0,0,0,0.15);
+body.login .left-title h1{
+  font-size: clamp(36px, 8vw, 64px);
+  line-height: 1.15;
+  margin: 0;
 }
-.bottom-drawer.open { transform: translateY(0); }
+#logoutBtn { white-space: nowrap; }
+#logoutBtn:hover { background:rgba(239,68,68,.1) !important; }  
 
-.drawer-header { padding: 12px 16px; border-bottom: 1px solid var(--gray-200); flex-shrink: 0; text-align: center; position: relative; }
-.drawer-handle { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 0 auto 12px; }
-.drawer-title { font-size: 18px; font-weight: 800; color: var(--gray-900); }
-.drawer-close { position: absolute; right: 16px; top: 20px; font-size: 24px; color: var(--gray-500); cursor: pointer; line-height: 1; }
-.drawer-content { overflow-y: auto; padding: 0 16px 30px; flex: 1; -webkit-overflow-scrolling: touch; }
+/* ===== 頂層三頁 Tab ===== */
+.main-tabs{ display:flex; gap:12px; margin:6px 0 8px; flex-wrap:wrap; }
+.main-tab{ background:#fff; color:var(--primary-600); border:1px solid var(--primary-600); border-radius:var(--radius-lg); padding:8px 20px; font-size:15px; font-weight:700; cursor:pointer; min-width:120px; text-align:center; }
+body.dark .main-tab{ background:transparent; }
+.main-tab:hover{ background:rgba(31,111,229,.06) }
+.main-tab.active{ background:var(--primary-600); color:#fff }
+.tab-pane{ margin-top:8px; }
 
-.d-item { padding: 12px 0; border-bottom: 1px solid var(--gray-100); display: flex; justify-content: space-between; align-items: center; }
-.d-info { display: flex; flex-direction: column; gap: 2px; }
-.d-main { font-size: 16px; font-weight: 700; color: var(--gray-900); }
-.d-sub { font-size: 13px; color: var(--gray-500); }
-.d-action .btn { padding: 6px 12px; font-size: 13px; border-radius: 6px; }
-
-/* =========== Desktop & Web Mode Layout (電腦版修復核心) =========== */
-/* 強制使用 Grid Area 命名定位，避免錯位 */
-.topbar-grid { 
-  display: grid; 
-  grid-template-columns: 1fr auto; 
-  grid-template-rows: auto auto; 
-  grid-template-areas: 
-    "title user"
-    "tabs refresh";
-  gap: 10px 20px; 
-  align-items: center; 
-  margin-bottom: 16px;
-}
-.left-title { grid-area: title; }
-.right-user { 
-  grid-area: user; 
-  display: flex; 
-  align-items: center; 
-  justify-content: flex-end; 
-  gap: 12px; 
-}
-/* 避免登入按鈕撐開寬度 */
-.right-user #signin { max-height: 44px; } 
-
-.left-tabs { grid-area: tabs; }
-.right-refresh { 
-  grid-area: refresh; 
-  display: flex; 
-  justify-content: flex-end; 
-  align-items: center;
-}
-
-.main-tabs { display: flex; gap: 12px; }
-.main-tab { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 10px; padding: 8px 20px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-.main-tab.active { background: var(--primary-600); color: #fff; }
-.refresh-bar { display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
-.clock { font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 20px; letter-spacing: 0.5px; }
-.seg-btn { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
-.seg-btn.active { background: var(--primary-600); color: #fff; }
-
-/* 電腦版卡片 */
+/* ======= 整體情報（儀表板）樣式 ======= */
+.dash-section{ margin:16px 0 24px; }
 .dash-title{ font-size:18px; font-weight:800; color:var(--text-strong); margin:0 0 8px; }
-.stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+.stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
 .stat-card{ border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.9); padding:12px; box-shadow:var(--shadow-card); }
+body.dark .stat-card{ background:rgba(15,23,42,.30); }
 .stat-head{ font-weight:800; margin-bottom:8px; color:var(--text-strong); }
 .stat-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.stat-pill{ border:1px solid var(--border); border-radius:10px; padding:10px 4px; background:#fff; display:flex; flex-direction:column; align-items:center; cursor:pointer; }
-.stat-num{ font-size:32px; font-weight:900; line-height:1; }
-.stat-num.done{ color:#2563eb; } .stat-num.todo{ color:#ef4444; }
-.stat-label{ font-size:14px; color:var(--text-muted); margin-top:4px; font-weight: normal; }
-.loc-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:8px; }
+.stat-pill{ border:1px solid var(--border); border-radius:10px; padding:10px 8px; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; }
+body.dark .stat-pill{ background:rgba(2,6,23,.5); }
+.stat-pill:hover{ filter:brightness(1.02); }
+.stat-num{ font-size:26px; font-weight:800; line-height:1; }
+.stat-num.done{ color:#2563eb; }
+.stat-num.todo{ color:#ef4444; }
+.stat-label{ font-size:12px; color:var(--text-muted); margin-top:4px; }
+
+/* 停車位置卡片（單欄寬） */
+.loc-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-top:8px; }
 .loc-pill{ border:1px dashed var(--border); border-radius:12px; padding:10px; background:rgba(255,255,255,.85); display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
-.loc-name{ font-weight:700; font-size:15px; }
-.loc-num{ font-size:32px; font-weight:900; color:#2563eb; line-height:1; }
+body.dark .loc-pill{ background:rgba(15,23,42,.28); }
+.loc-name{ font-weight:700; }
+.loc-num{ font-size:22px; font-weight:900; color:#2563eb; }
 
-/* =========== RWD Logic (響應式規則) =========== */
+/* 清單／詳情彈窗內部 */
+.modal .dash-close{ position:absolute; right:10px; top:8px; font-size:22px; line-height:1; cursor:pointer; opacity:.7; }
+.modal .dash-close:hover{ opacity:1; }
+.list-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px dashed var(--border); }
+.list-left{ display:flex; flex-direction:column; gap:2px; }
+.list-title{ font-weight:800; }
+.list-sub{ font-size:13px; opacity:.85; }
+.detail-table{ width:100%; border-collapse:collapse; }
+.detail-table th, .detail-table td{ border:1px solid var(--border); padding:8px 10px; text-align:center; }
+.detail-table th{ background:#0f172a; color:#fff; }
 
-/* 1. 電腦版 (≥ 768px) - 絕對優先 */
-@media (min-width: 768px) {
-  #mobile-nav, #mobile-status-view, .drawer-backdrop, .bottom-drawer { display: none !important; }
-  .topbar-grid { display: grid !important; } /* 強制顯示 Grid */
-  #main-content-wrap { display: block !important; }
+/* RWD */
+@media(max-width:768px){
+  .veh-list{ grid-template-columns:1fr; }
+  .sheet-tabs{ gap:10px; }
 }
 
-/* 2. 手機版 (≤ 767px) */
-@media (max-width: 767px) {
-  
-  /* A. 預設狀態 (Status Mode) - 極簡模式 */
-  body:not(.mode-web) #mobile-nav { display: flex; }
-  body:not(.mode-web) #mobile-status-view { display: block; }
-  body:not(.mode-web) .topbar-grid { display: none !important; } /* 確保隱藏 */
-  body:not(.mode-web) #main-content-wrap { display: none !important; }
-  
-  /* B. 網頁版模式 (Web Mode) - 模擬電腦版 */
-  /* 確保手機導覽列隱藏 */
-  body.mode-web #mobile-nav { display: none !important; } 
-  
-  /* 顯示主要容器 */
-  body.mode-web #main-content-wrap { display: block !important; }
-  body.mode-web #mobile-status-view { display: none !important; }
-  
-  /* 調整頂部 Grid 為垂直堆疊，避免寬度不足擠壓 */
-  body.mode-web .topbar-grid { 
-    display: grid !important;
-    grid-template-areas: 
-      "title"
-      "user"
-      "tabs"
-      "refresh";
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    gap: 12px;
-    text-align: center;
-    margin-top: 10px;
+/* ====== 頂部兩列排版（標題/分頁 ←→ 使用者/時鐘+更新） ====== */
+.topbar-grid{
+  display:grid;
+  grid-template-columns: 1fr auto;   /* 左寬右窄 */
+  grid-template-rows: auto auto;     /* 上：標題/使用者，下：分頁/時鐘 */
+  gap:6px 12px;
+  align-items:center;
+}
+.topbar-grid .left-title{ grid-area: 1 / 1 / 2 / 2; }
+.topbar-grid .left-tabs{  grid-area: 2 / 1 / 3 / 2; }
+.topbar-grid .right-user{
+  grid-area: 1 / 2 / 2 / 3;
+  display:flex; align-items:center; gap:12px; justify-content:flex-end;
+}
+.topbar-grid .right-refresh{ grid-area: 2 / 2 / 3 / 3; }
+
+/* 讓時鐘與頻率鈕靠右，間距更緊一些 */
+.refresh-bar{ margin:0; display:flex; gap:8px; align-items:center; justify-content:flex-end; }
+.clock{ font-weight:800; font-variant-numeric: tabular-nums; letter-spacing:.5px; }
+
+/* 登入頁不顯示右側的更新列，但保留標題 */
+body.login .right-refresh{ display:none !important; }
+
+/* Modal 版面安全高度與配色 */
+.modal{ max-height: calc(100dvh - 48px); overflow:auto; padding-right:44px !important; max-width:96vw !important; border-radius:12px; }
+@supports not (height: 100dvh){ .modal{ max-height: 90vh; } }
+.detail-table th{ background: var(--primary-700) !important; color:#fff; }
+body.dark .detail-table th{ background: var(--primary-600) !important; }
+.detail-table, .detail-table th, .detail-table td{ border-color: var(--border); }
+.detail-table thead th:first-child{ border-top-left-radius:10px; }
+.detail-table thead th:last-child{  border-top-right-radius:10px; }
+/* 登入模式：只留 Google 登入按鈕與大標題，其他一律隱藏 */
+body.login #mainTabs,
+body.login .right-refresh,
+body.login #userInfo,
+body.login #tabs,
+body.login #content,
+body.login .tab-pane {
+  display: none !important;
+}
+.user-info{ display:flex; align-items:center; gap:12px; font-size:.875rem; }
+
+/* ===== 個別情報樣式 ===== */
+.indiv-row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+.indiv-row select{ min-width:240px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+.indiv-row select[disabled]{ opacity:.6; cursor:not-allowed; }
+.indiv-actions .btn{ min-width:96px; }
+.indiv-cards-grid{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-top:8px; }
+.indiv-card{ border:1px solid var(--border); background:#fff; border-radius:12px; padding:12px; box-shadow:var(--shadow-card); cursor:pointer; }
+body.dark .indiv-card{ background:rgba(15,23,42,.30); }
+.indiv-card .top{ font-weight:600; margin-bottom:6px; }
+.mini-badge{ display:inline-block; font-size:12px; padding:2px 6px; border-radius:999px; background:#eef2ff; color:#3730a3; }
+.indiv-card .mid{ font-size:20px; font-weight:800; letter-spacing:.5px; margin-bottom:6px; }
+.indiv-card .bot{ color:#334155; font-size:14px; }
+.step-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.step-cell{ background:#1d4ed8; color:#fff; padding:8px; border-radius:8px; text-align:center; font-size:14px; }
+@media (max-width: 1200px){ .indiv-cards-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width: 680px){ .indiv-cards-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } .indiv-row select{ min-width:180px; } }
+/* 個別情報：精簡名片樣式（置中、三行同字級） */
+.single-list{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+.single-card{
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.9);
+  border-radius:12px; padding:14px;
+  box-shadow:var(--shadow-card);
+  text-align:center; cursor:pointer;
+}
+body.dark .single-card{ background:rgba(15,23,42,.30); }
+.single-card:hover{ filter:brightness(1.015); }
+.single-line{
+  font-size:var(--fz-title);
+  line-height:var(--lh-title);
+  font-weight:var(--fw-title);
+  color:var(--text-strong);
+}
+.single-line + .single-line{ margin-top:6px; }
+
+/* ======================= 響應式主按鈕佈局（手機超友善）======================= */
+@media (max-width: 768px) {
+  #mainTabs.main-tabs {
+    flex-wrap: wrap;           /* 小螢幕自動換行 */
+    gap: 10px;                 /* 按鈕間距 */
+    justify-content: center !important;  /* 置中排列 */
+    padding: 8px 12px;         /* 增加內距更好按 */
   }
-  body.mode-web .right-user { justify-content: center; }
-  body.mode-web .right-refresh { justify-content: center; }
-  body.mode-web .main-tabs { justify-content: center; }
-  body.mode-web #mainTabs .main-tab { padding: 10px 5px; font-size: 14px; flex: 1; }
+
+  #mainTabs .main-tab {
+    flex: 1;                   /* 平均分配寬度 */
+    min-width: 120px;          /* 最小寬度避免太擠 */
+    max-width: 45%;            /* 每行最多放兩個 */
+    padding: 12px 8px;         /* 上下加大，按鈕更好按 */
+    font-size: 15px;           /* 字稍微放大 */
+    font-weight: 700;
+  }
+
+  /* 手機上「最新狀態」和「登錄與修改」永遠最大、最顯眼 */
+  #mainTabs .main-tab[data-target="pane-dashboard2"],
+  #mainTabs .main-tab[data-target="pane-punch"] {
+    flex: 1 1 100% !important; /* 強制佔滿整行 */
+    max-width: 100% !important;
+    order: -1;                 /* 確保「最新狀態」在最上面 */
+    background: var(--primary-600) !important;
+    color: white !important;
+    font-size: 17px !important;
+    padding: 16px !important;
+    border-radius: 12px !important;
+  }
+
+  /* 「登錄與修改」預設開啟時特別突出 */
+  #mainTabs .main-tab[data-target="pane-punch"].active {
+    background: var(--success-600) !important;
+    box-shadow: 0 4px 12px rgba(34,197,94,0.4);
+  }
 }
 
-.btn { background: var(--primary-600); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; }
-.btn--secondary { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); }
-.loading { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: none; align-items: center; justify-content: center; z-index: 20000; }
-.loading.show { display: flex; }
-.spinner { width: 30px; height: 30px; border: 3px solid #e5e7eb; border-top-color: var(--primary-600); border-radius: 50%; animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* 平板（769px ~ 1024px）三顆橫排 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  #mainTabs .main-tab {
+    flex: 1;
+    padding: 14px 12px;
+    font-size: 16px;
+  }
+}
+
+/* 電腦（>1024px）保持原來 space-between 佈局，但字更大更好按 */
+@media (min-width: 1025px) {
+  #mainTabs .main-tab {
+    padding: 14px 24px;
+    font-size: 17px;
+    min-width: 180px;
+  }
+}
+
+/* ======================= 最終統一美化（數字更大 + 字體完全一致）======================= */
+/* 主要統計數字（完成/未完成 + 停車位置）全部放大、更粗 */
+.stat-num,
+.loc-num {
+  font-size: 32px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+/* 「完成」「未完成」「台」字統一：14px、非粗體 */
+.stat-label,
+.loc-pill .stat-label {
+  font-size: 14px !important;
+  font-weight: normal !important;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* 停車位置名稱稍微放大（手機更清楚） */
+.loc-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* 手機專屬：只保留「最新狀態」＋極致美化（與其他卡片陰影完全一致） */
+@media (max-width: 767px) {
+  /* 隱藏其他按鈕 */
+  #mainTabs .main-tab[data-target="pane-punch"],
+  #mainTabs .main-tab[data-target="pane-single"] {
+    display: none !important;
+  }
+
+  /* 最新狀態按鈕（手機終極版） */
+  #mainTabs .main-tab[data-target="pane-dashboard2"] {
+    flex: 1 !important;
+    min-width: 0;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    padding: 18px !important;
+    background: var(--primary-600) !important;
+    color: white !important;
+    border-radius: 16px !important;
+    box-shadow: var(--shadow-card) !important; /* 與其他卡片完全一致 */
+  }
+}
+  
 </style>
 </head>
 <body>
-
-<nav id="mobile-nav">
-  <button class="m-nav-btn active" id="btn-m-status" onclick="switchMobileMode('status')">最新狀態</button>
-  <button class="m-nav-btn" onclick="forceRefreshMobile()">立即更新</button>
-  <button class="m-nav-btn" id="btn-m-web" onclick="switchMobileMode('web')">網頁版</button>
-  <button class="m-nav-btn" onclick="logout()">登出</button>
-</nav>
-
-<div id="mobile-status-view">
-  <select id="mobile-sheet-select" class="m-select" onchange="onMobileSelectChange()">
-    <option value="ALL">▼ 所有車輛 (全部讀取)</option>
-    </select>
-  <div id="mobile-cards-container">
-    <div style="text-align:center; padding:40px; color:#666;">請稍候，正在連線...</div>
-  </div>
-  <div style="text-align:center; color:#999; font-size:12px; margin-top:20px;">
-    每 2 分鐘自動更新
-  </div>
-</div>
-
-<div class="drawer-backdrop" id="drawer-backdrop" onclick="closeDrawer()"></div>
-<div class="bottom-drawer" id="bottom-drawer">
-  <div class="drawer-header">
-    <div class="drawer-handle"></div>
-    <div class="drawer-title" id="drawer-title">標題</div>
-    <div class="drawer-close" onclick="closeDrawer()">✕</div>
-  </div>
-  <div class="drawer-content" id="drawer-list"></div>
-</div>
-
 <div class="wrap">
+  <!-- 兩列兩欄的頂部排版 -->
   <div class="topbar-grid">
-    <div class="left-title"><h1 style="margin:0; font-size:24px;">車流人流退場情報</h1></div>
+    <!-- 左上：標題（登入與登入後皆顯示） -->
+    <div class="left-title">
+      <h1 id="pageTitle">車流人流退場情報</h1>
+    </div>
+
+    <!-- 右上：登入資訊 -->
     <div class="right-user">
       <div id="signin"></div>
-      <div id="userInfo" class="hide" style="display:flex;align-items:center;gap:10px;">
-        <span id="userDisplay" style="font-size:14px;font-weight:bold;"></span>
-        <button class="btn btn--secondary" style="padding:4px 10px;font-size:13px;" onclick="logout()">登出</button>
+      <div id="userInfo" class="hide user-info">
+      <span id="userDisplay"></span>
+        <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
       </div>
     </div>
+
+    <!-- 左下：三個主頁籤 -->
     <div class="left-tabs">
-      <div id="mainTabs" class="main-tabs">
-        <button class="main-tab" data-target="pane-dashboard2">最新狀態</button>
-        <button class="main-tab" data-target="pane-single">個別情報</button>
-        <button class="main-tab active" data-target="pane-punch">登錄與修改</button>
-      </div>
+      <div id="mainTabs" class="main-tabs" style="justify-content: space-between;">
+  <!-- 最左邊：最新狀態（原本的整體情報 II） -->
+  <button class="main-tab" data-target="pane-dashboard2">最新狀態</button>
+
+  <!-- 中間：個別情報（保留） -->
+  <button class="main-tab" data-target="pane-single">個別情報</button>
+
+  <!-- 最右邊：登錄與修改（原本的登錄） -->
+  <button class="main-tab active" data-target="pane-punch">登錄與修改</button>
+</div>
+
+<!-- 完全隱藏原本的「整體情報」按鈕（不會出現在畫面上） -->
+<style>
+  /* 隱藏原本的整體情報按鈕（pane-dashboard） */
+  #mainTabs .main-tab[data-target="pane-dashboard"] {
+    display: none !important;
+  }
+
+/* 「完成」「未完成」「台」三個字 → 完全跟小標題（.stat-head）一樣大、一樣粗、一樣顏色 */
+.stat-label,
+.loc-pill .stat-label {
+  font-size: 14px !important;
+  font-weight: 800 !important;        /* 跟小標題一樣粗 */
+  color: var(--text-strong) !important; /* 跟小標題一樣黑 */
+  margin-top: 4px !important;
+  line-height: 1.4 !important;        /* 與小標題視覺一致 */
+}
+  
+</style>
     </div>
+
+    <!-- 右下：時鐘 + 自動更新頻率 -->
     <div class="right-refresh">
       <div class="refresh-bar">
-        <div class="clock" id="clockDisplay">--:--:--</div>
+        <div class="clock" id="clockDisplay" aria-live="polite">--:--:--</div>
         <div class="seg-group" id="refreshControls"></div>
       </div>
     </div>
   </div>
 
-  <div id="main-content-wrap">
-    <div id="pane-dashboard2" class="tab-pane hide"><div id="dashboard2"></div></div>
-    <div id="pane-punch" class="tab-pane">
-      <div id="sheetTabs" class="sheet-tabs" style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;"></div>
-      <div id="vehList" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px;"></div>
+  <!-- 第 1 頁：沿用（打卡 + 車卡） -->
+  <div id="pane-punch" class="tab-pane">
+    <div id="tabs" class="card hide" style="padding-bottom:6px;">
+      <div class="sheet-tabs" id="sheetTabs"></div>
     </div>
-    <div id="pane-single" class="tab-pane hide">
-      <div class="card"><div id="singleControls" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;"></div></div>
-      <div id="singleResults"></div>
+    <div id="content" class="hide">
+      <div id="vehList" class="veh-list"></div>
     </div>
+  </div>
+
+  <!-- 第 2 頁：整體情報 -->
+  <div id="pane-dashboard" class="tab-pane hide">
+  <!-- 整體情報的 5 個子分頁 -->
+  <div class="card" id="dashTabsBar" style="padding-bottom:6px;">
+    <div class="sheet-tabs" id="dashboardTabs"></div>
+  </div>
+  <!-- 內容容器 -->
+  <div id="dashboard"></div>
+</div>
+
+
+  <!-- 第 3 頁：個別情報 -->
+  <div id="pane-single" class="tab-pane hide">
+  <div class="card" id="singleControlsCard" style="padding-bottom:10px;">
+    <div class="single-controls" id="singleControls">
+      <select id="selSheet" class="step-select" aria-label="Tab（可不選）">
+        <option value="">— 全部 Tab —</option>
+      </select>
+      <select id="selArea" class="step-select" aria-label="區域車次編號（可不選）">
+        <option value="">— 全部 區域車次編號 —</option>
+      </select>
+      <select id="selCar" class="step-select" aria-label="車號（可不選）">
+        <option value="">— 全部 車號 —</option>
+      </select>
+    </div>
+    <div class="single-actions">
+      <button id="btnQuery" class="btn btn--primary btn--sm">查詢</button>
+      <button id="btnReset" class="btn btn--secondary btn--sm">全部重設</button>
+    </div>
+  </div>
+
+  <div class="card" id="singleResultsCard">
+    <div id="singleResults" class="single-list" aria-live="polite"></div>
   </div>
 </div>
 
-<div id="notif" style="position:fixed; bottom:20px; right:20px; background:rgba(0,0,0,0.8); color:#fff; padding:10px 20px; border-radius:20px; z-index:20000; opacity:0; transition:opacity 0.3s; pointer-events:none;"></div>
-<div id="loading" class="loading"><div class="spinner"></div></div>
+<div id="pane-dashboard2" class="tab-pane hide">
+  <div class="card" id="dashTabsBar2" style="padding-bottom:6px;">
+    <div class="sheet-tabs" id="dashboardTabs2"></div>
+  </div>
+  <div id="dashboard2"></div>
+</div>
+  
+</div>
+
+<div id="notif" class="notif"></div>
+
+<!-- 全螢幕 Loading Overlay -->
+<div id="loading" class="loading" role="status" aria-live="polite" aria-busy="true">
+  <div class="loading-box">
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="loading-text">處理中…</div>
+  </div>
+</div>
+  
 
 <script>
-/* ================= 設定檔 ================= */
 const GOOGLE_CLIENT_ID = '368914333961-b8j4o6h73hurdoq5k377f6v2e1pg0r3p.apps.googleusercontent.com';
 const API_BASE = 'https://script.google.com/macros/s/AKfycbxjGHiVKpNMG84OIHIvX4tGYgJ7gksxT0PItegG-7bpSeumnqgMPfwo-1Ocs1l9rMxC/exec';
 
-const SHEET_CONFIGS = [
-  { key:'地區專車退場（遊覽車平台）', sheet:'地區專車退場（遊覽車平台）', steps:['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台']},
-  { key:'地區專車退場（禪堂平台）', sheet:'地區專車退場（禪堂平台）', steps:['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','車已離開禪堂平台']},
-  { key:'水陸專車退場', sheet:'水陸專車退場', steps:['已 Call 車排車隊','已排好車隊','退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','車暫停位置','車已離開遊覽車平台']},
-  { key:'288法青退場', sheet:'288法青退場', steps:['退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台']}
+/* 停車位置選單 */
+const STOP_OPTIONS = [
+  '禪堂平台','法心北路','法心南路（西）','法心南路（東）','法大路','雙環路到三門','三門到大停車場','靈山勝境石往外','雙環路至法大一橋'
 ];
-const STOP_OPTIONS = ['禪堂平台','法心北路','法心南路（西）','法心南路（東）','法大路','雙環路到三門','三門到大停車場','靈山勝境石往外','雙環路至法大一橋'];
 
-/* ================= 全域變數 ================= */
-let currentUser = null;
-let idToken = null;
-let ALL_SHEETS = {}; // 緩存所有資料
+/* 四個工作表 */
+const SHEET_CONFIGS = [
+  { key:'地區專車退場（遊覽車平台）', sheet:'地區專車退場（遊覽車平台）', steps:[
+    '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
+    '退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台'
+  ]},
+  { key:'地區專車退場（禪堂平台）', sheet:'地區專車退場（禪堂平台）', steps:[
+    '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','車已離開禪堂平台'
+  ]},
+  { key:'水陸專車退場', sheet:'水陸專車退場', steps:[
+    '已 Call 車排車隊','已排好車隊','退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','車暫停位置','車已離開遊覽車平台'
+  ]},
+  { key:'288法青退場', sheet:'288法青退場', steps:[
+    '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
+  ]}
+];
+
+/* ===== 新增：時鐘 + 自動更新頻率設定 ===== */
+const REFRESH_PRESETS = [
+  { label:'5分',  ms: 5*60*1000 },
+  { label:'2分',  ms: 2*60*1000 },
+  { label:'60秒', ms: 60*1000 },
+  { label:'30秒', ms: 30*1000 }
+];
+const REFRESH_STORAGE_KEY = 'dash_refresh_ms';
+let refreshMs = parseInt(localStorage.getItem(REFRESH_STORAGE_KEY) || '', 10);
+if (!Number.isFinite(refreshMs) || refreshMs <= 0) refreshMs = 2*60*1000; // 預設 30 秒
+
+/* 原本的 dashboard 計時器 */
 let dashTimer = null;
-const REFRESH_INTERVAL = 120000; // 2分鐘
+let currentDashFilter = 'ALL'; // 'ALL' 或某一個 SHEET_CONFIGS[i].key
 
-/* ================= 初始化 ================= */
+let currentUser = null;
+let currentSheetKey = SHEET_CONFIGS[0].key;
+let sheetData = []; // 打卡頁使用
+const TOKEN_STORAGE_KEY = 'ddcc_user_token';
+let idToken = null;
+
+/* ---------------- 初始登入與頁籤 ---------------- */
 window.onload = function(){
-  // 1. 手機判斷
-  if(window.innerWidth <= 767) {
-    switchMobileMode('status');
-  } else {
-    document.body.classList.add('mode-web');
-  }
+  // 啟動時鐘 & 建立更新頻率控制列
+  startClock();
+  buildRefreshControls();
+  updateRefreshControlsVisibility();
 
-  // 2. 下拉選單初始化
-  const ms = document.getElementById('mobile-sheet-select');
-  ms.innerHTML = ''; 
-  // 預設選第一個表，不要選 ALL，避免一次載入太慢
-  SHEET_CONFIGS.forEach((c, idx) => {
-    let o = document.createElement('option');
-    o.value = c.key; 
-    o.textContent = c.key;
-    ms.appendChild(o);
-  });
-  // 設預設值為第一個
-  ms.value = SHEET_CONFIGS[0].key;
+  const saved = localStorage.getItem(TOKEN_STORAGE_KEY);
 
-  // 3. 時鐘
-  setInterval(() => {
-    const now = new Date();
-    document.getElementById('clockDisplay').textContent = 
-      now.toLocaleTimeString('zh-TW', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
-  }, 1000);
-
-  // 4. 登入檢查
-  const saved = localStorage.getItem('ddcc_user_token');
-  if(saved) {
+  if (saved) {
     idToken = saved;
-    verifyToken(saved);
+    fetch(API_BASE + '?action=verify', {
+      method: 'POST',
+      headers: { 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify({ idToken })
+    })
+    .then(r => r.json())
+    .then(j => {
+      if (j.error) throw new Error(j.error);
+      currentUser = j;
+      finishLoginUI();
+      buildTabs();
+      loadSheetData(currentSheetKey);
+    })
+    .catch(() => {
+      logout();
+      initGoogleSignIn();
+    });
   } else {
     initGoogleSignIn();
   }
-  
-  // 5. 自動刷新
-  startAutoRefresh();
-  
-  // 6. 如果是手機，立刻觸發下載（不管登入了沒）
-  if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
-    onMobileSelectChange();
-  } else {
-    loadAllSheetsForDesktop();
-  }
+
+  document.getElementById('logoutBtn').addEventListener('click', logout);
 };
 
-/* ================= 核心：隨點隨載 (On-Demand) ================= */
 
-// 手機下拉改變時
-async function onMobileSelectChange() {
-  const key = document.getElementById('mobile-sheet-select').value;
-  // 如果快取沒有資料，就去抓
-  if(!ALL_SHEETS[key]) {
-    await fetchSingleSheet(key);
-  }
-  renderMobileStats(); // 有資料了，渲染
+
+/* ===== 時鐘（時區 +8、hh:mm:ss） ===== */
+function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
+function startClock(){
+  const el = document.getElementById('clockDisplay');
+  const tick = ()=>{ if (el) el.textContent = getTaipeiHHMMSS(); };
+  tick();
+  setInterval(tick, 1000);
 }
 
-// 手機立即更新 (只抓當前這張)
-async function forceRefreshMobile() {
-  const key = document.getElementById('mobile-sheet-select').value;
-  showNotif('正在更新...');
-  await fetchSingleSheet(key); // 強制重抓
-  renderMobileStats();
+/* ===== 自動更新頻率控制列 ===== */
+function buildRefreshControls(){
+  const box = document.getElementById('refreshControls');
+  if (!box) return;
+  box.innerHTML = '';
+
+  // 頻率按鈕
+  REFRESH_PRESETS.forEach(p=>{
+    const btn = document.createElement('button');
+    btn.className = 'seg-btn';
+    btn.textContent = p.label;
+    btn.dataset.ms = String(p.ms);
+    if (p.ms === refreshMs){
+      btn.classList.add('active');
+      btn.disabled = true; // 當前選擇：不可按、變色
+    }
+    btn.onclick = ()=> openRefreshSaveDialog(p.ms, p.label);
+    box.appendChild(btn);
+  });
+
+  // 立即更新
+  const nowBtn = document.createElement('button');
+  nowBtn.className = 'seg-btn';
+  nowBtn.textContent = '立即更新';
+  nowBtn.title = '立刻重新整理整體情報';
+  nowBtn.onclick = ()=> {
+  if (isDashboardVisible()) {
+    buildDashboard(false);
+    buildDashboard2(true);
+    refreshAllActiveTodoModals();   // 加上這行
+  } else showNotif('切到「整體情報」即可看到最新資料', false);
+};
+  box.appendChild(nowBtn);
 }
 
-// 抓取單張表資料 (核心函式 - 強力容錯版)
-async function fetchSingleSheet(targetKey) {
-  const container = document.getElementById('mobile-cards-container');
-  
-  // 顯示局部 Loading
-  if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
-    container.innerHTML = `<div style="text-align:center;padding:40px;color:#666;">
-      <div class="spinner" style="margin:0 auto 10px;"></div>
-      正在讀取 <b>${targetKey}</b>...
-    </div>`;
-  } else {
-    showLoading();
-  }
+/* ===== 只在「整體情報」顯示更新時間按鈕 ===== */
+function updateRefreshControlsVisibility(){
+  try{
+    const controls = document.getElementById('refreshControls');
+    if (!controls) return;
+    const show = isDashboardVisible() && !document.body.classList.contains('login');
+    controls.classList.toggle('hide', !show);
+  }catch(e){ /* noop */ }
+}
 
-  const cfg = SHEET_CONFIGS.find(c => c.key === targetKey);
-  if(!cfg) return;
+function openRefreshSaveDialog(ms, label){
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3>儲存自動更新頻率</h3>
+    <div class="modal-msg" style="font-size:15px;line-height:1.7;margin:6px 0 10px;">
+      將自動更新頻率設定為 <b>${label}</b>。按「儲存」後即刻生效。
+    </div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn--primary">儲存</button>
+    </div>
+  `;
+  const close = openModal(box);
+  const [btnCancel, btnOK] = box.querySelectorAll('button');
+  btnCancel.onclick = close;
+  btnOK.onclick = ()=>{
+    try{
+      refreshMs = ms;
+      localStorage.setItem(REFRESH_STORAGE_KEY, String(refreshMs));
+      updateRefreshButtonsUI();
+      if (isDashboardVisible()){
+        startDashboardAutoRefresh();     // 重啟定時（新頻率）
+      }
+      showNotif(`已設定為每 ${label} 自動更新`, false);
+    } finally{ close(); }
+  };
+}
 
-  try {
-    // 強制不快取 (加時間戳)
-    const r = await fetch(`${API_BASE}?action=get&sheet=${encodeURIComponent(cfg.sheet)}&_t=${new Date().getTime()}`);
-    
-    // 容錯處理 JSON
-    const text = await r.text();
-    let j;
-    try {
-      j = JSON.parse(text);
-    } catch(e) {
-      throw new Error("伺服器忙碌中，請稍後再試");
-    }
-    
-    if(j.error) {
-      container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">讀取錯誤: ${j.error} <br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
-      hideLoading();
-      return;
-    }
+function updateRefreshButtonsUI(){
+  const btns = document.querySelectorAll('#refreshControls .seg-btn');
+  btns.forEach(btn=>{
+    if (btn.textContent === '立即更新') return; // 永遠不變色
+    const ms = parseInt(btn.dataset.ms||'0',10);
+    const isActive = (ms === refreshMs);
+    btn.classList.toggle('active', isActive);
+    btn.disabled = isActive;
+  });
+}
 
-    const vals = j.values || [];
-    if (vals.length === 0) {
-      container.innerHTML = `<div style="text-align:center;padding:20px;">此工作表目前沒有資料 <br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
-      hideLoading();
-      return;
-    }
+/* ---------------- Google Sign-In（原） ---------------- */
+function initGoogleSignIn() {
+  enterLoginView(); // 確保所有面板都關掉
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
+  google.accounts.id.renderButton(document.getElementById('signin'), { theme:'outline', size:'large' });
 
-    // ★★★ 強力表頭搜尋：只要該列有「區域」和「車號」就算 ★★★
-    const hIdx = vals.findIndex(r => {
-      if (!Array.isArray(r)) return false;
-      const rowStr = r.join('').replace(/\s/g, ''); 
-      return rowStr.includes('區域') && rowStr.includes('車號');
-    });
-    
-    if(hIdx === -1) {
-      container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">
-        <b>找不到表頭</b><br>請確認表單內是否有「區域」與「車號」欄位
-        <br><button class="btn" onclick="forceRefreshMobile()">重新載入</button>
-      </div>`;
-      hideLoading();
-      return;
-    }
+  // 只是建立按鈕 DOM，登入模式下會被 CSS 隱藏
+  buildTabs();
+}
 
-    // 存入快取
-    ALL_SHEETS[targetKey] = {
-      cfg,
-      header: vals[hIdx].map(String),
-      rows: vals.slice(hIdx+1).filter(r => r[1] && String(r[1]).trim() !== ''), 
-      hIdx
+function buildTabs(){
+  const box = document.getElementById('sheetTabs');
+  box.innerHTML = '';
+  if (!SHEET_CONFIGS.length) return;
+
+  const prevKey = currentSheetKey;
+  if (!SHEET_CONFIGS.some(s => s.key === currentSheetKey)) currentSheetKey = SHEET_CONFIGS[0].key;
+  const keyChanged = (prevKey !== currentSheetKey);
+
+  SHEET_CONFIGS.forEach(cfg => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-tab tab' + (cfg.key === currentSheetKey ? ' active' : '');
+    btn.textContent = cfg.key;
+    btn.onclick = () => {
+      currentSheetKey = cfg.key;
+      box.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      loadSheetData(currentSheetKey);
     };
+    box.appendChild(btn);
+  });
 
-  } catch(e) {
-    container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">
-      <b>連線失敗</b><br>請檢查網路訊號
-      <br><br><button class="btn" onclick="forceRefreshMobile()">重新載入</button>
-    </div>`;
-    console.error(e);
-  }
-  
-  hideLoading();
+  const contentShown = !document.getElementById('content').classList.contains('hide');
+  if (keyChanged && contentShown) loadSheetData(currentSheetKey);
+}
+function buildDashboardTabs(){
+  const box = document.getElementById('dashboardTabs');
+  if (!box) return;
+  box.innerHTML = '';
+
+  const makeBtn = (label, key) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-tab' + (currentDashFilter === key ? ' active' : '');
+    btn.textContent = label;
+    btn.dataset.key = key;              // 用 data-key 來辨識
+    btn.onclick = () => {
+      if (currentDashFilter === key) return;
+      currentDashFilter = key;
+      updateDashTabActive();
+      buildDashboard(false);            // 依新篩選重繪
+    };
+    box.appendChild(btn);
+  };
+
+  makeBtn('所有車輛', 'ALL');
+  SHEET_CONFIGS.forEach(cfg => makeBtn(cfg.key, cfg.key));
+}  
+
+function updateDashTabActive(){
+  const box = document.getElementById('dashboardTabs');
+  if (!box) return;
+  box.querySelectorAll('.btn-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.key === String(currentDashFilter));
+  });
 }
 
-/* ================= 手機渲染邏輯 ================= */
-function renderMobileStats() {
-  const container = document.getElementById('mobile-cards-container');
-  const key = document.getElementById('mobile-sheet-select').value;
-  const data = ALL_SHEETS[key];
+function buildDashboardTabs2(){
+  const box = document.getElementById('dashboardTabs2'); // 改抓 2
+  if (!box) return;
+  box.innerHTML = '';
 
-  if(!data) {
-    container.innerHTML = `<div style="text-align:center;padding:40px;">
-      資料未載入<br><br>
-      <button class="btn" onclick="forceRefreshMobile()">載入資料</button>
-    </div>`;
+  const makeBtn = (label, key) => {
+    const btn = document.createElement('button');
+    // 判斷 currentDashFilter2
+    btn.className = 'btn-tab' + (currentDashFilter2 === key ? ' active' : '');
+    btn.textContent = label;
+    btn.dataset.key = key;
+    btn.onclick = () => {
+      if (currentDashFilter2 === key) return;
+      currentDashFilter2 = key; // 更新 2 的狀態
+      updateDashTabActive2();   // 更新 2 的樣式
+      buildDashboard2(false);   // 重繪 2
+    };
+    box.appendChild(btn);
+  };
+
+  makeBtn('所有車輛', 'ALL');
+  SHEET_CONFIGS.forEach(cfg => makeBtn(cfg.key, cfg.key));
+}
+
+function updateDashTabActive2(){
+  const box = document.getElementById('dashboardTabs2');
+  if (!box) return;
+  box.querySelectorAll('.btn-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.key === String(currentDashFilter2));
+  });
+}  
+  
+async function handleCredential(resp) {
+  idToken = resp.credential;
+  localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
+  try {
+    const r = await fetch(API_BASE + '?action=verify', { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken }) });
+    const j = await r.json(); if (j.error) throw new Error(j.error);
+    currentUser = j; finishLoginUI(); loadSheetData(currentSheetKey);
+  } catch (err) { showNotif('登入失敗：' + err.message, true); logout(); }
+}
+function finishLoginUI() {
+  updateRefreshControlsVisibility();
+  document.body.classList.remove('login');
+  document.getElementById('signin').classList.add('hide');
+  const ui = document.getElementById('userInfo'); ui.classList.remove('hide');
+  ui.style.display = ''; // 還原由 CSS 控制
+const nameSafe  = escapeHtml(currentUser.name || '');
+const emailSafe = escapeHtml(currentUser.email || '');
+const permSafe  = escapeHtml(currentUser.permission || '');
+document.getElementById('userDisplay').innerHTML =
+  `${nameSafe} &lt;${emailSafe}&gt; ｜ 權限：<b>${permSafe}</b>`;
+document.getElementById('tabs').classList.remove('hide');
+document.getElementById('content').classList.remove('hide');
+
+  if (currentUser.permission === '檢視') showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
+  // 預設直接開啟「最新狀態」（整體情報 II）
+  switchPane('pane-dashboard2');
+
+  // （可選）恢復頁籤可聚焦
+  document.querySelectorAll('#mainTabs .main-tab')
+    .forEach(b => { b.tabIndex = 0; b.removeAttribute('aria-disabled'); });
+}
+function logout() {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  idToken = null;
+  currentUser = null;
+
+  enterLoginView();           // 先切回登入版面，統一隱藏所有 pane
+  stopDashboardAutoRefresh(); // 關掉儀表板自動刷新
+
+  const signinDiv = document.getElementById('signin');
+  signinDiv.classList.remove('hide');
+  signinDiv.innerHTML = '';
+
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
+  google.accounts.id.renderButton(signinDiv, { theme:'outline', size:'large' });
+
+  showNotif('已登出', false);
+}
+
+/* ---------------- 工具 ---------------- */
+function escapeHtml(str){
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+
+/* ---------------- 工具 ---------------- */
+function formatSheetTime(val){
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) return s.split(':').map(p=>p.padStart(2,'0')).join(':');
+  if (/^\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}$/.test(s)) return s.split(' ')[1].split(':').map(p=>p.padStart(2,'0')).join(':');
+  const m = s.match(/^(上午|下午)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m){ let h=+m[2]; const mm=m[3], ss=m[4]||'00'; if (m[1]==='下午'&&h<12) h+=12; if (m[1]==='上午'&&h===12) h=0; return `${String(h).padStart(2,'0')}:${mm}:${ss}`;}
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(s)){ const d=new Date(s); const tw=new Date(d.getTime()+8*3600*1000); const hh=String(tw.getUTCHours()).padStart(2,'0'); const mm=String(tw.getUTCMinutes()).padStart(2,'0'); const ss=String(tw.getUTCSeconds()).padStart(2,'0'); return `${hh}:${mm}:${ss}`;}
+  return s;
+}
+const pad2 = n => String(n).padStart(2,'0');
+const splitHMS = v => { const s=String(v||'').trim(); const m=s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/); return m?[pad2(m[1]),m[2],m[3]?m[3]:'00']:['','','']; };
+const isValidHMS = (h,m,s) => (/^\d{2}$/.test(h)&&/^\d{2}$/.test(m)&&/^\d{2}$/.test(s) && +h<=23 && +m<=59 && +s<=59);
+const sleep = ms=>new Promise(r=>setTimeout(r,ms));
+function showLoading(msg='處理中…'){ const el=document.getElementById('loading'); if(!el) return; const t=el.querySelector('.loading-text'); if(t) t.textContent=msg; el.classList.add('show'); document.body.classList.add('loading-open'); }
+function hideLoading(){ const el=document.getElementById('loading'); if(!el) return; el.classList.remove('show'); document.body.classList.remove('loading-open'); }
+async function withLoading(fn,msg='處理中…'){ showLoading(msg); try{ return await fn(); } finally{ hideLoading(); } }
+function showNotif(msg,isErr){ const box=document.getElementById('notif'); box.textContent=msg; box.style.background=isErr?'rgba(248,113,113,.9)':'rgba(15,23,42,.85)'; box.classList.add('show'); setTimeout(()=>box.classList.remove('show'), 2500); }
+function enterLoginView(){
+  updateRefreshControlsVisibility();
+  // 標記為登入畫面
+  document.body.classList.add('login');
+
+  // 停止任何自動刷新，並清空儀表板
+  stopDashboardAutoRefresh?.();
+  try { document.getElementById('dashboard').innerHTML = ''; } catch {}
+
+  // 關掉所有工作頁
+  ['pane-punch','pane-dashboard','pane-single'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hide');
+  });
+
+  // 顯示登入按鈕、隱藏使用者資訊
+  const signinDiv = document.getElementById('signin');
+  if (signinDiv) signinDiv.classList.remove('hide');
+  const ui = document.getElementById('userInfo');
+  if (ui) {
+    ui.classList.add('hide');
+    ui.style.display = 'none'; // 確保隱藏該區塊
+  }
+
+  // （可選）避免鍵盤 Tab 到隱藏的頁籤
+  document.querySelectorAll('#mainTabs .main-tab')
+    .forEach(b => { b.tabIndex = -1; b.setAttribute('aria-disabled','true'); });
+}
+
+
+/* Modal：覆蓋頁 */
+function closeAllModals(){ document.querySelectorAll('.modal, .modal-backdrop').forEach(el=>{ try{el.remove()}catch{} }); document.body.classList.remove('modal-open'); }
+function openModal(element){
+  const MAX_Z = 2147483647; // 最高層
+  const layer = document.createElement('div');
+
+  // 全螢幕覆蓋層：固定在可視區、置中顯示
+  Object.assign(layer.style, {
+    position:'fixed',
+    inset:'0',
+    width:'100vw',
+    height:'100vh',
+    background:'rgba(0,0,0,.45)',
+    zIndex: String(MAX_Z),
+    display:'grid',
+    placeItems:'center'
+  });
+
+  // 對話框本體：使用相對定位、限制最大尺寸（修正少逗號的 bug）
+  element.classList.add('modal');
+  Object.assign(element.style, {
+    position:'relative',
+    top:'auto',
+    left:'auto',
+    transform:'none',
+    margin:'0',
+    maxWidth:'min(1300px,96vw)',
+    maxHeight:'min(86dvh, 640px)',
+    overflow:'auto'
+  });
+
+  // 插入 DOM
+  layer.appendChild(element);
+  document.body.appendChild(layer);
+  document.body.classList.add('modal-open');
+
+  // 針對行動裝置鍵盤/動態視口：跟隨 VisualViewport
+  function syncToVisualViewport(){
+    const vv = window.visualViewport;
+    if(!vv) return;
+    layer.style.width  = vv.width + 'px';
+    layer.style.height = vv.height + 'px';
+    layer.style.left   = vv.offsetLeft + 'px';
+    layer.style.top    = vv.offsetTop + 'px';
+  }
+  if (window.visualViewport){
+    syncToVisualViewport();
+    window.visualViewport.addEventListener('resize', syncToVisualViewport);
+    window.visualViewport.addEventListener('scroll', syncToVisualViewport);
+  }
+
+  // Esc 關閉
+  const onEsc = e => { if (e.key === 'Escape') cleanup(); };
+  document.addEventListener('keydown', onEsc);
+
+  function cleanup(){
+    document.body.classList.remove('modal-open');
+    document.removeEventListener('keydown', onEsc);
+    if (window.visualViewport){
+      window.visualViewport.removeEventListener('resize', syncToVisualViewport);
+      window.visualViewport.removeEventListener('scroll', syncToVisualViewport);
+    }
+    try{ layer.remove(); }catch{}
+  }
+  return cleanup;
+}
+
+/* ---------------- 打卡頁：載入資料 & 渲染 ---------------- */
+async function loadSheetData(key){
+  const cfg = SHEET_CONFIGS.find(s=>s.key===key);
+  document.getElementById('vehList').textContent = '讀取中...';
+
+  const r = await fetch(
+    API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
+  );
+  const j = await r.json();
+  if (j.error){
+    document.getElementById('vehList').textContent = '❌ ' + j.error;
+    return;
+  }
+  sheetData = j.values || [];
+  renderVehicles(cfg, sheetData);
+}
+
+  
+function isCompletedValue(v){ if (v==null) return false; const s=String(v).trim(); return !!s && s!=='—' && s!=='-'; }
+
+/* ====== 打卡頁 renderVehicles ====== */
+function renderVehicles(cfg, data) {
+  const box = document.getElementById('vehList'); box.innerHTML = '';
+  const canWrite = currentUser?.permission === '全功能';
+  const headerRowIdx = data.findIndex(row => Array.isArray(row) && String(row[0]||'').trim()==='編號' && String(row[1]||'').trim().startsWith('區域') && String(row[2]||'').trim()==='車號');
+  if (headerRowIdx === -1){ box.textContent='找不到表頭'; return; }
+  const header = data[headerRowIdx].map(c=>String(c||'').trim());
+  const rows = data.slice(headerRowIdx+1).filter(r => Array.isArray(r) && String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim());
+  if (!rows.length){ box.textContent='(這張表目前沒有車輛資料)'; return; }
+
+  const cards=[];
+  rows.forEach((row, idx) => {
+    const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim(); const baseRow = headerRowIdx+2+idx;
+    const {completed,total} = computeCompletion(cfg, header, row);
+    const card = document.createElement('div');
+card.className = 'veh-card';
+card.innerHTML =
+  `<div>
+     <div class="veh-title-main">${escapeHtml(area)}</div>
+     <div class="veh-title-sub">${escapeHtml(car)}</div>
+   </div>`;
+
+    // 讓名片上方標題區可點擊看詳情（採用整體情報樣式）
+const headWrap = card.querySelector(':scope > div:first-child');
+if (headWrap){
+  headWrap.style.cursor = 'pointer';
+  headWrap.setAttribute('title','點我看詳情');
+  headWrap.addEventListener('click', (e)=>{
+    // 用「cfg + header + row」直接呼叫新的 openDetailModal
+    openDetailModal(cfg, row, header);
+  });
+}
+
+    const stepsBox=document.createElement('div');
+
+    cfg.steps.forEach(st=>{
+      const colIdx=header.indexOf(st);
+      const rawVal = (colIdx!==-1 && row[colIdx]!=null) ? String(row[colIdx]).trim(): '';
+      const displayVal = rawVal?formatSheetTime(rawVal):'';
+      const rowEl=document.createElement('div'); rowEl.className='step-row';
+      const labelEl=document.createElement('div'); labelEl.className='step-label'; labelEl.textContent=st; rowEl.appendChild(labelEl);
+
+      if (st==='車暫停位置'){
+        const valueEl=document.createElement('div');
+        const sel=document.createElement('select'); sel.className='step-select select';
+        const optEmpty=document.createElement('option'); optEmpty.value=''; optEmpty.textContent='— 請選擇 —'; sel.appendChild(optEmpty);
+        STOP_OPTIONS.forEach(opt=>{ const o=document.createElement('option'); o.value=opt; o.textContent=opt; sel.appendChild(o); });
+        if (rawVal) sel.value=rawVal;
+        const ghost=document.createElement('span'); ghost.style.display='none';
+        valueEl.appendChild(sel); valueEl.appendChild(ghost); rowEl.appendChild(valueEl);
+        const btnG=document.createElement('div'); btnG.className='btn-group'; rowEl.appendChild(btnG);
+        if (!canWrite){ sel.disabled=true; rowEl.classList.add('locked'); }
+        else {
+          const prevOk=prevDone(cfg, header, row, st); if (!prevOk && !rawVal) sel.disabled=true;
+          sel.onchange=()=>onStopSelect(cfg, baseRow, header, st, sel.value, ghost);
+        }
+        stepsBox.appendChild(rowEl); return;
+      }
+
+      const timeSpan=document.createElement('span'); timeSpan.className='step-time'; timeSpan.textContent=displayVal||'—'; rowEl.appendChild(timeSpan);
+      const btnG=document.createElement('div'); btnG.className='btn-group';
+      const btnPunch=document.createElement('button'); btnPunch.className='btn btn--primary btn--sm btn-punch'; btnPunch.textContent='打卡';
+      const btnEdit=document.createElement('button'); btnEdit.className='btn btn--success btn--sm btn-edit'; btnEdit.textContent='修改';
+      const btnDel=document.createElement('button'); btnDel.className='btn btn--danger btn--sm btn-del'; btnDel.textContent='刪除';
+      btnG.appendChild(btnPunch); btnG.appendChild(btnEdit); btnG.appendChild(btnDel); rowEl.appendChild(btnG);
+
+      if (!canWrite){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; rowEl.classList.add('locked'); }
+      else{
+        const prevOk=prevDone(cfg, header, row, st); const hasVal=!!rawVal;
+        if (!prevOk && !hasVal){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; }
+        else{
+          btnPunch.disabled=hasVal; btnEdit.disabled=btnDel.disabled=!hasVal;
+          btnPunch.onclick=()=>onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+          btnEdit.onclick =()=>onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
+          btnDel.onclick  =()=>onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+        }
+      }
+      stepsBox.appendChild(rowEl);
+    });
+
+    card.appendChild(stepsBox);
+
+    // 備註
+    const memoWrap=document.createElement('div'); memoWrap.style.marginTop='8px';
+    const memoRow=document.createElement('div'); memoRow.style.cssText='display:flex;gap:8px;align-items:flex-start;';
+    const memoTA=document.createElement('textarea'); memoTA.className='textarea'; memoTA.placeholder='備註'; memoTA.style.flex='1';
+    let memoColIdx=header.indexOf('備註'); if (memoColIdx===-1) memoColIdx=header.length-1;
+    memoTA.value=(memoColIdx!==-1 && row[memoColIdx]) ? String(row[memoColIdx]):'';
+    const memoBtn = document.createElement('button');
+memoBtn.className = 'btn btn--primary';
+memoBtn.textContent = '儲存';
+memoBtn.disabled = !canWrite;
+
+memoBtn.onclick = async () => {
+  if (!canWrite) return;
+  if (!currentUser) {
+    alert('請先登入');
     return;
   }
 
-  container.innerHTML = '';
-  const { cfg, header, rows } = data;
-  const steps = cfg.steps.filter(s => s !== '車暫停位置');
+  await withLoading(async () => {
+    const body = {
+      sheet:  cfg.sheet,
+      email:  currentUser.email || '',
+      idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+      mode:   'memo', // 後端沒用到也沒關係，純標記這是備註更新
+      writes: [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }]
+    };
 
-  const card = document.createElement('div');
-  card.className = 'm-card';
-  
-  steps.forEach(step => {
-    const colIdx = header.indexOf(step);
-    let done=0, todo=0;
-    rows.forEach(r => {
-      const v = colIdx>=0 ? r[colIdx] : '';
-      (v && String(v).trim()!=='—' && String(v).trim()!=='-') ? done++ : todo++;
-    });
-
-    const div = document.createElement('div');
-    div.className = 'm-stat-row';
-    div.innerHTML = `
-      <div class="m-stat-label">${step}</div>
-      <div class="m-stat-nums">
-        <div class="m-pill" onclick="openDrawer('${cfg.key}', '${step}', 'done')">
-          <div class="m-num done">${done}</div><div class="m-sub">完成</div>
-        </div>
-        <div class="m-pill" onclick="openDrawer('${cfg.key}', '${step}', 'todo')">
-          <div class="m-num todo">${todo}</div><div class="m-sub">未完成</div>
-        </div>
-      </div>
-    `;
-    card.appendChild(div);
-  });
-
-  // 停車位置
-  if(header.indexOf('車暫停位置') >= 0) {
-    const stopCol = header.indexOf('車暫停位置');
-    const counts = {};
-    STOP_OPTIONS.forEach(s => counts[s] = 0);
-    rows.forEach(r => {
-      const v = String(r[stopCol]||'').trim();
-      if(counts[v] !== undefined) counts[v]++;
-    });
-
-    const locDiv = document.createElement('div');
-    locDiv.style.marginTop = '16px';
-    locDiv.innerHTML = `<div class="m-card-title" style="font-size:16px;border:none;padding:0;">停車位置</div>`;
-    const grid = document.createElement('div');
-    grid.style.display = 'grid'; grid.style.gridTemplateColumns = 'repeat(3,1fr)'; grid.style.gap = '8px'; marginTop='8px';
-    
-    STOP_OPTIONS.forEach(opt => {
-      const p = document.createElement('div');
-      p.className = 'm-pill';
-      p.style.border = '1px solid var(--border)';
-      p.onclick = () => openDrawer(cfg.key, '車暫停位置', 'loc', opt);
-      p.innerHTML = `<div style="font-size:12px;font-weight:700;text-align:center">${opt}</div>
-                     <div class="m-num" style="color:#2563eb">${counts[opt]}</div>`;
-      grid.appendChild(p);
-    });
-    locDiv.appendChild(grid);
-    card.appendChild(locDiv);
-  }
-
-  container.appendChild(card);
-}
-
-/* ================= 登入與權限 ================= */
-function initGoogleSignIn() {
-  document.body.classList.add('login');
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleCredential,
-    auto_select: false,
-    use_fedcm_for_prompt: true
-  });
-  google.accounts.id.renderButton(document.getElementById('signin'), { theme:'outline', size:'large' });
-}
-
-async function handleCredential(resp) {
-  const token = resp.credential;
-  localStorage.setItem('ddcc_user_token', token);
-  verifyToken(token);
-}
-
-async function verifyToken(token) {
-  try {
-    const r = await fetch(API_BASE + '?action=verify', {
-      method:'POST', body:JSON.stringify({idToken: token})
-    });
-    const j = await r.json();
-    if(j.error) throw new Error(j.error);
-    
-    currentUser = j;
-    idToken = token;
-    
-    document.body.classList.remove('login');
-    document.getElementById('signin').classList.add('hide');
-    document.getElementById('userInfo').classList.remove('hide');
-    document.getElementById('userDisplay').innerHTML = `${j.name} (${j.permission})`;
-    
-    // 登入後，如果電腦版沒資料就載入
-    if(window.innerWidth > 767 && Object.keys(ALL_SHEETS).length === 0) {
-        loadAllSheetsForDesktop();
-    }
-    
-  } catch(e) {
-    console.error(e);
-    localStorage.removeItem('ddcc_user_token');
-    initGoogleSignIn();
-  }
-}
-
-function logout() {
-  localStorage.removeItem('ddcc_user_token');
-  location.reload();
-}
-
-/* ================= 電腦版邏輯 (一次載入全部) ================= */
-async function loadAllSheetsForDesktop() {
-  const reqs = SHEET_CONFIGS.map(c => fetchSingleSheet(c.key));
-  await Promise.all(reqs);
-  renderDashboard2();
-}
-
-function renderDashboard2() {
-  const box = document.getElementById('dashboard2');
-  box.innerHTML = '';
-  SHEET_CONFIGS.forEach(cfg => {
-    const d = ALL_SHEETS[cfg.key];
-    if(!d) return; 
-    
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `<div class="dash-title">${cfg.key}</div>`;
-    
-    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">';
-    cfg.steps.filter(s=>s!=='車暫停位置').forEach(st => {
-       const cIdx = d.header.indexOf(st);
-       let done=0, todo=0;
-       d.rows.forEach(r => {
-         const v = cIdx>=0?r[cIdx]:'';
-         (v&&String(v).trim()!=='—'&&String(v).trim()!=='-')?done++:todo++;
-       });
-       html += `<div style="border:1px solid #eee;padding:10px;border-radius:8px;text-align:center;">
-         <div style="font-weight:700;margin-bottom:4px;">${st}</div>
-         <div style="display:flex;justify-content:center;gap:10px;">
-           <span style="color:#2563eb;font-weight:900">${done}</span>
-           <span style="color:#ef4444;font-weight:900">${todo}</span>
-         </div>
-       </div>`;
-    });
-    html += '</div>';
-    card.innerHTML += html;
-    box.appendChild(card);
-  });
-}
-
-/* ================= 其他功能 ================= */
-function switchMobileMode(mode) {
-  const btnStatus = document.getElementById('btn-m-status');
-  const btnWeb = document.getElementById('btn-m-web');
-  
-  if (mode === 'status') {
-    document.body.classList.remove('mode-web');
-    btnStatus.classList.add('active');
-    btnWeb.classList.remove('active');
-    onMobileSelectChange(); 
-  } else {
-    document.body.classList.add('mode-web');
-    btnStatus.classList.remove('active');
-    btnWeb.classList.add('active');
-    // 切換到網頁版，一次載入全部給 Dashboard 看
-    loadAllSheetsForDesktop();
-    // 切換 Tab
-    document.querySelector('[data-target="pane-dashboard2"]').click();
-  }
-}
-
-function startAutoRefresh() {
-  if(dashTimer) clearInterval(dashTimer);
-  dashTimer = setInterval(() => {
-    // 自動刷新：只刷新當前正在看的
-    if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
-      const key = document.getElementById('mobile-sheet-select').value;
-      fetchSingleSheet(key).then(renderMobileStats);
-    } else {
-      loadAllSheetsForDesktop(); 
-    }
-  }, REFRESH_INTERVAL);
-}
-
-/* 底部抽屜 */
-function openDrawer(key, step, type, val) {
-  const data = ALL_SHEETS[key];
-  if(!data) return;
-  
-  const title = document.getElementById('drawer-title');
-  const list = document.getElementById('drawer-list');
-  const colIdx = data.header.indexOf(step);
-  
-  let items = [];
-  if(type === 'loc') {
-    title.textContent = `${val}`;
-    items = data.rows.filter(r => String(r[colIdx]||'').trim() === val);
-  } else {
-    title.textContent = `${step} (${type==='done'?'完成':'未完成'})`;
-    items = data.rows.filter(r => {
-      const v = r[colIdx];
-      const isDone = (v && String(v).trim()!=='—' && String(v).trim()!=='-');
-      return type==='done' ? isDone : !isDone;
-    });
-  }
-  
-  list.innerHTML = items.length ? '' : '<div style="text-align:center;padding:20px;color:#999">無資料</div>';
-  items.forEach(r => {
-    const area = r[1]; const car = r[2];
-    const div = document.createElement('div');
-    div.className = 'd-item';
-    
-    let btnHtml = '';
-    if(type==='todo' && step!=='車暫停位置' && currentUser && currentUser.permission==='全功能') {
-      btnHtml = `<div class="d-action"><button class="btn" onclick="quickPunch('${key}','${step}','${area}','${car}',this)">打卡</button></div>`;
-    }
-    
-    div.innerHTML = `<div class="d-info"><div class="d-main">${area} <span style="color:#2563eb;margin-left:5px;">${car}</span></div></div>${btnHtml}`;
-    list.appendChild(div);
-  });
-  
-  document.getElementById('drawer-backdrop').classList.add('open');
-  document.getElementById('bottom-drawer').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeDrawer() {
-  document.getElementById('drawer-backdrop').classList.remove('open');
-  document.getElementById('bottom-drawer').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-async function quickPunch(key, step, area, car, btn) {
-  if(!confirm(`確認幫 ${car} 打卡？`)) return;
-  btn.textContent = '...'; btn.disabled = true;
-  
-  const data = ALL_SHEETS[key];
-  const rIdx = data.rows.findIndex(r => r[1]===area && r[2]===car);
-  if(rIdx===-1) return;
-  
-  const realRow = data.hIdx + 2 + rIdx;
-  const col = data.header.indexOf(step) + 1;
-  const now = new Date().toLocaleTimeString('zh-TW',{hour12:false});
-  
-  try {
-    await fetch(API_BASE+'?action=update', {
+    const r = await fetch(API_BASE + '?action=update', {
       method: 'POST',
-      body: JSON.stringify({ sheet:data.cfg.sheet, idToken, email:currentUser.email, writes:[{row:realRow, col, value:now}] })
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
     });
-    btn.parentElement.innerHTML = `<span style="color:green">${now}</span>`;
-    fetchSingleSheet(key).then(renderMobileStats);
-  } catch(e) {
-    alert('失敗'); btn.textContent='打卡'; btn.disabled=false;
+
+    let j;
+    try {
+      j = await r.json();
+    } catch (e) {
+      throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+    }
+
+    if (!j.ok) throw new Error(j.error || 'unknown');
+
+    await sleep(250);
+    await reloadSheet();
+  }, '儲存備註…');
+
+  showNotif('備註已儲存', false);
+};
+
+    
+    memoRow.appendChild(memoTA); memoRow.appendChild(memoBtn); memoWrap.appendChild(memoRow); card.appendChild(memoWrap);
+
+    cards.push({ el:card, completed, total, origOrder:idx });
+  });
+
+  cards.sort((a,b)=> (a.completed!==b.completed ? a.completed-b.completed : a.origOrder-b.origOrder));
+  cards.forEach(c=>box.appendChild(c.el));
+}
+function prevDone(cfg, header, row, st){ const idx=cfg.steps.indexOf(st); if (idx===0) return true; const prev=cfg.steps[idx-1]; const col=header.indexOf(prev); if (col===-1) return true; return !!row[col]; }
+async function onStopSelect(cfg,rowNumber,header,st,value,span){
+  if (!currentUser) return alert('請先登入'); 
+  if (currentUser.permission!=='全功能') return alert('權限不足');
+  
+  const colIdx=header.indexOf(st); 
+  if (colIdx===-1) return alert('此欄位不存在：'+st);
+
+  await withLoading(async()=>{
+    const body = {
+      sheet: cfg.sheet,
+      email: currentUser.email,
+      idToken: (typeof idToken !== 'undefined' ? idToken : ''), // ★ 補上這行
+      writes: [{row:rowNumber, col:colIdx+1, value}]
+    };
+    
+    const r = await fetch(API_BASE+'?action=update', {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(body)
+    });
+    
+    const j = await r.json(); 
+    if(!j.ok) throw new Error(j.error||'unknown'); 
+    
+    await sleep(200); 
+    await reloadSheet();
+  },'更新中…'); 
+  
+  span.textContent=value||''; 
+  showNotif(value?'已更新車暫停位置':'已清除車暫停位置',false);
+}
+// 打卡按鈕事件
+async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
+  // 基本權限檢查
+  if (!currentUser) {
+    alert('請先登入');
+    return;
+  }
+  if (currentUser.permission !== '全功能') {
+    alert('權限不足');
+    return;
+  }
+
+  // 找到這個步驟在表頭中的欄位
+  const colIdx = header.indexOf(st);
+  if (colIdx === -1) {
+    alert('此欄位不存在：' + st);
+    return;
+  }
+
+  // 已經有時間就不允許再次打卡
+  const nowText = (timeSpan.textContent || '').trim();
+  if (nowText && nowText !== '—') {
+    showNotif('此步驟已有時間，請用「修改」或「刪除」', true);
+    return;
+  }
+
+  // 取得目前台北時間 HH:mm:ss
+  const now = getTaipeiHHMMSS();
+
+  try {
+    await withLoading(async () => {
+      // 同時帶 email + idToken，後端要用哪個驗證都可以
+
+      const body = {
+  sheet:  cfg.sheet,
+  email:  currentUser.email || '',
+  idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+  mode: 'punch',   // ★ 告訴後端：這次是打卡行為
+  writes: [
+    { row: rowNumber, col: colIdx + 1, value: now }
+  ]
+};
+
+
+      const r = await fetch(API_BASE + '?action=update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      });
+
+      let j;
+      try {
+        j = await r.json();
+      } catch (e) {
+        // 例如被 302 轉去 HTML 頁面（非 JSON）
+        throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+      }
+
+      if (!j.ok) {
+        throw new Error(j.error || '更新失敗');
+      }
+
+      // 稍微等一下，確保後端寫入完成再重載
+      await sleep(200);
+      await reloadSheet();
+    }, '打卡中…');
+
+    // ✅ 後端成功更新後，才更新前端畫面
+    timeSpan.textContent = formatSheetTime(now);
+    btnPunch.disabled = true;
+    btnEdit.disabled  = false;
+    btnDel.disabled   = false;
+    unlockNext(rowEl);
+    showNotif('已打卡', false);
+
+  } catch (err) {
+    console.error('打卡失敗：', err);
+    showNotif('打卡失敗：' + err.message, true);
   }
 }
 
-/* 電腦版 Tab 切換 */
-document.getElementById('mainTabs').addEventListener('click', (e)=>{
-  if(e.target.classList.contains('main-tab')) {
-    document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
-    e.target.classList.add('active');
-    document.querySelectorAll('#main-content-wrap .tab-pane').forEach(p=>p.classList.add('hide'));
-    
-    const target = e.target.dataset.target;
-    document.getElementById(target).classList.remove('hide');
-    
-    if(target === 'pane-dashboard2') renderDashboard2();
+
+
+
+async function onEditTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl,currentVal){
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission!=='全功能') return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx===-1) return alert('此欄位不存在：'+st);
+
+  openEditTimeDialog(currentVal || timeSpan.textContent || getTaipeiHHMMSS(), async (newHHMMSS)=>{
+    try {
+      await withLoading(async()=>{
+        const body = {
+          sheet:  cfg.sheet,
+          email:  currentUser.email || '',
+          idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+          mode:   'edit',
+          writes: [{ row: rowNumber, col: colIdx+1, value: newHHMMSS }]
+        };
+
+        const r = await fetch(API_BASE+'?action=update',{
+          method: 'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(body)
+        });
+
+        let j;
+        try{
+          j = await r.json();
+        } catch(e){
+          throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+        }
+
+        if(!j.ok) throw new Error(j.error||'更新失敗');
+        await sleep(200);
+        await reloadSheet();
+      }, '儲存中…');
+
+      const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim()==='—';
+      timeSpan.textContent = formatSheetTime(newHHMMSS);
+      if (wasEmpty) unlockNext(rowEl);
+
+      btnPunch.disabled = true;
+      btnEdit.disabled  = false;
+      btnDel.disabled   = false;
+
+      showNotif('已修改時間', false);
+    } catch (err) {
+      console.error('修改時間失敗：', err);
+      showNotif('修改時間失敗：' + err.message, true);
+    }
+  });
+}
+
+  
+async function onDeleteTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl){
+  if (!currentUser) return alert('請先登入');
+  if (currentUser.permission!=='全功能') return alert('權限不足');
+
+  const colIdx = header.indexOf(st);
+  if (colIdx===-1) return alert('此欄位不存在：'+st);
+
+  openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
+    try {
+      await withLoading(async()=>{
+        const body = {
+          sheet:  cfg.sheet,
+          email:  currentUser.email || '',
+          idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+          mode:   'delete',
+          writes: [{ row: rowNumber, col: colIdx+1, value: '' }]
+        };
+
+        const r = await fetch(API_BASE+'?action=update',{
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify(body)
+        });
+
+        let j;
+        try{
+          j = await r.json();
+        } catch(e){
+          throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
+        }
+
+        if(!j.ok) throw new Error(j.error||'更新失敗');
+        await sleep(200);
+        await reloadSheet();
+      }, '刪除中…');
+
+      timeSpan.textContent = '';
+      btnPunch.disabled    = false;
+      btnEdit.disabled     = true;
+      btnDel.disabled      = true;
+      lockFollowing(rowEl);
+      showNotif('已刪除', false);
+    } catch (err) {
+      console.error('刪除時間失敗：', err);
+      showNotif('刪除時間失敗：' + err.message, true);
+    }
+  });
+}
+
+  
+function reloadSheet(){ loadSheetData(currentSheetKey); }
+function unlockNext(rowEl){
+  const nextRow=rowEl?.nextElementSibling; if(!nextRow) return;
+  const sel=nextRow.querySelector('.step-select'); const timeSpan=nextRow.querySelector('.step-time');
+  const btnPunch=nextRow.querySelector('.btn-punch'); const btnEdit=nextRow.querySelector('.btn-edit'); const btnDel=nextRow.querySelector('.btn-del');
+  if (currentUser?.permission!=='全功能') return;
+  if (sel){ sel.disabled=false; return; }
+  if (btnPunch){ const hasVal=!!(timeSpan && timeSpan.textContent.trim() && timeSpan.textContent.trim()!=='—'); btnPunch.disabled=hasVal; if(btnEdit) btnEdit.disabled=!hasVal; if(btnDel) btnDel.disabled=!hasVal; }
+}
+function lockFollowing(rowEl){
+  let it=rowEl?.nextElementSibling;
+  while(it){
+    const sel=it.querySelector('.step-select'); const timeSpan=it.querySelector('.step-time');
+    const btnPunch=it.querySelector('.btn-punch'); const btnEdit=it.querySelector('.btn-edit'); const btnDel=it.querySelector('.btn-del');
+    if (sel && !sel.value) sel.disabled=true;
+    if (btnPunch){ const hasVal=!!(timeSpan && timeSpan.textContent.trim() && timeSpan.textContent.trim()!=='—'); if(!hasVal){ btnPunch.disabled=true; if(btnEdit) btnEdit.disabled=true; if(btnDel) btnDel.disabled=true; } }
+    it=it.nextElementSibling;
   }
+}
+function computeCompletion(cfg, header, row) {
+  const usableSteps = cfg.steps.filter(st => header.indexOf(st) !== -1);
+  let completed = 0;
+  for (const st of usableSteps) {
+    const colIdx = header.indexOf(st);
+    const val = (colIdx !== -1 && colIdx < row.length) ? row[colIdx] : '';
+    if (isCompletedValue(val)) completed++;
+  }
+  return { completed, total: usableSteps.length };
+}
+
+/* ===== 頂層三頁切換 ===== */
+/* 修改這裡：加入 'pane-dashboard2' */
+const PANE_IDS=['pane-punch','pane-dashboard','pane-single', 'pane-dashboard2'];
+
+/* 新增這個變數：用來記錄 II 的 Tab 狀態，避免跟 I 互相影響 */
+let currentDashFilter2 = 'ALL'; // 預設顯示「所有車輛」
+  /* 取代原本的 switchPane 函式內容，或依照下方邏輯修改 */
+function switchPane(targetId){
+  // 未登入就不要切換
+  if (!currentUser) {
+    showNotif('請先登入', true);
+    return;
+  }
+
+  // 切換 tab 樣式與顯示對應面板
+  document.querySelectorAll('#mainTabs .main-tab')
+    .forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
+  PANE_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hide', id !== targetId);
+  });
+
+  updateRefreshControlsVisibility();
+
+  // ★邏輯分支：判斷是 I 還是 II
+  if (targetId === 'pane-dashboard') {
+    buildDashboardTabs();   // 建構 I 的 Tabs
+    buildDashboard(false);  // 載入 I 的資料
+    startDashboardAutoRefresh();
+  } 
+  
+  else if (targetId === 'pane-dashboard2') {
+  buildDashboardTabs2();
+  currentDashFilter2 = 'ALL';     // 強制預設所有車輛
+  updateDashTabActive2();         // 高亮「所有車輛」按鈕
+  buildDashboard2(false);
+  startDashboardAutoRefresh();
+  }
+  else {
+    stopDashboardAutoRefresh();
+  }
+
+  // 個別情報：初始化
+  if (targetId === 'pane-single') {
+    initSinglePage();
+  }
+}
+
+function isDashboardVisible() {
+  const p1 = document.getElementById('pane-dashboard');
+  const p2 = document.getElementById('pane-dashboard2');
+  // 只要其中一個沒有 hide class，就代表可見
+  return (p1 && !p1.classList.contains('hide')) || (p2 && !p2.classList.contains('hide'));
+}
+  
+function startDashboardAutoRefresh() {
+  stopDashboardAutoRefresh();
+  dashTimer = setInterval(() => {
+    // 檢查 I 是否開著
+    if (!document.getElementById('pane-dashboard').classList.contains('hide')) {
+       buildDashboard(true);
+    }
+    // 檢查 II 是否開著
+    if (!document.getElementById('pane-dashboard2').classList.contains('hide')) {
+       buildDashboard2(true); // 呼叫 II 的靜默刷新
+       refreshAllActiveTodoModals();
+    }
+  }, refreshMs);
+}
+  
+function stopDashboardAutoRefresh() {
+  if (dashTimer) { clearInterval(dashTimer); dashTimer = null; }
+}
+// 頁面可見性切換時自動暫停/恢復
+document.addEventListener('visibilitychange', () => {
+  updateRefreshControlsVisibility();
+  if (document.hidden) stopDashboardAutoRefresh();
+  else if (isDashboardVisible()) startDashboardAutoRefresh();
 });
 
-function showLoading(){document.getElementById('loading').classList.add('show');}
-function hideLoading(){document.getElementById('loading').classList.remove('show');}
-function showNotif(msg){
-  const n = document.getElementById('notif');
-  n.textContent = msg; n.style.opacity = 1;
-  setTimeout(()=>n.style.opacity=0, 2000);
+document.getElementById('mainTabs').addEventListener('click', (e)=>{
+  const btn=e.target.closest('.main-tab'); if(!btn) return; switchPane(btn.dataset.target);
+});
+
+/* ======================= 整體情報 ======================= */
+let ALL_SHEETS = {}; // { key: { cfg, headerIdx, header, rows } }
+
+// 支援靜默刷新：buildDashboard(true) 會不顯示 Loading
+async function buildDashboard(silent = false){
+  if (!currentUser) return;                              // ★ 未登入直接退出
+  if (document.body.classList.contains('login')) return; // ★ 保險
+
+  const dash = document.getElementById('dashboard');
+  dash.innerHTML = '';
+    const work = async () => {
+    // 取回四張表
+    const results = await Promise.all(
+  SHEET_CONFIGS.map(async cfg => {
+    const r = await fetch(
+      API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
+    );
+    const j = await r.json();
+    const values = j.values || [];
+        const headerIdx = values.findIndex(
+          r => Array.isArray(r) &&
+               String(r[0]||'').trim() === '編號' &&
+               String(r[1]||'').trim().startsWith('區域') &&
+               String(r[2]||'').trim() === '車號'
+        );
+        const header = headerIdx >= 0 ? values[headerIdx].map(c => String(c||'').trim()) : [];
+        const rows   = headerIdx >= 0 ? values.slice(headerIdx+1)
+                          .filter(r => String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim())
+                          : [];
+        return { key: cfg.key, cfg, headerIdx, header, rows };
+      })
+    );
+
+    // 給清單/明細用
+    ALL_SHEETS = {};
+    results.forEach(x => ALL_SHEETS[x.key] = x);
+
+    // 逐張表生成區塊
+results.forEach(({ cfg, header, rows }) => {
+  // ★ 依子分頁篩選；ALL 顯示全部
+  const filterKey = (typeof currentDashFilter === 'undefined' || !currentDashFilter)
+    ? 'ALL'
+    : String(currentDashFilter);
+  if (filterKey !== 'ALL' && String(cfg.key) !== filterKey) return;
+
+      const sec   = document.createElement('section'); sec.className = 'dash-section card';
+      const title = document.createElement('div');     title.className = 'dash-title'; title.textContent = cfg.key;
+      sec.appendChild(title);
+
+      // 1) 步驟完成/未完成統計（「車暫停位置」不在此統計）
+      const statWrap = document.createElement('div'); statWrap.className = 'stat-grid';
+      const stepsForCount = cfg.steps.filter(st => st !== '車暫停位置');
+      stepsForCount.forEach(st => {
+        const col = header.indexOf(st);
+        let done = 0, todo = 0;
+        rows.forEach(r => {
+          const v = col >= 0 ? r[col] : '';
+          isCompletedValue(v) ? done++ : todo++;
+        });
+
+        const card = document.createElement('div'); card.className = 'stat-card';
+        card.innerHTML = `
+          <div class="stat-head">${st}</div>
+          <div class="stat-row">
+            <div class="stat-pill" data-type="done">
+              <div class="stat-num done">${done}</div>
+              <div class="stat-label">完成</div>
+            </div>
+            <div class="stat-pill" data-type="todo">
+              <div class="stat-num todo">${todo}</div>
+              <div class="stat-label">未完成</div>
+            </div>
+          </div>`;
+        // 點完成/未完成 → 開清單
+        card.querySelectorAll('.stat-pill').forEach(pill => {
+          pill.addEventListener('click', () => openListModal(cfg.key, st, pill.dataset.type));
+        });
+        statWrap.appendChild(card);
+      });
+      sec.appendChild(statWrap);
+
+      // 2) 停車位置分佈（只有表頭含「車暫停位置」才顯示）
+      const stopCol = header.indexOf('車暫停位置');
+      if (stopCol >= 0) {
+        const locTitle = document.createElement('div');
+        locTitle.className = 'dash-title';
+        locTitle.style.marginTop = '12px';
+        locTitle.textContent = '停車位置';
+        sec.appendChild(locTitle);
+
+        const locWrap = document.createElement('div'); locWrap.className = 'loc-grid';
+
+        const counter = new Map();
+        STOP_OPTIONS.forEach(n => counter.set(n, 0));
+
+        rows.forEach(r => {
+          const v = String(r[stopCol] || '').trim();
+          if (counter.has(v)) counter.set(v, counter.get(v) + 1);
+        });
+
+        STOP_OPTIONS.forEach(name => {
+          const n = counter.get(name) || 0;
+          const pill = document.createElement('div'); pill.className = 'loc-pill';
+          pill.innerHTML = `
+            <div class="loc-name">${name}</div>
+            <div class="loc-num">${n}</div>
+            <div class="stat-label">台</div>`;
+          pill.addEventListener('click', () =>
+            openListModal(cfg.key, '車暫停位置', 'loc', name)
+          );
+          locWrap.appendChild(pill);
+        });
+        sec.appendChild(locWrap);
+      }
+
+      dash.appendChild(sec);
+    });
+  };
+
+  if (silent) { await work(); }
+  else { await withLoading(work, '整理整體情報…'); }
 }
+
+async function buildDashboard2(silent = false){
+  if (!currentUser) return;
+  if (document.body.classList.contains('login')) return;
+
+  const dash = document.getElementById('dashboard2');
+  dash.innerHTML = '';
+
+  const work = async () => {
+    // 1. 抓取資料 (這部分與原本相同)
+    const results = await Promise.all(
+      SHEET_CONFIGS.map(async cfg => {
+        const r = await fetch(
+          API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
+        );
+        const j = await r.json();
+        const values = j.values || [];
+        const headerIdx = values.findIndex(
+          r => Array.isArray(r) &&
+               String(r[0]||'').trim() === '編號' &&
+               String(r[1]||'').trim().startsWith('區域') &&
+               String(r[2]||'').trim() === '車號'
+        );
+        const header = headerIdx >= 0 ? values[headerIdx].map(c => String(c||'').trim()) : [];
+        const rows   = headerIdx >= 0 ? values.slice(headerIdx+1)
+                          .filter(r => String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim())
+                          : [];
+        return { key: cfg.key, cfg, headerIdx, header, rows };
+      })
+    );
+
+    // 2. 準備全域資料
+    ALL_SHEETS = {};
+    results.forEach(x => ALL_SHEETS[x.key] = x);
+
+    // 3. 逐一產生卡片
+    results.forEach(({ cfg, header, rows }) => {
+      // 篩選 Tab
+      const filterKey = (typeof currentDashFilter2 === 'undefined' || !currentDashFilter2)
+        ? 'ALL'
+        : String(currentDashFilter2);
+      if (filterKey !== 'ALL' && String(cfg.key) !== filterKey) return;
+
+      // 建立外框
+      const sec = document.createElement('section'); 
+      sec.className = 'dash-section card';
+      
+      // 標題
+      const title = document.createElement('div'); 
+      title.className = 'dash-title'; 
+      title.textContent = cfg.key;
+      sec.appendChild(title);
+
+      // === 定義分割邏輯 (上層步驟 vs 下層步驟) ===
+      let topSteps = [];
+      let botSteps = [];
+      const stopStep = '車暫停位置';
+      const stopColIdx = header.indexOf(stopStep);
+
+      if (cfg.key === '水陸專車退場') {
+        // ★ 特殊處理：水陸專車依照 PDF 新排列，強制指定上下層順序
+        // 上層：Call車排隊、已排好
+        topSteps = ['已 Call 車排車隊', '已排好車隊'];
+        // 下層：人員到齊、Call車上平台、車上平台、車離開
+        botSteps = ['退場人員已到齊', '已 Call 車上遊覽車平台', '車已上遊覽車平台', '車已離開遊覽車平台'];
+      } 
+      else if (cfg.steps.includes(stopStep)) {
+        // ★ 通用處理（遊覽車平台、禪堂平台）：以「車暫停位置」為界切割
+        const splitIndex = cfg.steps.indexOf(stopStep);
+        topSteps = cfg.steps.slice(0, splitIndex);
+        botSteps = cfg.steps.slice(splitIndex + 1);
+      } 
+      else {
+        // ★ 其他（如 288 法青）：沒有停車位置，全部放上層
+        topSteps = cfg.steps;
+        botSteps = [];
+      }
+
+      // === 內部小工具：渲染步驟 Grid ===
+      const renderGrid = (steps) => {
+        if (!steps || steps.length === 0) return;
+        const grid = document.createElement('div'); 
+        grid.className = 'stat-grid';
+        
+        steps.forEach(st => {
+          const col = header.indexOf(st);
+          // 容錯：如果該表真的沒有這個步驟(例如欄位被改名)，就跳過
+          if (col === -1 && cfg.key === '水陸專車退場') return; 
+
+          let done = 0, todo = 0;
+          rows.forEach(r => {
+            const v = col >= 0 ? r[col] : '';
+            isCompletedValue(v) ? done++ : todo++;
+          });
+
+          const card = document.createElement('div'); card.className = 'stat-card';
+          card.innerHTML = `
+            <div class="stat-head">${st}</div>
+            <div class="stat-row">
+              <div class="stat-pill" data-type="done">
+                <div class="stat-num done">${done}</div>
+                <div class="stat-label">完成</div>
+              </div>
+              <div class="stat-pill" data-type="todo">
+                <div class="stat-num todo">${todo}</div>
+                <div class="stat-label">未完成</div>
+              </div>
+            </div>`;
+          
+          card.querySelectorAll('.stat-pill').forEach(pill => {
+            pill.addEventListener('click', () => openListModal2(cfg.key, st, pill.dataset.type));
+          });
+          grid.appendChild(card);
+        });
+        sec.appendChild(grid);
+      };
+
+      // --- 1. 渲染上層步驟 ---
+      renderGrid(topSteps);
+
+      // --- 2. 渲染中層：停車位置 (如果有的話) ---
+      if (stopColIdx >= 0) {
+        // 加個分隔標題，視覺比較清楚（依照 PDF 邏輯）
+        const locTitle = document.createElement('div');
+        locTitle.className = 'dash-title';
+        locTitle.style.marginTop = '16px';
+        locTitle.style.marginBottom = '6px';
+        locTitle.style.fontSize = '16px'; // 稍微小一點的副標
+        locTitle.textContent = '停車位置';
+        sec.appendChild(locTitle);
+
+        const locWrap = document.createElement('div'); 
+        locWrap.className = 'loc-grid';
+        // 為了讓這區塊跟下面稍微有點距離
+        locWrap.style.marginBottom = '16px'; 
+
+        const counter = new Map();
+        STOP_OPTIONS.forEach(n => counter.set(n, 0));
+
+        rows.forEach(r => {
+          const v = String(r[stopColIdx] || '').trim();
+          if (counter.has(v)) counter.set(v, counter.get(v) + 1);
+        });
+
+        STOP_OPTIONS.forEach(name => {
+          const n = counter.get(name) || 0;
+          const pill = document.createElement('div'); pill.className = 'loc-pill';
+          pill.innerHTML = `
+            <div class="loc-name">${name}</div>
+            <div class="loc-num">${n}</div>
+            <div class="stat-label">台</div>`;
+          pill.addEventListener('click', () =>
+            openListModal(cfg.key, '車暫停位置', 'loc', name)
+          );
+          locWrap.appendChild(pill);
+        });
+        sec.appendChild(locWrap);
+      }
+
+      // --- 3. 渲染下層步驟 ---
+      // 如果有下層資料，且剛好有停車位置區塊，加個分隔線或間距會更好看
+      if (botSteps.length > 0 && stopColIdx >= 0) {
+         // 這裡不需要額外標題，直接接續顯示
+      }
+      renderGrid(botSteps);
+
+      dash.appendChild(sec);
+    });
+  };
+
+  if (silent) { await work(); }
+  else { await withLoading(work, '整理整體情報 II…'); }
+}
+
+/* =================== 個別情報：下拉/過濾/鎖定 =================== */
+/* 需求：
+   - 三個下拉：分頁(Tab) / 區域車次編號 / 車號
+   - 選了「區域」→ 車號只顯示該區域的車；鎖住「分頁」
+   - 選了「車號」→ 反向約束到對應的區域與分頁，且「區域＋分頁」被鎖住
+   - 「區域」與「車號」都定案後，想更改必須點「全部重設」
+   - Tab 未選也可挑其它兩個（跨表查詢）
+*/
+
+const SINGLE_IDS = {
+  sheet:  'selSheet',
+  area:   'selArea',
+  car:    'selCar',
+  search: 'btnSingleSearch',
+  reset:  'btnSingleReset',
+  result: 'singleResult',
+};
+
+let SINGLE_STORE = {};        // {key: {cfg, header, rows, byArea:Map, byCar:Map}}
+let singleInitialized = false;
+let singleLockedBy = null;    // 'area' | 'car' | null
+
+async function initSinglePage(){
+  if (singleInitialized) return;
+  singleInitialized = true;
+  buildSingleSkeleton();
+  await loadSingleData();
+  fillSheetOptions();
+  bindSingleEvents();
+}
+
+function buildSingleSkeleton(){
+  const pane = document.getElementById('pane-single');
+  pane.innerHTML = `
+    <div class="card" style="padding-bottom:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <select id="${SINGLE_IDS.sheet}" class="step-select">
+          <option value="">— 全部分頁 —</option>
+        </select>
+        <select id="${SINGLE_IDS.area}" class="step-select">
+          <option value="">— 區域車次編號 —</option>
+        </select>
+        <select id="${SINGLE_IDS.car}" class="step-select">
+          <option value="">— 全部 車號 —</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px;">
+        <button id="${SINGLE_IDS.search}" class="btn btn--primary">查詢</button>
+        <button id="${SINGLE_IDS.reset}"  class="btn btn--secondary">全部重設</button>
+      </div>
+    </div>
+    <div id="${SINGLE_IDS.result}" class="veh-list" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));"></div>
+  `;
+}
+
+async function loadSingleData(){
+  const results = await Promise.all(
+    SHEET_CONFIGS.map(async cfg => {
+      const r = await fetch(
+        API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
+      );
+      const j = await r.json();
+      const values = j.values || [];
+      const headerIdx = values.findIndex(
+        r => Array.isArray(r) &&
+             String(r[0]||'').trim() === '編號' &&
+             String(r[1]||'').trim().startsWith('區域') &&
+             String(r[2]||'').trim() === '車號'
+      );
+      const header = headerIdx >= 0 ? values[headerIdx].map(c => String(c||'').trim()) : [];
+      const rows   = headerIdx >= 0 ? values.slice(headerIdx+1)
+                        .filter(r => String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim())
+                        : [];
+      const byArea = new Map(), byCar = new Map();
+      rows.forEach(r=>{
+        const area = String(r[1]||'').trim();
+        const car  = String(r[2]||'').trim();
+        if (!byArea.has(area)) byArea.set(area, []);
+        byArea.get(area).push(car);
+        if (!byCar.has(car)) byCar.set(car, []);
+        byCar.get(car).push(area);
+      });
+      return { key: cfg.key, cfg, header, rows, byArea, byCar };
+    })
+  );
+  SINGLE_STORE = {};
+  results.forEach(x => SINGLE_STORE[x.key] = x);
+}
+
+function fillSheetOptions(){
+  const selSheet = document.getElementById(SINGLE_IDS.sheet);
+  selSheet.innerHTML = `<option value="">— 全部分頁 —</option>` +
+    SHEET_CONFIGS.map(s=>`<option value="${s.key}">${s.key}</option>`).join('');
+  refreshAreaOptions();
+  refreshCarOptions();
+}
+
+function getActiveScope(){
+  const k = document.getElementById(SINGLE_IDS.sheet).value;
+  return k ? [k] : SHEET_CONFIGS.map(s=>s.key);
+}
+
+function refreshAreaOptions(keep=false){
+  const selArea = document.getElementById(SINGLE_IDS.area);
+  const selCar  = document.getElementById(SINGLE_IDS.car);
+  const chosenCar = selCar.value;
+  const keys = getActiveScope();
+  const items = [];
+  const seen = new Set();
+  keys.forEach(k=>{
+    const st = SINGLE_STORE[k]; if (!st) return;
+    const list = chosenCar ? (st.byCar.get(chosenCar)||[]) : Array.from(st.byArea.keys());
+    list.forEach(a=>{
+      const id = `${k}:::${a}`;
+      if (!seen.has(id)){ seen.add(id); items.push({k,a}); }
+    });
+  });
+  const prev = selArea.value;
+  selArea.innerHTML = `<option value="">— 區域車次編號 —</option>` +
+    items.sort((x,y)=>x.a.localeCompare(y.a,'zh-Hant')).map(({k,a})=>`<option data-sheet="${k}" value="${a}">${a}</option>`).join('');
+  if (keep && prev) selArea.value = prev;
+}
+
+function refreshCarOptions(keep=false){
+  const selArea = document.getElementById(SINGLE_IDS.area);
+  const selCar  = document.getElementById(SINGLE_IDS.car);
+  const chosenArea = selArea.value;
+  const chosenSheet = selArea.options[selArea.selectedIndex]?.dataset?.sheet || '';
+  const keys = chosenArea ? [chosenSheet] : getActiveScope();
+  const cars = new Set();
+  keys.forEach(k=>{
+    const st = SINGLE_STORE[k]; if (!st) return;
+    if (chosenArea) (st.byArea.get(chosenArea)||[]).forEach(c=>cars.add(c));
+    else st.byCar.forEach((_areas,c)=>cars.add(c));
+  });
+  const prev = selCar.value;
+  selCar.innerHTML = `<option value="">— 全部 車號 —</option>` +
+    [...cars].sort((a,b)=>a.localeCompare(b,'zh-Hant')).map(c=>`<option value="${c}">${c}</option>`).join('');
+  if (keep && prev) selCar.value = prev;
+}
+
+function bindSingleEvents(){
+  const selSheet = document.getElementById(SINGLE_IDS.sheet);
+  const selArea  = document.getElementById(SINGLE_IDS.area);
+  const selCar   = document.getElementById(SINGLE_IDS.car);
+  const btnSearch= document.getElementById(SINGLE_IDS.search);
+  const btnReset = document.getElementById(SINGLE_IDS.reset);
+
+  selSheet.onchange = ()=>{
+    if (singleLockedBy){
+      showNotif('已選定區域/車號，請先點「全部重設」再更改分頁', true);
+      selSheet.value = selSheet.dataset.prev || '';
+      return;
+    }
+    selSheet.dataset.prev = selSheet.value;
+    selArea.disabled = false;
+    selArea.value = '';
+    selCar.disabled = false;
+    selCar.value = '';
+    refreshAreaOptions();
+    refreshCarOptions();
+  };
+
+  selArea.onchange = ()=>{
+    if (singleLockedBy === 'car'){
+      showNotif('已選定車號；要更換請點「全部重設」', true);
+      return;
+    }
+    // 選了區域 → 車號收斂；且鎖住「分頁」
+    refreshCarOptions();
+    selSheet.disabled = !!selArea.value;
+    if (!selArea.value){
+      selSheet.disabled = false;
+      singleLockedBy = null;
+    }
+  };
+
+  selCar.onchange = ()=>{
+    if (!selCar.value){
+      // 清掉車 → 解除鎖定
+      selArea.disabled = false;
+      selSheet.disabled = !!selArea.value;
+      singleLockedBy = null;
+      refreshAreaOptions();
+      return;
+    }
+    // 選了車 → 反向收斂到該車所屬的唯一區域與分頁並鎖定
+    const keys = getActiveScope();
+    let firstArea='', firstSheet='';
+    keys.forEach(k=>{
+      (SINGLE_STORE[k]?.byCar.get(selCar.value)||[]).forEach(a=>{
+        if (!firstArea){ firstArea=a; firstSheet=k; }
+      });
+    });
+    // 套用收斂結果
+    if (firstArea){
+      selArea.disabled = true;
+      selArea.value = firstArea;
+      refreshAreaOptions(true);
+    }
+    selSheet.value   = firstSheet;
+    selSheet.disabled= true;
+    singleLockedBy = 'car';
+  };
+
+  btnSearch.onclick = ()=> runSingleQuery();
+  btnReset.onclick  = ()=> resetSingleUI();
+}
+
+function runSingleQuery(){
+  const resBox  = document.getElementById(SINGLE_IDS.result);
+  const selSheet= document.getElementById(SINGLE_IDS.sheet).value;
+  const selArea = document.getElementById(SINGLE_IDS.area).value;
+  const selCar  = document.getElementById(SINGLE_IDS.car).value;
+
+  resBox.innerHTML = '';
+  const keys = selSheet ? [selSheet] : SHEET_CONFIGS.map(s=>s.key);
+  const items = [];
+
+  keys.forEach(k=>{
+    const st = SINGLE_STORE[k]; if (!st) return;
+    st.rows.forEach(r=>{
+      const area=String(r[1]||'').trim();
+      const car =String(r[2]||'').trim();
+      if ((selArea && area!==selArea) || (selCar && car!==selCar)) return;
+      const latest = getLatestStatus(st.cfg, st.header, r);
+const card = document.createElement('div');
+card.className = 'veh-card';
+Object.assign(card.style,{display:'flex',alignItems:'center',justifyContent:'center',textAlign:'center'});
+card.innerHTML = `
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    <div class="veh-title-sub" style="font-weight:700;">${escapeHtml(area)}</div>
+    <div class="veh-title-sub" style="font-weight:700;">${escapeHtml(car)}</div>
+    <div class="veh-title-sub" style="font-weight:700;">${escapeHtml(latest)}</div>
+  </div>`;
+
+      card.onclick = ()=> openDetailModal(k, r);
+      items.push({k, idx: Number(r[0]||0), el:card});
+    });
+  });
+
+  // 依「sheet順序 → 編號」排序
+  items.sort((a,b)=>{
+    const si = SHEET_CONFIGS.findIndex(s=>s.key===a.k) - SHEET_CONFIGS.findIndex(s=>s.key===b.k);
+    return si!==0 ? si : (a.idx - b.idx);
+  });
+  items.forEach(x=>resBox.appendChild(x.el));
+}
+
+function resetSingleUI(){
+  const selSheet = document.getElementById(SINGLE_IDS.sheet);
+  const selArea  = document.getElementById(SINGLE_IDS.area);
+  const selCar   = document.getElementById(SINGLE_IDS.car);
+  singleLockedBy = null;
+  selSheet.disabled = selArea.disabled = selCar.disabled = false;
+  selSheet.value = ''; selArea.value=''; selCar.value='';
+  refreshAreaOptions(); refreshCarOptions();
+  document.getElementById(SINGLE_IDS.result).innerHTML = '';
+}
+  
+
+/* 取得一台車目前「最新狀態」 */
+function getLatestStatus(cfg, header, row){
+  for (let i=cfg.steps.length-1; i>=0; i--){
+    const st=cfg.steps[i]; const col=header.indexOf(st);
+    if (col>=0 && isCompletedValue(row[col])) {
+      if (st==='車暫停位置') return `車暫停位置：${row[col]}`;
+      return st;
+    }
+  }
+  return '尚未開始';
+}
+
+/* ============================= 需求二：停車位置彈窗新增車輛 ============================= */
+function openListModal(sheetKey, step, type, locValue) {
+  const { cfg, header, rows } = ALL_SHEETS[sheetKey];
+  const list = [];
+  const stopCol = header.indexOf('車暫停位置');
+  const prevStepCol = header.indexOf('車前往排車隊');
+
+  if (type === 'loc') {
+    rows.forEach(r => {
+      if (stopCol >= 0 && String(r[stopCol] || '').trim() === locValue) list.push(r);
+    });
+  }
+
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <div class="dash-close">✕</div>
+    <h3 style="font-size:18px;margin:0 0 8px;">${escapeHtml(sheetKey)}：${step}＝${locValue}</h3>
+    <div style="max-height:60vh; overflow:auto; padding-right:6px;">
+      ${list.length ? '' : '<div style="opacity:.7">目前沒有車輛停在此處</div>'}
+    </div>
+    ${stopCol >= 0 && ['地區專車退場（遊覽車平台）', '地區專車退場（禪堂平台）', '水陸專車退場'].includes(cfg.sheet) ? `
+      <div style="border-top:1px solid var(--border); margin-top:12px; padding-top:12px;">
+        <div style="font-weight:600; margin-bottom:8px;">新增此位置停車資訊</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="addStopCarSelect" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border);">
+            <option value="">請選擇車輛...</option>
+          </select>
+          <button id="btnAddStopCar" class="btn btn--primary" disabled>新增</button>
+        </div>
+      </div>` : ''}
+  `;
+
+  const close = openModal(box);
+  box.querySelector('.dash-close').onclick = close;
+
+  const scroller = box.querySelector('div[style*="overflow"]');
+  list.forEach(r => {
+    const area = String(r[1] || '').trim();
+    const car = String(r[2] || '').trim();
+    const item = document.createElement('div');
+    item.className = 'list-item';
+    item.innerHTML = `
+      <div class="list-left">
+        <div class="list-title">${escapeHtml(area)}　<span style="font-weight:900">${escapeHtml(car)}</span></div>
+      </div>
+      <div><button class="btn btn--primary btn--sm">詳細資料</button></div>
+    `;
+    item.querySelector('button').onclick = () => openDetailModal(sheetKey, r);
+    scroller.appendChild(item);
+  });
+
+  // 新增車輛功能
+  if (stopCol >= 0 && box.querySelector('#addStopCarSelect')) {
+    const select = box.querySelector('#addStopCarSelect');
+    const btn = box.querySelector('#btnAddStopCar');
+
+    // 產生候選車輛
+    const candidates = rows.filter(r => {
+      const prevDone = prevStepCol >= 0 && isCompletedValue(r[prevStepCol]);
+      const noStop = !String(r[stopCol] || '').trim();
+      return prevDone && noStop;
+    });
+
+    if (candidates.length === 0) {
+      select.innerHTML = '<option value="">無可新增車輛</option>';
+    } else {
+      candidates.forEach(r => {
+        const area = String(r[1] || '').trim();
+        const car = String(r[2] || '').trim();
+        const opt = document.createElement('option');
+        opt.value = `${area}|${car}`;
+        opt.textContent = `${area} ${car}`;
+        select.appendChild(opt);
+      });
+    }
+
+    select.onchange = () => btn.disabled = !select.value;
+    btn.onclick = async () => {
+      if (!select.value) return;
+      const [area, car] = select.value.split('|');
+      const rowIndex = rows.findIndex(r =>
+        String(r[1] || '').trim() === area && String(r[2] || '').trim() === car
+      );
+      const realRowNum = ALL_SHEETS[sheetKey].headerIdx + 2 + rowIndex;
+
+      await withLoading(async () => {
+        const body = {
+          sheet: cfg.sheet,
+          idToken: idToken || '',
+          ifMatch: null,
+          writes: [{ row: realRowNum, col: stopCol + 1, value: locValue }]
+        };
+        const r = await fetch(API_BASE + '?action=update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(body)
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || '新增失敗');
+        showNotif('新增成功！', false);
+        close();
+        refreshAllActiveTodoModals();
+        buildDashboard2(true);
+      }, '新增中…');
+    };
+  }
+}
+
+/* ============================= 需求一：強制步驟順序鎖 + 即時更新 ============================= */
+// 全局變數：儲存所有已開啟的未完成清單（用來即時刷新按鈕狀態）
+const activeTodoModals = new Set();
+
+// 強制步驟順序鎖 + 解決雙滾動條 + 打卡 loading
+// ============================= 最終完美版 openListModal2（保證有資料 + 單滾動條 + loading）=============================
+function openListModal2(sheetKey, step, type, locValue) {
+  const { cfg, header, rows } = ALL_SHEETS[sheetKey];
+  const list = [];
+
+  if (type === 'loc') {
+    const c = header.indexOf('車暫停位置');
+    rows.forEach(r => {
+      if (c >= 0 && String(r[c] || '').trim() === locValue) list.push(r);
+    });
+  } else {
+    const c = header.indexOf(step);
+    rows.forEach(r => {
+      const v = c >= 0 ? r[c] : '';
+      if ((type === 'done' && isCompletedValue(v)) || (type === 'todo' && !isCompletedValue(v))) list.push(r);
+    });
+  }
+
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.style.maxHeight = '90vh';
+  box.style.overflow = 'hidden';
+
+  const titleText = (type === 'loc')
+    ? `${sheetKey}：${step}＝${locValue}`
+    : `${sheetKey}：${step}（${type === 'done' ? '完成' : '未完成'}）`;
+
+  box.innerHTML = `
+    <div class="dash-close">✕</div>
+    <h3 style="font-size:18px;margin:0 0 8px;">${escapeHtml(titleText)}</h3>
+    <div style="max-height:calc(100vh - 200px); overflow-y:auto; padding-right:8px; margin-top:8px;" id="modalListContent">
+      ${list.length ? '' : '<div style="opacity:.7;text-align:center;padding:30px 0;">目前沒有資料</div>'}
+    </div>`;
+
+  const closeList = openModal(box);
+  box.querySelector('.dash-close').onclick = () => {
+    activeTodoModals.delete(box);
+    closeList();
+  };
+
+  const scroller = box.querySelector('#modalListContent');
+  const steps = cfg.steps;
+
+  // 關鍵：這裡一定要有！渲染每一台車
+  list.forEach(r => {
+    const area = String(r[1] || '').trim();
+    const car = String(r[2] || '').trim();
+    const latest = getLatestStatus(cfg, header, r);
+
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'list-item';
+
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'list-left';
+    infoDiv.innerHTML = `
+      <div class="list-title">${escapeHtml(area)}　<span style="font-weight:900">${escapeHtml(car)}</span></div>
+      <div class="list-sub">最新狀態：${escapeHtml(latest)}</div>`;
+
+    const actionsDiv = document.createElement('div');
+    actionsDiv.style.display = 'flex';
+    actionsDiv.style.gap = '8px';
+
+    // 詳細資料按鈕
+    const btnDetail = document.createElement('button');
+    btnDetail.className = 'btn btn--secondary btn--sm';
+    btnDetail.textContent = '詳細資料';
+    btnDetail.onclick = () => openDetailModal(sheetKey, r);
+    actionsDiv.appendChild(btnDetail);
+
+    // 快速打卡（未完成 + 不是車暫停位置）
+    if (type === 'todo' && step !== '車暫停位置' && currentUser?.permission === '全功能') {
+      const stepIndex = steps.indexOf(step);
+      const prevStep = stepIndex > 0 ? steps[stepIndex - 1] : null;
+      const prevCol = prevStep ? header.indexOf(prevStep) : -1;
+      const canPunch = !prevStep || (prevCol >= 0 && isCompletedValue(r[prevCol]));
+
+      const btnPunch = document.createElement('button');
+      btnPunch.className = `btn ${canPunch ? 'btn--primary' : 'btn--secondary'} btn--sm`;
+      btnPunch.textContent = '打卡';
+      btnPunch.disabled = !canPunch;
+      btnPunch.title = canPunch ? '' : `請先完成「${prevStep}」`;
+
+      btnPunch.onclick = async () => {
+        if (!canPunch) return;
+
+        const sheetInfo = ALL_SHEETS[sheetKey];
+        const rowIndex = sheetInfo.rows.findIndex(row =>
+          String(row[1] || '').trim() === area && String(row[2] || '').trim() === car
+        );
+        const realRowNum = sheetInfo.headerIdx + 2 + rowIndex;
+
+        await withLoading(async () => {
+          const minShow = sleep(800);
+          await onQuickPunch(sheetKey, step, realRowNum, area, car, closeList);
+          await minShow;
+        }, '打卡中…');
+      };
+
+      actionsDiv.appendChild(btnPunch);
+    }
+
+    rowDiv.appendChild(infoDiv);
+    rowDiv.appendChild(actionsDiv);
+    scroller.appendChild(rowDiv);
+  });
+
+  activeTodoModals.add(box);
+}
+
+// 任何資料更新後，呼叫此函式即時刷新所有已開的清單
+async function refreshAllActiveTodoModals() {
+  if (activeTodoModals.size === 0) return;
+  await buildDashboard2(true); // 靜默更新 ALL_SHEETS
+  activeTodoModals.forEach(box => {
+    if (document.body.contains(box)) {
+      // 簡單粗暴：關掉重開（最穩、最快）
+      box.querySelector('.dash-close').click();
+      // 可選：延遲一點再重開，避免太快
+      setTimeout(() => {
+        const title = box.querySelector('h3').textContent;
+        const match = title.match(/：(.+?)[（＝]/);
+        if (match) {
+          const step = match[1].split('（')[0];
+          openListModal2(title.split('：')[0], step, title.includes('未完成') ? 'todo' : 'done');
+        }
+      }, 300);
+    }
+  });
+}
+
+// 所有會改變資料的地方，成功後都加這一行：
+/*
+  refreshAllActiveTodoModals();
+*/
+
+/* 執行快速打卡動作 */
+async function onQuickPunch(sheetKey, stepName, dummy, area, car, closeListFn) {
+  if (!currentUser || currentUser.permission !== '全功能') {
+    showNotif('權限不足', true);
+    return;
+  }
+
+  const cfg = SHEET_CONFIGS.find(s => s.key === sheetKey);
+  const sheetInfo = ALL_SHEETS[sheetKey];
+  if (!sheetInfo) {
+    showNotif('資料尚未載入', true);
+    return;
+  }
+
+  const rowIndexInArray = sheetInfo.rows.findIndex(r =>
+    String(r[1] || '').trim() === area.trim() &&
+    String(r[2] || '').trim() === car.trim()
+  );
+
+  if (rowIndexInArray === -1) {
+    showNotif('找不到這台車', true);
+    return;
+  }
+
+  const realRowNum = sheetInfo.headerIdx + 2 + rowIndexInArray;
+  const colIdx = sheetInfo.header.indexOf(stepName);
+  if (colIdx === -1) {
+    showNotif('找不到欄位：' + stepName, true);
+    return;
+  }
+
+  const nowTime = getTaipeiHHMMSS();
+
+  try {
+    // 直接執行，不再包 withLoading（外面已經包了）
+    const body = {
+      sheet: cfg.sheet,
+      idToken: idToken || '',
+      ifMatch: null,
+      writes: [{
+        row: realRowNum,
+        col: colIdx + 1,
+        value: nowTime
+      }]
+    };
+
+    const r = await fetch(API_BASE + '?action=update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    });
+
+    const text = await r.text();
+    let j;
+    try { j = JSON.parse(text); } catch (e) {
+      console.error('後端回傳非 JSON：', text);
+      throw new Error('伺服器錯誤');
+    }
+
+    if (!j.ok) throw new Error(j.error || '更新失敗');
+
+    // 成功！
+    if (closeListFn) closeListFn();
+    showPunchSuccessModal(area, car, nowTime, stepName);
+    buildDashboard2(true);
+    refreshAllActiveTodoModals();
+
+  } catch (err) {
+    showNotif('打卡失敗：' + err.message, true);
+  }
+}
+
+/* 顯示打卡成功確認視窗 (依照圖片樣式) */
+function showPunchSuccessModal(area, car, time, step) {
+  const box = document.createElement('div');
+  box.className = 'modal';
+  // 設定置中樣式
+  box.style.textAlign = 'center';
+  box.style.padding = '24px';
+  box.style.maxWidth = '320px'; // 窄版設計
+
+  box.innerHTML = `
+    <div style="font-size:22px; font-weight:700; color:var(--text-strong); margin-bottom:4px;">${escapeHtml(area)}</div>
+    <div style="font-size:20px; font-weight:700; color:var(--text-strong); margin-bottom:12px;">${escapeHtml(car)}</div>
+    
+    <div style="font-size:16px; color:#64748b; margin-bottom:2px;">[${time}]</div>
+    <div style="font-size:16px; font-weight:600; color:#334155; margin-bottom:16px;">[${escapeHtml(step)}]</div>
+    
+    <div style="font-size:20px; font-weight:800; color:var(--success-600); margin-bottom:24px;">打卡成功</div>
+    
+    <button id="btnSuccessConfirm" class="btn btn--primary btn--lg" style="width:100%;">確定</button>
+  `;
+
+  const close = openModal(box);
+  
+  // 點擊「確定」只單純關閉此視窗，畫面就停留在整體情報 II
+  document.getElementById('btnSuccessConfirm').onclick = close;
+}  
+
+/* --------------- Overlay 2：單車詳情 --------------- */
+// - openDetailModal(sheetKey, row)
+// - openDetailModal(cfgObject, row, headerArray)
+function openDetailModal(sheetOrKey, row, headerOverride){
+  // 取得 cfg / header
+  let cfg, header;
+  if (typeof sheetOrKey === 'string') {
+    const pack = ALL_SHEETS[sheetOrKey] || {};
+    cfg    = pack.cfg;
+    header = pack.header;
+    if (!cfg || !header) return;
+  } else {
+    cfg    = sheetOrKey;
+    header = headerOverride;
+  }
+
+  const area = String(row[1]||'').trim();
+  const car  = String(row[2]||'').trim();
+
+  // 依「車暫停位置」切成進/退場兩段（若無此欄就全部一段）
+  const cutIdx = cfg.steps.indexOf('車暫停位置');
+  const groups = [];
+  if (cutIdx >= 0){
+    groups.push({ title:'進場', cols: cfg.steps.slice(0, cutIdx+1) });
+    if (cutIdx+1 < cfg.steps.length) groups.push({ title:'退場', cols: cfg.steps.slice(cutIdx+1) });
+  } else {
+    groups.push({ title:'狀態', cols: cfg.steps });
+  }
+
+  const box = document.createElement('div');
+  box.className = 'modal';
+  let html = `
+    <div class="dash-close">✕</div>
+    <div style="font-weight:900;margin-bottom:8px;">${escapeHtml(cfg.key)}</div>
+    <div style="margin-bottom:10px;"><b>${escapeHtml(area)}</b>　<span style="font-weight:900">${escapeHtml(car)}</span></div>
+  `;
+
+  groups.forEach(g=>{
+    html += `<div style="font-weight:800;margin:6px 0 4px;">${escapeHtml(g.title)}</div>
+      <table class="detail-table">
+        <thead><tr>${g.cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
+        <tbody><tr>${
+          g.cols.map(c=>{
+            const idx = header.indexOf(c);
+            const v   = idx>=0 ? String(row[idx]||'').trim() : '';
+            const cellText = (c === '車暫停位置')
+              ? (v || '')
+              : (v ? formatSheetTime(v) : '');
+            return `<td>${escapeHtml(cellText)}</td>`;
+          }).join('')
+        }</tr></tbody>
+      </table>`;
+  });
+
+  box.innerHTML = html;
+  const close = openModal(box);
+  box.querySelector('.dash-close').onclick = close;
+}
+
+
+
+/* ====== 其餘舊有的「確認/修改時間」小視窗 ====== */
+function openConfirmDialog(msg, onOK){
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3>確認刪除</h3>
+    <div class="modal-msg" style="font-size:15px;line-height:1.6;margin:4px 0 8px;">${msg}</div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-del">確定</button>
+    </div>`;
+  const close = openModal(box);
+  const [btnCancel, btnOK] = box.querySelectorAll('button');
+  btnCancel.onclick = close;
+  btnOK.onclick = ()=>{ try{ onOK && onOK(); } finally{ close(); } };
+}
+function openEditTimeDialog(initialHHMMSS, onOK){
+  const [h0,m0,s0] = splitHMS(initialHHMMSS);
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3>修改時間</h3>
+    <div class="time-edit">
+      <input id="hh" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${h0}" aria-label="小時">
+      <span class="colon">:</span>
+      <input id="mm" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${m0}" aria-label="分鐘">
+      <span class="colon">:</span>
+      <input id="ss" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${s0}" aria-label="秒">
+    </div>
+    <div class="hint">請輸入 2 位數！下午兩點請輸入 14。</div>
+    <div class="actions">
+      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
+      <button class="btn btn-edit">確定</button>
+    </div>`;
+  const close = openModal(box);
+  const hh = box.querySelector('#hh'), mm = box.querySelector('#mm'), ss = box.querySelector('#ss');
+  const [btnCancel, btnOK] = box.querySelectorAll('button');
+  setTimeout(()=>{ try{ hh.focus({ preventScroll:true }); }catch{} }, 80);
+
+  [hh,mm,ss].forEach(inp=>inp.addEventListener('input', ()=>{ inp.value = inp.value.replace(/\D/g,'').slice(0,2); }));
+  btnCancel.onclick = close;
+  btnOK.onclick = ()=>{
+    const H = pad2(hh.value||''), M = pad2(mm.value||''), S = pad2(ss.value||'');
+    if (!isValidHMS(H,M,S)){ showNotif('格式需為 HH(00–23) / MM(00–59) / SS(00–59)', true); return; }
+    try{ onOK(`${H}:${M}:${S}`); } finally{ close(); }
+  };
+}
+
+/* ================= 個別情報 ================= */
+let __indivInited__ = false;
+let INDIV_ROWS = []; // {tabKey, sheetOrder, areaSeq, plate, latest, stepsIn[], stepsOut[]}
+
+function indivNorm(v){ return String(v ?? '').trim(); }
+
+function initIndividual(){
+  // 首次掛 UI
+  indivMountUI();
+  // 載入四表資料
+  withLoading(indivLoadAllSheets, '讀取資料…').then(()=>{
+    indivFillTabOptions();
+    indivApplyFilter(); // 依目前選項（都是空）回填候選
+    __indivInited__ = true;
+  });
+  // 綁事件
+  ['indiv-sel-tab','indiv-sel-area','indiv-sel-plate'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', indivApplyFilter);
+  });
+  document.getElementById('indiv-btn-query').addEventListener('click', indivDoQuery);
+  document.getElementById('indiv-btn-reset').addEventListener('click', indivReset);
+}
+
+function indivMountUI(){
+  // 把四個 Tab 名稱先放到第一個下拉（其餘兩個等載入資料後回填）
+  const selTab = document.getElementById('indiv-sel-tab');
+  selTab.innerHTML = '<option value="">全部（四個Tab）</option>';
+  SHEET_CONFIGS.forEach(cfg=>{
+    const opt=document.createElement('option'); opt.value=cfg.key; opt.textContent=cfg.key; selTab.appendChild(opt);
+  });
+}
+
+async function indivLoadAllSheets(){
+  const results = await Promise.all(SHEET_CONFIGS.map(async (cfg, idx)=>{
+    const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
+    const j = await r.json();
+    const values = j.values || [];
+    // 找表頭（只要有「編號 / 區域* / 車號」）
+    const headIdx = values.findIndex(row =>
+      Array.isArray(row) &&
+      indivNorm(row[0])==='編號' &&
+      indivNorm(row[1]).startsWith('區域') &&
+      indivNorm(row[2])==='車號'
+    );
+    if (headIdx < 0) return [];
+    const header = values[headIdx].map(indivNorm);
+    const rows = values.slice(headIdx+1).filter(r => indivNorm(r[0]) && indivNorm(r[1]) && indivNorm(r[2]));
+    const pack = [];
+    rows.forEach(row=>{
+      const area = indivNorm(row[1]);
+      const plate = indivNorm(row[2]);
+      // 最新狀態（用你原本的步驟順序回推）
+      let latest = '';
+      for (let i=cfg.steps.length-1;i>=0;i--){
+        const st = cfg.steps[i];
+        const ci = header.indexOf(st);
+        if (ci>=0 && indivNorm(row[ci])) { latest = (st==='車暫停位置') ? `車暫停位置：${indivNorm(row[ci])}` : st; break; }
+      }
+      // 進/退場步驟值（彈窗用）
+      const cut = cfg.steps.indexOf('車暫停位置');
+      const stepsIn = cfg.steps.slice(0, cut>=0 ? cut+1 : cfg.steps.length).map(name=>{
+        const i=header.indexOf(name); const val = i>=0 ? indivNorm(row[i]) : '';
+        return {name, val};
+      });
+      const stepsOut = (cut>=0 ? cfg.steps.slice(cut+1) : []).map(name=>{
+        const i=header.indexOf(name); const val = i>=0 ? indivNorm(row[i]) : '';
+        return {name, val};
+      });
+
+      pack.push({
+        tabKey: cfg.key,
+        sheetOrder: idx,
+        areaSeq: area,
+        plate,
+        latest,
+        stepsIn,
+        stepsOut
+      });
+    });
+    return pack;
+  }));
+
+  INDIV_ROWS = results.flat();
+}
+
+function indivCurrentFilter(){
+  const tab   = indivNorm(document.getElementById('indiv-sel-tab').value);
+  const area  = indivNorm(document.getElementById('indiv-sel-area').value);
+  const plate = indivNorm(document.getElementById('indiv-sel-plate').value);
+  return {tab, area, plate};
+}
+function indivFillTabOptions(){
+  // 已在 mount 放入，這裡預留如需動態更新
+}
+
+function indivApplyFilter(){
+  const selTab   = document.getElementById('indiv-sel-tab');
+  const selArea  = document.getElementById('indiv-sel-area');
+  const selPlate = document.getElementById('indiv-sel-plate');
+  const {tab, area, plate} = indivCurrentFilter();
+
+  // 依目前選擇做交集
+  const filtered = INDIV_ROWS.filter(r =>
+    (!tab   || r.tabKey  === tab) &&
+    (!area  || r.areaSeq === area) &&
+    (!plate || r.plate   === plate)
+  );
+
+  // 候選集合（自然排序，中文/數字友善）
+  const sortNat = (a,b)=> a.localeCompare(b,'zh-Hant-u-kn-true');
+  const areas  = [...new Set(filtered.map(r=>r.areaSeq))].sort(sortNat);
+  const plates = [...new Set(filtered.map(r=>r.plate))].sort(sortNat);
+
+  // 回填下拉（保留已選值）
+  const fill = (sel, items, ph, keep)=>{
+    const cur = keep || '';
+    sel.innerHTML = '';
+    const op0 = document.createElement('option'); op0.value=''; op0.textContent=ph; sel.appendChild(op0);
+    items.forEach(v=>{
+      const op=document.createElement('option'); op.value=v; op.textContent=v; if (v===cur) op.selected=true; sel.appendChild(op);
+    });
+  };
+  fill(selArea , areas , '全部區域車次編號', area );
+  fill(selPlate, plates, '全部車號'      , plate);
+
+  // 鎖定規則：選了「車號」或「區域車次編號」任一者 → 其他兩個鎖定
+  const lockByPlate = !!plate;
+  const lockByArea  = !!area;
+  selTab.disabled   = lockByPlate || lockByArea;
+  selArea.disabled  = lockByPlate || (lockByArea && !plate);
+  selPlate.disabled = lockByArea  || (lockByPlate && !area);
+}
+
+function indivDoQuery(){
+  const {tab, area, plate} = indivCurrentFilter();
+  const data = INDIV_ROWS
+    .filter(r =>
+      (!tab   || r.tabKey  === tab) &&
+      (!area  || r.areaSeq === area) &&
+      (!plate || r.plate   === plate)
+    )
+    .sort((a,b)=>{
+      if (a.sheetOrder !== b.sheetOrder) return a.sheetOrder - b.sheetOrder;
+      if (a.areaSeq !== b.areaSeq) return a.areaSeq.localeCompare(b.areaSeq,'zh-Hant-u-kn-true');
+      return a.plate.localeCompare(b.plate,'zh-Hant-u-kn-true');
+    });
+  indivRenderCards(data);
+}
+
+function indivRenderCards(list){
+  const box = document.getElementById('indiv-cards');
+  box.innerHTML = '';
+  if (!list.length){
+    box.innerHTML = `<div style="color:#64748b;padding:8px 2px;">（沒有符合的資料）</div>`;
+    return;
+  }
+  list.forEach(item=>{
+    const el = document.createElement('div');
+    el.className = 'indiv-card';
+    el.innerHTML = `
+      <div class="top"><span class="mini-badge">${item.tabKey}</span> <span style="margin-left:6px;">${item.areaSeq}</span></div>
+      <div class="mid">${item.plate}</div>
+      <div class="bot">${item.latest || '—'}</div>
+    `;
+    el.addEventListener('click', ()=> indivOpenDetail(item));
+    box.appendChild(el);
+  });
+}
+
+function indivOpenDetail(item){
+  // 以步驟切兩組：進場 / 退場
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <h3 style="margin:0 0 6px;">${item.tabKey}</h3>
+    <div style="margin-bottom:10px;"><b>${item.areaSeq}</b>　<span style="font-weight:900">${item.plate}</span></div>
+
+    <h4 style="margin:12px 0 6px;font-weight:800;">進場</h4>
+    <div class="step-grid" id="__in"></div>
+
+    <h4 style="margin:12px 0 6px;font-weight:800;">退場</h4>
+    <div class="step-grid" id="__out"></div>
+  `;
+  const close = openModal(box);
+
+  const fill = (wrapId, arr)=>{
+    const w = box.querySelector(wrapId);
+    arr.forEach(s=>{
+      const cell = document.createElement('div');
+      cell.className = 'step-cell';
+      const v = s.name==='車暫停位置' ? (s.val||'—') : (s.val ? formatSheetTime(s.val) : '—');
+      cell.innerHTML = `<div style="font-weight:700;margin-bottom:4px;">${s.name}</div><div>${v}</div>`;
+      w.appendChild(cell);
+    });
+  };
+  fill('#__in',  item.stepsIn  || []);
+  fill('#__out', item.stepsOut || []);
+}
+
+function indivReset(){
+  document.getElementById('indiv-sel-tab').value   = '';
+  document.getElementById('indiv-sel-area').value  = '';
+  document.getElementById('indiv-sel-plate').value = '';
+  document.getElementById('indiv-sel-tab').disabled   = false;
+  document.getElementById('indiv-sel-area').disabled  = false;
+  document.getElementById('indiv-sel-plate').disabled = false;
+  indivApplyFilter();
+  document.getElementById('indiv-cards').innerHTML = '';
+}
+// 只顯示：區域車次編號／車號／最新狀態；點卡片開詳情（沿用整體情報表格樣式）
+function buildSingleCard(cfg, header, row){
+  const area   = String(row[1]||'').trim();             // 區域車次編號
+  const car    = String(row[2]||'').trim();             // 車號
+  const latest = getLatestStatus(cfg, header, row);      // 最新狀態（已有的工具）
+
+  const card = document.createElement('div');
+  card.className = 'single-card';
+  card.innerHTML = `
+    <div class="single-line">${area}</div>
+    <div class="single-line">${car}</div>
+    <div class="single-line">${latest}</div>
+  `;
+  card.addEventListener('click', ()=> openDetailModal(cfg, row, header));
+  return card;
+}
+/* ======================= 個別情報（三選單 + 三行置中名片） ======================= */
+let SINGLE_INITTED = false;
+let SINGLE_ITEMS = [];  // 每筆：{ sheetKey, cfg, header, row }
+
+/* 動態塞入這頁專用樣式（只會插一次） */
+(function ensureSingleStyles(){
+  if (document.getElementById('singleCardStyles')) return;
+  const css = document.createElement('style');
+  css.id = 'singleCardStyles';
+  css.textContent = `
+    .single-controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .single-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+    .single-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .single-card{
+      border:1px solid var(--border);background:rgba(255,255,255,.9);
+      border-radius:12px;padding:14px;text-align:center;cursor:pointer;box-shadow:var(--shadow-card)
+    }
+    body.dark .single-card{background:rgba(15,23,42,.30)}
+    .single-card:hover{filter:brightness(1.015)}
+    .single-line{font-size:var(--fz-title);line-height:var(--lh-title);font-weight:var(--fw-title);color:var(--text-strong)}
+    .single-line + .single-line{margin-top:6px}
+  `;
+  document.head.appendChild(css);
+})();
+
+/* 初始化頁面（只做一次） */
+function initSinglePage(){
+  if (SINGLE_INITTED){ return; }
+  SINGLE_INITTED = true;
+
+  // 綁定事件
+  document.getElementById('btnQuery').addEventListener('click', onSingleQuery);
+  document.getElementById('btnReset').addEventListener('click', onSingleReset);
+  ['selSheet','selArea','selCar'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', rebuildSelectOptions);
+  });
+
+  // 載入四張表資料
+  withLoading(loadSingleData, '讀取資料…');
+}
+
+/* 讀四張表，整理為可篩選的 items */
+async function loadSingleData(){
+  SINGLE_ITEMS = [];
+  const results = await Promise.all(
+    SHEET_CONFIGS.map(async cfg => {
+      const r = await fetch(
+        API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
+      );
+      const j = await r.json();
+      const values = j.values || [];
+      const headerIdx = values.findIndex(
+        r => Array.isArray(r) &&
+             String(r[0]||'').trim() === '編號' &&
+             String(r[1]||'').trim().startsWith('區域') &&
+             String(r[2]||'').trim() === '車號'
+      );
+      const header = headerIdx>=0 ? values[headerIdx].map(c=>String(c||'').trim()) : [];
+      const rows   = headerIdx>=0 ? values.slice(headerIdx+1)
+                        .filter(r=>String(r[0]||'').trim() && String(r[1]||'').trim() && String(r[2]||'').trim())
+                        : [];
+      // 確保 openDetailModal 也能用（若使用者沒先去整體情報）
+      ALL_SHEETS[cfg.key] = { cfg, header, rows };
+      rows.forEach(row => SINGLE_ITEMS.push({ sheetKey: cfg.key, cfg, header, row }));
+      return { cfg, header, rows };
+    })
+  );
+
+  // 填入「Tab」選單（四張表）
+  const selSheet = document.getElementById('selSheet');
+  selSheet.innerHTML = '<option value="">— 全部 Tab —</option>' +
+    SHEET_CONFIGS.map(s=>`<option value="${s.key}">${s.key}</option>`).join('');
+
+  // 依目前條件重建另外兩個選單
+  rebuildSelectOptions();
+}
+
+/* 依當前條件，重建三個選單的可選值（保留仍有效的既有選擇） */
+function rebuildSelectOptions(){
+  const selSheet = document.getElementById('selSheet');
+  const selArea  = document.getElementById('selArea');
+  const selCar   = document.getElementById('selCar');
+
+  const keepSheet = selSheet.value || '';
+  const keepArea  = selArea.value  || '';
+  const keepCar   = selCar.value   || '';
+
+  const filtered = filterItems(keepSheet, '', ''); // 先看目前選的 Tab，另外兩個先放寬
+  const areas = uniq(filtered.map(it => String(it.row[1]||'').trim())).sort(localeCmp);
+  const cars  = uniq(filtered.map(it => String(it.row[2]||'').trim())).sort(localeCmp);
+
+  selArea.innerHTML = '<option value="">— 全部 區域車次編號 —</option>' + areas.map(a=>`<option value="${a}">${a}</option>`).join('');
+  selCar.innerHTML  = '<option value="">— 全部 車號 —</option>' + cars.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+  // 若舊選項仍在列表中就保留
+  if (keepArea && areas.includes(keepArea)) selArea.value = keepArea;
+  if (keepCar  && cars.includes(keepCar))   selCar.value  = keepCar;
+}
+
+/* 點「查詢」→ 渲染名片 */
+function onSingleQuery(){
+  const sheet = document.getElementById('selSheet').value || '';
+  const area  = document.getElementById('selArea').value  || '';
+  const car   = document.getElementById('selCar').value   || '';
+
+  const items = filterItems(sheet, area, car)
+    .slice()
+    .sort((a,b)=>{
+      // 依每張表的「編號」欄位排序（升冪）
+      const ai = parseInt(String(a.row?.[0]||''),10);
+      const bi = parseInt(String(b.row?.[0]||''),10);
+      if (isNaN(ai) && isNaN(bi)) return 0;
+      if (isNaN(ai)) return 1;
+      if (isNaN(bi)) return -1;
+      return ai - bi;
+    });
+
+  renderSingleCards(items);
+}
+
+/* 點「全部重設」 */
+function onSingleReset(){
+  document.getElementById('selSheet').value = '';
+  document.getElementById('selArea').value  = '';
+  document.getElementById('selCar').value   = '';
+  rebuildSelectOptions();
+  renderSingleCards([]); // 清空顯示
+}
+
+/* 以條件篩選 items */
+function filterItems(sheetKey, area, car){
+  return SINGLE_ITEMS.filter(it =>
+    (!sheetKey || it.sheetKey === sheetKey) &&
+    (!area  || String(it.row[1]||'').trim() === area) &&
+    (!car   || String(it.row[2]||'').trim() === car)
+  );
+}
+
+/* 渲染三行置中名片（只顯示：區域車次編號、車號、最新狀態） */
+function renderSingleCards(items){
+  const box = document.getElementById('singleResults');
+  box.innerHTML = '';
+  if (!items || items.length===0){
+    box.innerHTML = '<div style="opacity:.6;text-align:center;padding:10px 0;">（沒有符合項目）</div>';
+    return;
+  }
+
+  for (const it of items){
+    const area = String(it.row?.[1]||'').trim();
+    const car  = String(it.row?.[2]||'').trim();
+    const latest = getLatestStatus(it.cfg, it.header, it.row);
+
+    const card = document.createElement('div');
+    card.className = 'single-card';
+    card.innerHTML = `
+      <div class="single-line">${escapeHtml(area)}</div>
+      <div class="single-line">${escapeHtml(car)}</div>
+      <div class="single-line">${escapeHtml(latest)}</div>
+    `;
+    card.addEventListener('click', () => openDetailModal(it.sheetKey, it.row));
+    box.appendChild(card);
+  }
+}
+
+
+/* 小工具 */
+const uniq = arr => Array.from(new Set(arr.filter(Boolean)));
+const localeCmp = (a,b)=> a.localeCompare(b,'zh-Hant-u-nu-hanidec',{numeric:true, sensitivity:'base'});
+/* ======================= 個別情報 end ======================= */
+  
+
+/* ===== 覆寫：個別情報 三選單最終規格（不改動任何 Web 呈現） ===== */
+
+/* 工具：依條件抓取 items */
+function _single_getItems(sheet, area, car){
+  return SINGLE_ITEMS.filter(it =>
+    (!sheet || it.sheetKey === sheet) &&
+    (!area  || String(it.row[1]||'').trim() === area) &&
+    (!car   || String(it.row[2]||'').trim() === car)
+  );
+}
+/* 工具：從 items 取唯一集合（以在地語系排序） */
+function _single_unique(items, pick){
+  const arr = Array.from(new Set(items.map(pick).filter(Boolean)));
+  return arr.sort((a,b)=> a.localeCompare(b,'zh-Hant-u-nu-hanidec',{numeric:true, sensitivity:'base'}));
+}
+/* 工具：建立 <option> 清單，盡量保留既有值；若只剩唯一候選則自動選取 */
+function _single_applyOptions(selectEl, candidates, placeholder, keepVal){
+  const oldVal = selectEl.value;
+  const options = ['<option value=\"\">' + placeholder + '</option>']
+    .concat(candidates.map(v=>`<option value="${v}">${v}</option>`));
+  selectEl.innerHTML = options.join('');
+
+  let newVal = '';
+  if (keepVal && candidates.includes(keepVal)) newVal = keepVal;
+  else if (candidates.length === 1) newVal = candidates[0]; // 唯一 → 自動帶入
+  // 否則維持空白（— 全部 —）
+
+  selectEl.value = newVal;
+  return oldVal !== newVal;
+}
+
+/* 自動查詢：三者皆非空且唯一組合時觸發 */
+function _single_maybeAutoQuery(){
+  const s = document.getElementById('selSheet').value || '';
+  const a = document.getElementById('selArea').value  || '';
+  const c = document.getElementById('selCar').value   || '';
+  if (!s || !a || !c) return;
+  const items = _single_getItems(s,a,c);
+  if (items.length === 1){
+    try{ onSingleQuery(); }catch(e){ /* ignore */ }
+  }
+}
+
+/* 覆寫 rebuildSelectOptions：
+   — 三選單永不鎖定
+   — 候選依其它條件即時收斂
+   — 只剩唯一候選時自動選取
+   — 選車號→可唯一反帶 Tab/區域；選區域→可唯一反帶 Tab，且在該 Tab 下若車號唯一也自動帶入
+   — 任一時刻候選唯一皆自動帶入
+   — 三者落在唯一組合時自動查詢
+*/
+function rebuildSelectOptions(){
+  const selSheet = document.getElementById('selSheet');
+  const selArea  = document.getElementById('selArea');
+  const selCar   = document.getElementById('selCar');
+
+  // 讀取目前值
+  let sheet = selSheet.value || '';
+  let area  = selArea.value  || '';
+  let car   = selCar.value   || '';
+
+  let changed = true;
+  let guard = 0;
+  while (changed && guard < 5){  // 最多迭代 5 次以收斂
+    changed = false; guard++;
+
+    // 1) 選了「車號」→ 若唯一反帶 Tab/區域
+    if (car){
+      const carItems = _single_getItems('', '', car);
+      const uniqueSheets = _single_unique(carItems, it=>it.sheetKey);
+      const uniqueAreas  = _single_unique(carItems, it=>String(it.row[1]||'').trim());
+      if (uniqueSheets.length === 1 && sheet !== uniqueSheets[0]){ sheet = uniqueSheets[0]; changed = true; }
+      if (uniqueAreas.length  === 1 && area  !== uniqueAreas[0]) { area  = uniqueAreas[0];  changed = true; }
+    }
+
+    // 2) 選了「區域」→ 若唯一反帶 Tab；在該/目前 Tab 下若車號唯一也帶入
+    if (area){
+      const areaItems = _single_getItems('', area, '');
+      const uniqueSheetsByArea = _single_unique(areaItems, it=>it.sheetKey);
+      if (uniqueSheetsByArea.length === 1 && sheet !== uniqueSheetsByArea[0]){ sheet = uniqueSheetsByArea[0]; changed = true; }
+
+      // 在決定後的 sheet 範圍內，如果車號唯一 → 自動選
+      const carInScope = _single_unique(_single_getItems(sheet, area, ''), it=>String(it.row[2]||'').trim());
+      if (!car && carInScope.length === 1){ car = carInScope[0]; changed = true; }
+    }
+
+    // 3) 一般收斂：根據 (sheet, area, car) 計算三選單候選並套用（唯一自動帶入）
+    const itemsScopeForSheet = _single_getItems('', area, car); // 受 area+car 限制
+    const itemsScopeForArea  = _single_getItems(sheet, '', car); // 受 sheet+car 限制
+    const itemsScopeForCar   = _single_getItems(sheet, area, ''); // 受 sheet+area 限制
+
+    const sheets = _single_unique(itemsScopeForSheet, it=>it.sheetKey);
+    const areas  = _single_unique(itemsScopeForArea,  it=>String(it.row[1]||'').trim());
+    const cars   = _single_unique(itemsScopeForCar,   it=>String(it.row[2]||'').trim());
+
+    const ch1 = _single_applyOptions(selSheet, sheets, '— 全部 Tab —', sheet);
+    const ch2 = _single_applyOptions(selArea,  areas,  '— 全部 區域車次編號 —', area);
+    const ch3 = _single_applyOptions(selCar,   cars,   '— 全部 車號 —', car);
+
+    // 同步回內存變數
+    sheet = selSheet.value || '';
+    area  = selArea.value  || '';
+    car   = selCar.value   || '';
+
+    if (ch1 || ch2 || ch3) changed = true;
+  }
+
+  // 最終：如三者唯一組合 → 自動查詢
+  _single_maybeAutoQuery();
+}
+
+/* 覆寫 initSinglePage：不改視覺，只綁定到新的 rebuildSelectOptions 流程 */
+(function(){
+  const _origInit = initSinglePage;
+  initSinglePage = function(){
+    // 先跑原本的，確保資料讀取與按鈕事件已綁定
+    try{ _origInit(); }catch(e){ /* ignore */ }
+    // 再把 change 事件都導向新的收斂器
+    ['selSheet','selArea','selCar'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('change', rebuildSelectOptions);
+    });
+    // 初始一次收斂（若資料已到）
+    try{ rebuildSelectOptions(); }catch(e){ /* ignore */ }
+  };
+})();
+
+/* ===== 覆寫結束 ===== */
+
 </script>
 </body>
 </html>

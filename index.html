@@ -290,118 +290,161 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
 }
 .single-line + .single-line{ margin-top:6px; }
 
-/* ======================= 手機終極版：完全取代按鈕，變成標題列 + 下拉選單 ====================== */
-@media (max-width: 767px) {
-  /* 1. 徹底隱藏原本所有按鈕與上方欄位 */
-  #mainTabs,
-  .topbar-grid .left-tabs,
-  .topbar-grid .right-refresh {
-    display: none !important;
+/* ======================= 響應式主按鈕佈局（手機超友善）======================= */
+@media (max-width: 768px) {
+  #mainTabs.main-tabs {
+    flex-wrap: wrap;           /* 小螢幕自動換行 */
+    gap: 10px;                 /* 按鈕間距 */
+    justify-content: center !important;  /* 置中排列 */
+    padding: 8px 12px;         /* 增加內距更好按 */
   }
 
-  /* 2. 手機專用標題列（固定頂部） */
-  #mobileHeader {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    background: var(--primary-600);
-    color: white;
-    padding: 12px 16px;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    text-align: center;
-  }
-
-  #mobileHeader .title {
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: 1px;
-  }
-
-  #mobileHeader .user-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 8px;
-    font-size: 14px;
-  }
-
-  #mobileHeader .user-name {
+  #mainTabs .main-tab {
+    flex: 1;                   /* 平均分配寬度 */
+    min-width: 120px;          /* 最小寬度避免太擠 */
+    max-width: 45%;            /* 每行最多放兩個 */
+    padding: 12px 8px;         /* 上下加大，按鈕更好按 */
+    font-size: 15px;           /* 字稍微放大 */
     font-weight: 700;
   }
 
-  #mobileHeader .user-permission {
-    opacity: 0.9;
-    margin-top: 4px;
-    font-size: 13px;
+  /* 手機上「最新狀態」和「登錄與修改」永遠最大、最顯眼 */
+  #mainTabs .main-tab[data-target="pane-dashboard2"],
+  #mainTabs .main-tab[data-target="pane-punch"] {
+    flex: 1 1 100% !important; /* 強制佔滿整行 */
+    max-width: 100% !important;
+    order: -1;                 /* 確保「最新狀態」在最上面 */
+    background: var(--primary-600) !important;
+    color: white !important;
+    font-size: 17px !important;
+    padding: 16px !important;
+    border-radius: 12px !important;
   }
 
-  #mobileHeader .logout-btn {
-    background: rgba(255,255,255,0.2);
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 14px;
-  }
-
-  /* 3. 下拉選單（取代原本「所有車輛」分頁） */
-  #mobileSheetSelector {
-    margin: 100px auto 16px;
-    max-width: 90%;
-    padding: 12px 16px;
-    font-size: 16px;
-    font-weight: 600;
-    border: 2px solid var(--primary-600);
-    border-radius: 12px;
-    background: white;
-    color: var(--primary-600);
-  }
-
-  /* 4. 內容區自動往下墊 */
-  .wrap {
-    padding-top: 160px !important;
+  /* 「登錄與修改」預設開啟時特別突出 */
+  #mainTabs .main-tab[data-target="pane-punch"].active {
+    background: var(--success-600) !important;
+    box-shadow: 0 4px 12px rgba(34,197,94,0.4);
   }
 }
+
+/* 平板（769px ~ 1024px）三顆橫排 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  #mainTabs .main-tab {
+    flex: 1;
+    padding: 14px 12px;
+    font-size: 16px;
+  }
+}
+
+/* 電腦（>1024px）保持原來 space-between 佈局，但字更大更好按 */
+@media (min-width: 1025px) {
+  #mainTabs .main-tab {
+    padding: 14px 24px;
+    font-size: 17px;
+    min-width: 180px;
+  }
+}
+
+/* ======================= 最終統一美化（數字更大 + 字體完全一致）======================= */
+/* 主要統計數字（完成/未完成 + 停車位置）全部放大、更粗 */
+.stat-num,
+.loc-num {
+  font-size: 32px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+/* 「完成」「未完成」「台」字統一：14px、非粗體 */
+.stat-label,
+.loc-pill .stat-label {
+  font-size: 14px !important;
+  font-weight: normal !important;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* 停車位置名稱稍微放大（手機更清楚） */
+.loc-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* 手機專屬：只保留「最新狀態」＋極致美化（與其他卡片陰影完全一致） */
+@media (max-width: 767px) {
+  /* 隱藏其他按鈕 */
+  #mainTabs .main-tab[data-target="pane-punch"],
+  #mainTabs .main-tab[data-target="pane-single"] {
+    display: none !important;
+  }
+
+  /* 最新狀態按鈕（手機終極版） */
+  #mainTabs .main-tab[data-target="pane-dashboard2"] {
+    flex: 1 !important;
+    min-width: 0;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    padding: 18px !important;
+    background: var(--primary-600) !important;
+    color: white !important;
+    border-radius: 16px !important;
+    box-shadow: var(--shadow-card) !important; /* 與其他卡片完全一致 */
+  }
+}
+  
 </style>
-
-  <!-- ==================================================== -->
-  <!-- 手機專用標題列 + 下拉選單（放在最上面） -->
-  <div id="mobileHeader" class="mobile-only">
-    <div class="title">車流人流退場情報</div>
-    <div class="user-row">
-      <div>
-        <div class="user-name" id="mobileUserName"></div>
-        <div class="user-permission" id="mobileUserPermission"></div>
-      </div>
-      <button class="logout-btn" onclick="logout()">登出</button>
-    </div>
-  </div>
-
-  <select id="mobileSheetSelector" class="mobile-only">
-    <!-- 選項由 JS 自動產生 -->
-  </select>
-  <!-- ==================================================== -->
-
-  <!-- 原本電腦版頂部（手機隱藏） -->
+</head>
+<body>
+<div class="wrap">
+  <!-- 兩列兩欄的頂部排版 -->
   <div class="topbar-grid">
     <!-- 左上：標題（登入與登入後皆顯示） -->
     <div class="left-title">
       <h1 id="pageTitle">車流人流退場情報</h1>
     </div>
+
     <!-- 右上：登入資訊 -->
     <div class="right-user">
       <div id="signin"></div>
-      <div id="userInfo" hide class="user-info">
-        <span id="userDisplay"></span>
+      <div id="userInfo" class="hide user-info">
+      <span id="userDisplay"></span>
         <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
       </div>
     </div>
+
     <!-- 左下：三個主頁籤 -->
     <div class="left-tabs">
       <div id="mainTabs" class="main-tabs" style="justify-content: space-between;">
-        <button class="main-tab" data-target="pane-dashboard2">最新狀態</button>
-        <button class="main-tab" data-target="pane-single">個別情報</button>
-        <button class="main-tab active" data-target="pane-punch">登錄與修改</button>
-      </div>
+  <!-- 最左邊：最新狀態（原本的整體情報 II） -->
+  <button class="main-tab" data-target="pane-dashboard2">最新狀態</button>
+
+  <!-- 中間：個別情報（保留） -->
+  <button class="main-tab" data-target="pane-single">個別情報</button>
+
+  <!-- 最右邊：登錄與修改（原本的登錄） -->
+  <button class="main-tab active" data-target="pane-punch">登錄與修改</button>
+</div>
+
+<!-- 完全隱藏原本的「整體情報」按鈕（不會出現在畫面上） -->
+<style>
+  /* 隱藏原本的整體情報按鈕（pane-dashboard） */
+  #mainTabs .main-tab[data-target="pane-dashboard"] {
+    display: none !important;
+  }
+
+/* 「完成」「未完成」「台」三個字 → 完全跟小標題（.stat-head）一樣大、一樣粗、一樣顏色 */
+.stat-label,
+.loc-pill .stat-label {
+  font-size: 14px !important;
+  font-weight: 800 !important;        /* 跟小標題一樣粗 */
+  color: var(--text-strong) !important; /* 跟小標題一樣黑 */
+  margin-top: 4px !important;
+  line-height: 1.4 !important;        /* 與小標題視覺一致 */
+}
+  
+</style>
     </div>
+
     <!-- 右下：時鐘 + 自動更新頻率 -->
     <div class="right-refresh">
       <div class="refresh-bar">
@@ -411,7 +454,7 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
     </div>
   </div>
 
-  <!-- 第 1 頁：登錄與修改 -->
+  <!-- 第 1 頁：沿用（打卡 + 車卡） -->
   <div id="pane-punch" class="tab-pane">
     <div id="tabs" class="card hide" style="padding-bottom:6px;">
       <div class="sheet-tabs" id="sheetTabs"></div>
@@ -421,49 +464,53 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
     </div>
   </div>
 
-  <!-- 第 2 頁：整體情報（舊版，保留但不顯示） -->
+  <!-- 第 2 頁：整體情報 -->
   <div id="pane-dashboard" class="tab-pane hide">
-    <div class="card" id="dashTabsBar" style="padding-bottom:6px;">
-      <div class="sheet-tabs" id="dashboardTabs"></div>
-    </div>
-    <div id="dashboard"></div>
+  <!-- 整體情報的 5 個子分頁 -->
+  <div class="card" id="dashTabsBar" style="padding-bottom:6px;">
+    <div class="sheet-tabs" id="dashboardTabs"></div>
   </div>
+  <!-- 內容容器 -->
+  <div id="dashboard"></div>
+</div>
+
 
   <!-- 第 3 頁：個別情報 -->
   <div id="pane-single" class="tab-pane hide">
-    <div class="card" id="singleControlsCard" style="padding-bottom:10px;">
-      <div class="single-controls" id="singleControls">
-        <select id="selSheet" class="step-select" aria-label="Tab（可不選）">
-          <option value="">— 全部 Tab —</option>
-        </select>
-        <select id="selArea" class="step-select" aria-label="區域車次編號（可不選）">
-          <option value="">— 全部 區域車次編號 —</option>
-        </select>
-        <select id="selCar" class="step-select" aria-label="車號（可不選）">
-          <option value="">— 全部 車號 —</option>
-        </select>
-      </div>
-      <div class="single-actions">
-        <button id="btnQuery" class="btn btn--primary btn--sm">查詢</button>
-        <button id="btnReset" class="btn btn--secondary btn--sm">全部重設</button>
-      </div>
+  <div class="card" id="singleControlsCard" style="padding-bottom:10px;">
+    <div class="single-controls" id="singleControls">
+      <select id="selSheet" class="step-select" aria-label="Tab（可不選）">
+        <option value="">— 全部 Tab —</option>
+      </select>
+      <select id="selArea" class="step-select" aria-label="區域車次編號（可不選）">
+        <option value="">— 全部 區域車次編號 —</option>
+      </select>
+      <select id="selCar" class="step-select" aria-label="車號（可不選）">
+        <option value="">— 全部 車號 —</option>
+      </select>
     </div>
-    <div class="card" id="singleResultsCard">
-      <div id="singleResults" class="single-list" aria-live="polite"></div>
+    <div class="single-actions">
+      <button id="btnQuery" class="btn btn--primary btn--sm">查詢</button>
+      <button id="btnReset" class="btn btn--secondary btn--sm">全部重設</button>
     </div>
   </div>
 
-  <!-- 最新狀態頁面（主要頁面） -->
-  <div id="pane-dashboard2" class="tab-pane hide">
-    <div class="card" id="dashTabsBar2" style="padding-bottom:6px;">
-      <div class="sheet-tabs" id="dashboardTabs2"></div>
-    </div>
-    <div id="dashboard2"></div>
+  <div class="card" id="singleResultsCard">
+    <div id="singleResults" class="single-list" aria-live="polite"></div>
   </div>
+</div>
 
-</div> <!-- .wrap 結束 -->
+<div id="pane-dashboard2" class="tab-pane hide">
+  <div class="card" id="dashTabsBar2" style="padding-bottom:6px;">
+    <div class="sheet-tabs" id="dashboardTabs2"></div>
+  </div>
+  <div id="dashboard2"></div>
+</div>
+  
+</div>
 
 <div id="notif" class="notif"></div>
+
 <!-- 全螢幕 Loading Overlay -->
 <div id="loading" class="loading" role="status" aria-live="polite" aria-busy="true">
   <div class="loading-box">
@@ -471,6 +518,7 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
     <div class="loading-text">處理中…</div>
   </div>
 </div>
+  
 
 <script>
 const GOOGLE_CLIENT_ID = '368914333961-b8j4o6h73hurdoq5k377f6v2e1pg0r3p.apps.googleusercontent.com';
@@ -2968,64 +3016,8 @@ function rebuildSelectOptions(){
   };
 })();
 
-// 手機專用下拉選單：完全自動從 SHEET_CONFIGS 產生 + 即時切換
-function initMobileSheetSelector() {
-  if (window.innerWidth > 767) return; // 只在手機執行
+/* ===== 覆寫結束 ===== */
 
-  const select = document.getElementById('mobileSheetSelector');
-  if (!select) return;
-
-  // 清空並加入「所有車輛」（永遠第一個）
-  select.innerHTML = '<option value="ALL">所有車輛</option>';
-
-  // 自動從 SHEET_CONFIGS 產生選項
-  SHEET_CONFIGS.forEach(cfg => {
-    const option = document.createElement('option');
-    option.value = cfg.key;
-    option.textContent = cfg.key;
-    select.appendChild(option);
-  });
-
-  // 預設選「所有車輛」
-  select.value = 'ALL';
-
-  // 切換事件：完全同步原本的 currentDashFilter2 邏輯
-  select.onchange = () => {
-    const selectedKey = select.value;
-    currentDashFilter2 = selectedKey;           // 同步全域變數
-    updateDashTabActive2();                     // 更新上方按鈕高亮（電腦也會同步）
-    buildDashboard2(false);                     // 立即刷新內容
-  };
-
-  // 當其他地方切換時（例如電腦、自動更新），也同步下拉選單
-  const originalBuildDashboard2 = buildDashboard2;
-  buildDashboard2 = function(silent = false) {
-    originalBuildDashboard2(silent);
-    if (window.innerWidth <= 767 && select) {
-      select.value = currentDashFilter2;
-    }
-  };
-}
-
-// 頁面載入完成後執行
-document.addEventListener('DOMContentLoaded', initMobileSheetSelector);
-// 視窗大小改變時也重新檢查（橫豎屏切換）
-window.addEventListener('resize', initMobileSheetSelector);
-
-// 手機標題列即時更新姓名與權限
-function updateMobileHeader() {
-  if (window.innerWidth > 767) return;
-  if (!currentUser) return;
-  
-  const nameEl = document.getElementById('mobileUserName');
-  const permEl = document.getElementById('mobileUserPermission');
-  if (nameEl) nameEl.textContent = currentUser.name || '使用者';
-  if (permEl) permEl.textContent = '權限：' + (currentUser.permission || '無');
-}
-
-// 在 finishLoginUI() 最後加上
-updateMobileHeader();
-  
 </script>
 </body>
 </html>

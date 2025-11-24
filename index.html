@@ -133,7 +133,6 @@ body.login #signin-container {
 }
 .left-title { grid-area: title; }
 .right-user { grid-area: user; display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
-/* 修正按鈕高度 */
 .right-user #signin { max-height: 44px; }
 
 .left-tabs { grid-area: tabs; }
@@ -161,6 +160,20 @@ body.login #signin-container {
 .loc-pill{ border:1px dashed var(--border); border-radius:12px; padding:10px; background:rgba(255,255,255,.85); display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
 .loc-name{ font-weight:700; font-size:15px; }
 .loc-num{ font-size:32px; font-weight:900; color:#2563eb; line-height:1; }
+
+/* 個別情報與登錄頁卡片 */
+.veh-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.veh-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-card); }
+.veh-title-main { font-weight: 700; font-size: 18px; color: var(--text-strong); }
+.veh-title-sub { font-size: 14px; color: var(--text); }
+.step-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 4px; }
+.step-label { font-size: 14px; font-weight: 600; }
+.step-time { font-size: 14px; font-weight: bold; color: #2563eb; }
+
+.single-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.single-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: transform 0.2s; }
+.single-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.single-line { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
 
 /* =========== RWD Logic =========== */
 @media (min-width: 768px) {
@@ -235,6 +248,7 @@ body.login #signin-container {
   <div class="topbar-grid">
     <div class="left-title"><h1 style="margin:0; font-size:24px;">車流人流退場情報</h1></div>
     <div class="right-user">
+      <div id="signin"></div>
       <div id="userInfo" style="display:none; align-items:center; gap:10px;">
         <span id="userDisplay" style="font-size:14px;font-weight:bold;"></span>
         <button class="btn btn--secondary" style="padding:4px 10px;font-size:13px;" onclick="logout()">登出</button>
@@ -259,11 +273,15 @@ body.login #signin-container {
     <div id="pane-dashboard2" class="tab-pane"><div id="dashboard2"></div></div>
     <div id="pane-punch" class="tab-pane hide">
       <div id="sheetTabs" class="sheet-tabs" style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;"></div>
-      <div id="vehList" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px;"></div>
+      <div id="vehList" class="veh-list"></div>
     </div>
     <div id="pane-single" class="tab-pane hide">
-      <div class="card"><div id="singleControls" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;"></div></div>
-      <div id="singleResults"></div>
+      <div class="card">
+        <div id="singleControls" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:10px;">
+           <div>載入中...</div>
+        </div>
+      </div>
+      <div id="singleResults" class="single-list"></div>
     </div>
   </div>
 </div>
@@ -332,7 +350,6 @@ window.onload = function(){
 /* ================= 核心：隨點隨載 (On-Demand) ================= */
 async function onMobileSelectChange() {
   const key = document.getElementById('mobile-sheet-select').value;
-  // 手機切換時，先顯示載入狀態
   document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;">
       <div class="spinner" style="margin:0 auto 10px;"></div>
       正在讀取...
@@ -356,9 +373,9 @@ async function forceRefreshMobile() {
 async function fetchSingleSheet(targetKey) {
   const container = document.getElementById('mobile-cards-container');
   
-  // 只有手機極簡模式才顯示局部 Loading，避免影響電腦版
+  // 只有手機極簡模式才顯示局部 Loading
   if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
-    // 已經在外面設定了，這裡不重複
+    // 已經在外面設定了
   } else {
     showLoading();
   }
@@ -508,7 +525,7 @@ async function verifyToken(token) {
     document.getElementById('userInfo').style.display = 'flex';
     document.getElementById('userDisplay').innerHTML = `${j.name} (${j.permission})`;
     
-    // 登入成功：如果是電腦版，立刻載入所有資料
+    // 登入成功，若是電腦版，立刻載入所有資料
     if(window.innerWidth > 767 || document.body.classList.contains('mode-web')) {
         loadAllSheetsForDesktop();
     }
@@ -528,18 +545,20 @@ function logout() {
 /* ================= 電腦版邏輯 ================= */
 async function loadAllSheetsForDesktop() {
   showLoading();
+  // 平行載入所有表格
   const reqs = SHEET_CONFIGS.map(c => fetchSingleSheet(c.key));
   await Promise.all(reqs);
   hideLoading();
   
+  // 載入完成後，自動觸發 Dashboard 渲染
   renderDashboard2();
-  // 確保 Dashboard 顯示
-  document.getElementById('pane-dashboard2').classList.remove('hide');
 }
 
 function renderDashboard2() {
   const box = document.getElementById('dashboard2');
+  if(!box) return;
   box.innerHTML = '';
+  
   SHEET_CONFIGS.forEach(cfg => {
     const d = ALL_SHEETS[cfg.key];
     if(!d) return; 
@@ -569,6 +588,30 @@ function renderDashboard2() {
   });
 }
 
+/* 電腦版 Tab 切換 (修正版：強制渲染) */
+document.getElementById('mainTabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.main-tab');
+  if(btn) {
+    document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('#main-content-wrap .tab-pane').forEach(p=>p.classList.add('hide'));
+    
+    const target = btn.dataset.target;
+    document.getElementById(target).classList.remove('hide');
+    
+    // ★★★ 關鍵修復：切換 Tab 時，如果是最新狀態，檢查並強制渲染 ★★★
+    if(target === 'pane-dashboard2') {
+        if(Object.keys(ALL_SHEETS).length === 0) loadAllSheetsForDesktop();
+        else renderDashboard2();
+    } else {
+        // 其他 Tab 目前留空，但可以加載入邏輯
+        if(target === 'pane-single') {
+            document.getElementById('singleResults').innerHTML = '<div style="text-align:center;padding:20px;">請選擇上方條件進行查詢</div>';
+        }
+    }
+  }
+});
+
 /* ================= 其他功能 ================= */
 function switchMobileMode(mode) {
   const btnStatus = document.getElementById('btn-m-status');
@@ -589,9 +632,10 @@ function switchMobileMode(mode) {
         loadAllSheetsForDesktop();
     }
     
+    // 重置 Tab 狀態
     const tabs = document.querySelectorAll('.main-tab');
     tabs.forEach(t => t.classList.remove('active'));
-    tabs[0].classList.add('active'); // 預設選第一個 Tab
+    tabs[0].classList.add('active'); 
     
     document.querySelectorAll('.tab-pane').forEach(p=>p.classList.add('hide'));
     document.getElementById('pane-dashboard2').classList.remove('hide');
@@ -681,24 +725,6 @@ async function quickPunch(key, step, area, car, btn) {
     alert('失敗'); btn.textContent='打卡'; btn.disabled=false;
   }
 }
-
-/* 電腦版 Tab 切換 */
-document.getElementById('mainTabs').addEventListener('click', (e)=>{
-  if(e.target.classList.contains('main-tab')) {
-    document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
-    e.target.classList.add('active');
-    document.querySelectorAll('#main-content-wrap .tab-pane').forEach(p=>p.classList.add('hide'));
-    
-    const target = e.target.dataset.target;
-    document.getElementById(target).classList.remove('hide');
-    
-    if(target === 'pane-dashboard2') {
-        // 如果快取沒資料，就重抓
-        if(Object.keys(ALL_SHEETS).length === 0) loadAllSheetsForDesktop();
-        else renderDashboard2();
-    }
-  }
-});
 
 function showLoading(){document.getElementById('loading').classList.add('show');}
 function hideLoading(){document.getElementById('loading').classList.remove('show');}

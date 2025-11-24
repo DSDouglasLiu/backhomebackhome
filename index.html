@@ -13,7 +13,7 @@
   --success-600:#22c55e; --danger-600:#ef4444;
   --gray-100:#f1f5f9; --gray-200:#e5e7eb; --gray-500:#64748b;
   --gray-800:#1f2937; --gray-900:#0f172a;
-  --surface: rgba(255,255,255,.85);
+  --surface: rgba(255,255,255,.95);
   --page-bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
   --text-strong: var(--gray-900);
   --text: var(--gray-800);
@@ -22,7 +22,7 @@
 }
 
 /* =========== Base =========== */
-body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: 40px; }
+body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding-bottom: 40px; }
 .wrap{max-width:1080px;margin:0 auto;padding:16px;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
 .hide{ display:none !important; }
@@ -32,7 +32,7 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
   position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
   background: #fff; height: 50px; display: flex;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  display: none; /* 預設隱藏，手機版開啟 */
+  display: none; /* 預設隱藏，由 JS/CSS 控制 */
 }
 .m-nav-btn {
   flex: 1; border: none; background: transparent;
@@ -40,6 +40,7 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
   border-right: 1px solid var(--gray-200);
   cursor: pointer; padding: 0; margin: 0;
   transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
 }
 .m-nav-btn:last-child { border-right: none; }
 .m-nav-btn.active { background: var(--primary-600); color: #fff; }
@@ -51,6 +52,7 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
   border: 1px solid var(--primary-600); border-radius: 10px;
   background: #fff; color: var(--primary-600); margin-bottom: 16px;
   appearance: none; -webkit-appearance: none;
+  /* 藍色箭頭 icon */
   background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%231f6fe5%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
   background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 12px auto;
 }
@@ -98,15 +100,13 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
 .d-sub { font-size: 13px; color: var(--gray-500); }
 .d-action .btn { padding: 6px 12px; font-size: 13px; border-radius: 6px; }
 
-/* =========== Desktop & Web Mode Layout =========== */
-/* 電腦版頂部列 */
+/* =========== Desktop & Web Mode Layout (電腦版介面) =========== */
 .topbar-grid { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 6px 12px; align-items: center; }
 .left-title { grid-area: 1 / 1 / 2 / 2; }
 .right-user { grid-area: 1 / 2 / 2 / 3; display: flex; gap: 12px; justify-content: flex-end; }
 .left-tabs { grid-area: 2 / 1 / 3 / 2; }
 .right-refresh { grid-area: 2 / 2 / 3 / 3; }
 
-/* 按鈕與時鐘 */
 .main-tabs { display: flex; gap: 12px; }
 .main-tab { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 10px; padding: 8px 20px; font-weight: 700; cursor: pointer; }
 .main-tab.active { background: var(--primary-600); color: #fff; }
@@ -115,16 +115,33 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
 .seg-btn { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
 .seg-btn.active { background: var(--primary-600); color: #fff; }
 
-/* =========== RWD Logic =========== */
-/* 大螢幕 (≥ 768px)：強制隱藏手機元件 */
+/* 統計卡片 (電腦版用) */
+.dash-title{ font-size:18px; font-weight:800; color:var(--text-strong); margin:0 0 8px; }
+.stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+.stat-card{ border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.9); padding:12px; box-shadow:var(--shadow-card); }
+.stat-head{ font-weight:800; margin-bottom:8px; color:var(--text-strong); }
+.stat-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.stat-pill{ border:1px solid var(--border); border-radius:10px; padding:10px 4px; background:#fff; display:flex; flex-direction:column; align-items:center; cursor:pointer; }
+.stat-num{ font-size:32px; font-weight:900; line-height:1; }
+.stat-num.done{ color:#2563eb; } .stat-num.todo{ color:#ef4444; }
+.stat-label{ font-size:14px; color:var(--text-muted); margin-top:4px; font-weight: normal; }
+.loc-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:8px; }
+.loc-pill{ border:1px dashed var(--border); border-radius:12px; padding:10px; background:rgba(255,255,255,.85); display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
+.loc-name{ font-weight:700; font-size:15px; }
+.loc-num{ font-size:32px; font-weight:900; color:#2563eb; line-height:1; }
+
+/* =========== RWD Logic (關鍵) =========== */
+
+/* 大螢幕 (≥ 768px)：完全隱藏手機元件 */
 @media (min-width: 768px) {
   #mobile-nav, #mobile-status-view, .drawer-backdrop, .bottom-drawer { display: none !important; }
   .topbar-grid { display: grid !important; }
   #main-content-wrap { display: block !important; }
 }
 
-/* 小螢幕 (≤ 767px)：預設隱藏電腦版元件 */
+/* 小螢幕 (≤ 767px) */
 @media (max-width: 767px) {
+  
   /* 預設狀態 (Status Mode) */
   body:not(.mode-web) #mobile-nav { display: flex; }
   body:not(.mode-web) #mobile-status-view { display: block; }
@@ -132,13 +149,15 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
   body:not(.mode-web) #main-content-wrap { display: none; }
   
   /* 網頁版模式 (Web Mode) */
-  body.mode-web #mobile-nav { display: flex; }
-  body.mode-web .topbar-grid { display: grid; margin-top: 60px; } /* 避開頂部列 */
-  body.mode-web #main-content-wrap { display: block; }
-  body.mode-web #mobile-status-view { display: none; }
+  /* ★★★ 關鍵修正：隱藏手機導覽列，只顯示電腦版介面 ★★★ */
+  body.mode-web #mobile-nav { display: none !important; } 
+  body.mode-web .topbar-grid { display: grid !important; margin-top: 0; }
+  body.mode-web #main-content-wrap { display: block !important; }
+  body.mode-web #mobile-status-view { display: none !important; }
   
-  /* 在手機網頁版模式下，隱藏不必要的頁籤，只留我們需要的 */
-  body.mode-web #mainTabs .main-tab { padding: 10px; font-size: 14px; flex: 1; text-align: center; }
+  /* 手機網頁版模式下，調整 Tabs 以便觸控 */
+  body.mode-web #mainTabs .main-tab { padding: 10px 5px; font-size: 14px; flex: 1; text-align: center; }
+  body.mode-web .wrap { padding-top: 10px; }
 }
 
 /* Utility */
@@ -164,7 +183,8 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
     <option value="ALL">▼ 所有車輛</option>
     </select>
   <div id="mobile-cards-container">
-    </div>
+    <div style="text-align:center; padding:20px; color:#666;">載入中...</div>
+  </div>
   <div style="text-align:center; color:#999; font-size:12px; margin-top:20px;">
     每 2 分鐘自動更新
   </div>
@@ -187,7 +207,7 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
     <div class="right-user">
       <div id="signin"></div>
       <div id="userInfo" class="hide" style="display:flex;align-items:center;gap:10px;">
-        <span id="userDisplay" style="font-size:14px;"></span>
+        <span id="userDisplay" style="font-size:14px;font-weight:bold;"></span>
         <button class="btn btn--secondary" style="padding:4px 10px;font-size:13px;" onclick="logout()">登出</button>
       </div>
     </div>
@@ -223,7 +243,7 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
 <div id="loading" class="loading"><div class="spinner"></div></div>
 
 <script>
-/* ================= 設定檔 (正確數值) ================= */
+/* ================= 設定檔 ================= */
 const GOOGLE_CLIENT_ID = '368914333961-b8j4o6h73hurdoq5k377f6v2e1pg0r3p.apps.googleusercontent.com';
 const API_BASE = 'https://script.google.com/macros/s/AKfycbxjGHiVKpNMG84OIHIvX4tGYgJ7gksxT0PItegG-7bpSeumnqgMPfwo-1Ocs1l9rMxC/exec';
 
@@ -241,22 +261,20 @@ let idToken = null;
 let ALL_SHEETS = {};
 let dashTimer = null;
 let currentSheetKey = SHEET_CONFIGS[0].key;
-
-// 2分鐘自動更新
-const REFRESH_INTERVAL = 120000; 
+const REFRESH_INTERVAL = 120000; // 2分鐘
 
 /* ================= 初始化 ================= */
 window.onload = function(){
-  // 1. 偵測手機
+  // 1. 偵測手機 (寬度 <= 767)
   if(window.innerWidth <= 767) {
     switchMobileMode('status'); // 手機預設極簡模式
   } else {
-    // 電腦版預設顯示
-    document.body.classList.add('mode-web'); // 雖是電腦，但邏輯通用
+    document.body.classList.add('mode-web'); // 電腦版
   }
 
   // 2. 填入手機下拉選單
   const ms = document.getElementById('mobile-sheet-select');
+  ms.innerHTML = '<option value="ALL">▼ 所有車輛</option>';
   SHEET_CONFIGS.forEach(c => {
     let o = document.createElement('option');
     o.value = c.key; o.textContent = c.key;
@@ -292,16 +310,20 @@ function switchMobileMode(mode) {
     document.body.classList.remove('mode-web');
     btnStatus.classList.add('active');
     btnWeb.classList.remove('active');
-    // 重新渲染手機極簡畫面
+    
+    // 重新渲染手機極簡畫面 (確保資料存在)
     renderMobileStats();
+    
   } else {
     document.body.classList.add('mode-web');
     btnStatus.classList.remove('active');
     btnWeb.classList.add('active');
-    // 觸發電腦版資料載入
+    
+    // 切換到網頁版，預設顯示「最新狀態」Dashboard2
+    // 這樣使用者不會看到一片空白
     if(currentUser) {
-        // 預設切到最新狀態Tab
-        document.querySelector('[data-target="pane-dashboard2"]').click();
+        const dashBtn = document.querySelector('[data-target="pane-dashboard2"]');
+        if(dashBtn) dashBtn.click();
     }
   }
 }
@@ -319,7 +341,6 @@ function startAutoRefresh() {
 }
 
 /* ================= 資料讀取核心 ================= */
-// 統一抓取所有資料，然後分發給 手機UI 和 電腦UI
 async function loadAllData(silent = false) {
   if(!currentUser) return;
   if(!silent) showLoading();
@@ -334,35 +355,41 @@ async function loadAllData(silent = false) {
     
     ALL_SHEETS = {};
     results.forEach(({cfg, j}) => {
+      // 檢查是否有錯誤回傳
+      if(j.error) { console.error(cfg.sheet, j.error); return; }
+      
       const vals = j.values || [];
-      const hIdx = vals.findIndex(r => r[0]==='編號' && String(r[1]).includes('區域') && r[2]==='車號');
+      // 寬鬆比對表頭：只要有 "區域" 和 "車號" 即可
+      const hIdx = vals.findIndex(r => 
+        Array.isArray(r) && 
+        String(r[1]).includes('區域') && 
+        String(r[2]).includes('車號')
+      );
+      
       if(hIdx === -1) return;
+      
       ALL_SHEETS[cfg.key] = {
         cfg, 
         header: vals[hIdx].map(String),
-        rows: vals.slice(hIdx+1).filter(r => r[1] && r[2]),
+        rows: vals.slice(hIdx+1).filter(r => r[1] && r[2]), // 過濾空行
         hIdx
       };
     });
 
-    // 資料回來後，更新畫面
+    // 資料回來後，根據目前模式更新畫面
     if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
       renderMobileStats();
     } else {
-      // 電腦版或網頁模式，更新當前顯示的 Tab
+      // 電腦版或手機網頁模式
       const activeTab = document.querySelector('.main-tab.active');
       if(activeTab && activeTab.dataset.target === 'pane-dashboard2') {
         renderDashboard2();
-      }
-      // 若在 Punch 頁面也刷新
-      if(activeTab && activeTab.dataset.target === 'pane-punch') {
-        // 簡易重刷 (這裡簡化處理)
       }
     }
 
   } catch(e) {
     console.error(e);
-    if(!silent) alert('連線錯誤');
+    if(!silent) alert('連線錯誤，請檢查網路');
   }
   if(!silent) hideLoading();
 }
@@ -372,12 +399,18 @@ function renderMobileStats() {
   const container = document.getElementById('mobile-cards-container');
   container.innerHTML = '';
   
+  // 檢查是否有資料
+  if(Object.keys(ALL_SHEETS).length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">目前無資料 (或讀取失敗)</div>';
+    return;
+  }
+  
   const filter = document.getElementById('mobile-sheet-select').value;
   
   SHEET_CONFIGS.forEach(cfg => {
     if(filter !== 'ALL' && filter !== cfg.key) return;
     const data = ALL_SHEETS[cfg.key];
-    if(!data) return;
+    if(!data) return; // 若該表沒資料則跳過
 
     const { header, rows } = data;
     const steps = cfg.steps.filter(s => s !== '車暫停位置'); // 排除停車位
@@ -391,7 +424,8 @@ function renderMobileStats() {
       let done=0, todo=0;
       rows.forEach(r => {
         const v = colIdx>=0 ? r[colIdx] : '';
-        (v && v!=='—' && v!=='-') ? done++ : todo++;
+        // 判斷完成：非空、非橫線
+        (v && String(v).trim() !== '—' && String(v).trim() !== '-') ? done++ : todo++;
       });
       
       const rowDiv = document.createElement('div');
@@ -414,7 +448,6 @@ function renderMobileStats() {
     
     // 停車位置
     if(header.indexOf('車暫停位置') >= 0) {
-      // 簡單統計各區
       const counts = {};
       const stopCol = header.indexOf('車暫停位置');
       STOP_OPTIONS.forEach(s => counts[s] = 0);
@@ -423,7 +456,6 @@ function renderMobileStats() {
         if(counts[v] !== undefined) counts[v]++;
       });
       
-      // 為了版面整潔，只顯示有車的，或全部顯示
       const locDiv = document.createElement('div');
       locDiv.style.marginTop = '16px';
       locDiv.innerHTML = `<div class="m-card-title" style="font-size:16px;border:none;">停車位置</div>`;
@@ -462,7 +494,6 @@ function openDrawer(key, step, type, val) {
   const data = ALL_SHEETS[key];
   if(!data) return;
   
-  // 篩選資料
   const colIdx = data.header.indexOf(step);
   let items = [];
   
@@ -473,22 +504,21 @@ function openDrawer(key, step, type, val) {
     title.textContent = `${step} (${type==='done'?'完成':'未完成'})`;
     items = data.rows.filter(r => {
       const v = r[colIdx];
-      const isDone = (v && v!=='—' && v!=='-');
+      const isDone = (v && String(v).trim() !== '—' && String(v).trim() !== '-');
       return type==='done' ? isDone : !isDone;
     });
   }
   
-  // 渲染清單
   list.innerHTML = items.length ? '' : '<div style="text-align:center;color:#999;padding:20px;">無資料</div>';
+  
   items.forEach(r => {
     const area = r[1];
     const car = r[2];
-    const time = r[colIdx] || '';
+    const time = colIdx >= 0 ? (r[colIdx] || '') : '';
     
     const div = document.createElement('div');
     div.className = 'd-item';
     
-    // 判斷是否可打卡 (權限 + 是未完成清單 + 不是停車位置)
     let actionBtn = '';
     if(type === 'todo' && step !== '車暫停位置' && currentUser.permission === '全功能') {
         actionBtn = `<div class="d-action"><button class="btn" onclick="drawerPunch('${key}', '${step}', '${area}', '${car}', this)">打卡</button></div>`;
@@ -507,7 +537,6 @@ function openDrawer(key, step, type, val) {
   
   backdrop.classList.add('open');
   drawer.classList.add('open');
-  // 禁止背景滾動
   document.body.style.overflow = 'hidden';
 }
 
@@ -517,7 +546,6 @@ function closeDrawer() {
   document.body.style.overflow = '';
 }
 
-// 抽屜內快速打卡
 async function drawerPunch(key, step, area, car, btn) {
   if(!confirm(`確認幫 ${car} 打卡？`)) return;
   btn.textContent = '...';
@@ -542,8 +570,7 @@ async function drawerPunch(key, step, area, car, btn) {
       })
     });
     btn.parentElement.innerHTML = `<span style="color:var(--success-600)">${now}</span>`;
-    // 偷偷刷新背景數據
-    loadAllData(true);
+    loadAllData(true); // 更新資料
   } catch(e) {
     alert('失敗');
     btn.textContent = '打卡';
@@ -580,12 +607,16 @@ async function verifyToken(token) {
     currentUser = j;
     idToken = token;
     
+    // ★★★ 關鍵修復：同時更新電腦版頂部的登入資訊，這樣切換網頁版時就不會顯示未登入 ★★★
     document.body.classList.remove('login');
     document.getElementById('signin').classList.add('hide');
-    document.getElementById('userInfo').classList.remove('hide');
-    document.getElementById('userDisplay').innerHTML = `${j.name} (${j.permission})`;
+    const uiInfo = document.getElementById('userInfo');
+    uiInfo.classList.remove('hide');
     
-    // 登入後載入資料
+    const dispName = `${j.name} (${j.permission})`;
+    document.getElementById('userDisplay').innerHTML = dispName;
+    
+    // 登入成功後載入資料
     loadAllData();
     
   } catch(e) {
@@ -597,78 +628,3 @@ async function verifyToken(token) {
 
 function logout() {
   localStorage.removeItem('ddcc_user_token');
-  location.reload();
-}
-
-/* ================= 電腦版 Dashboard 邏輯 ================= */
-// 這裡簡單實作，將資料轉為原本的 dashboard2 結構
-function renderDashboard2() {
-  const box = document.getElementById('dashboard2');
-  box.innerHTML = '';
-  
-  SHEET_CONFIGS.forEach(cfg => {
-    const d = ALL_SHEETS[cfg.key];
-    if(!d) return;
-    
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `<div class="dash-title">${cfg.key}</div>`;
-    
-    // 這裡可復用類似極簡版的邏輯，產生 Grid
-    // 為了節省篇幅，這裡只產生簡單的結構，反正手機看不到
-    // 若需要在網頁版模式看到完整電腦版，需把原本 renderGrid 邏輯搬過來
-    // (因篇幅限制，此處簡化，若需要完整電腦版UI請將原有的 buildDashboard2 邏輯整合至此)
-    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">';
-    cfg.steps.filter(s=>s!=='車暫停位置').forEach(st => {
-       const cIdx = d.header.indexOf(st);
-       let done=0, todo=0;
-       d.rows.forEach(r => {
-         const v = cIdx>=0?r[cIdx]:'';
-         (v&&v!=='—'&&v!=='-')?done++:todo++;
-       });
-       html += `<div style="border:1px solid #eee;padding:10px;border-radius:8px;text-align:center;">
-         <div style="font-weight:700;margin-bottom:4px;">${st}</div>
-         <div style="display:flex;justify-content:center;gap:10px;">
-           <span style="color:#2563eb;font-weight:900">${done}</span>
-           <span style="color:#ef4444;font-weight:900">${todo}</span>
-         </div>
-       </div>`;
-    });
-    html += '</div>';
-    card.innerHTML += html;
-    box.appendChild(card);
-  });
-}
-
-/* 電腦版 Tabs 切換 */
-document.getElementById('mainTabs').addEventListener('click', (e)=>{
-  if(e.target.classList.contains('main-tab')) {
-    document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
-    e.target.classList.add('active');
-    document.querySelectorAll('#main-content-wrap .tab-pane').forEach(p=>p.classList.add('hide'));
-    
-    const target = e.target.dataset.target;
-    document.getElementById(target).classList.remove('hide');
-    
-    if(target === 'pane-dashboard2') renderDashboard2();
-    // 其他 Tab 邏輯可在此補上 (loadSheetData 等)
-  }
-});
-
-// 小工具
-function showLoading(){document.getElementById('loading').classList.add('show');}
-function hideLoading(){document.getElementById('loading').classList.remove('show');}
-function showNotif(msg){
-  const n = document.getElementById('notif');
-  n.textContent = msg; n.style.opacity = 1;
-  setTimeout(()=>n.style.opacity=0, 2000);
-}
-function formatTime(v) {
-  if(!v) return '';
-  // 簡單處理 HH:mm:ss
-  if(v.match(/\d{2}:\d{2}:\d{2}/)) return v.match(/\d{2}:\d{2}:\d{2}/)[0];
-  return v;
-}
-</script>
-</body>
-</html>

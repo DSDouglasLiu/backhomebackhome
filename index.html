@@ -2,738 +2,123 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>車流人流退場情報</title>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-
+  <script src="https://accounts.google.com/gsi/client"></script>
+  
 <style>
-/* =========== 您的原始 CSS (保留不動) =========== */
+/* =========== Design Tokens =========== */
 :root{
-  --radius-xs:6px;  --radius-sm:8px;  --radius-md:10px; --radius-lg:12px;
-  --primary-600:#1f6fe5; --primary-700:#165bd1; --primary-800:#1249ad;
-  --success-600:#22c55e; --success-700:#16a34a; --success-800:#15803d;
-  --danger-600:#ef4444;  --danger-700:#dc2626;  --danger-800:#b91c1c;
-  --gray-50:#f8fafc;  --gray-100:#f1f5f9; --gray-200:#e5e7eb;
-  --gray-300:#cbd5e1; --gray-400:#94a3b8; --gray-500:#64748b;
-  --gray-600:#475569; --gray-700:#334155; --gray-800:#1f2937; --gray-900:#0f172a;
-  --surface: rgba(255,255,255,.78);
+  --primary-600:#1f6fe5; --primary-700:#165bd1;
+  --success-600:#22c55e; --danger-600:#ef4444;
+  --gray-100:#f1f5f9; --gray-200:#e5e7eb; --gray-500:#64748b;
+  --gray-800:#1f2937; --gray-900:#0f172a;
+  --surface: rgba(255,255,255,.95);
   --page-bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
   --text-strong: var(--gray-900);
   --text: var(--gray-800);
-  --text-muted: var(--gray-600);
   --border: rgba(148,163,184,0.35);
-  --focus:#93c5fd;
-  --fz-display:28px; --lh-display:36px; --fw-display:700;
-  --fz-title:18px;   --lh-title:24px;   --fw-title:700;
-  --fz-sub:14px;     --lh-sub:20px;     --fw-sub:600;
-  --fz-label:14px;   --lh-label:20px;   --fw-label:600;
-  --fz-body:14px;    --lh-body:20px;    --fw-body:400;
-  --fz-note:12px;    --lh-note:16px;    --fw-note:400;
   --shadow-card:0 8px 24px rgba(0,0,0,.08);
 }
-body.dark{
-  --surface: rgba(15,23,42,.55);
-  --page-bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
-  --text-strong:#e5eaf3; --text:#e2e8f0; --text-muted:#93a3b5;
-  --border: rgba(148,163,184,0.25);
-  --shadow-card:0 8px 24px rgba(0,0,0,.35);
-}
-body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif; }
-.wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px;}
-h1{margin:0 0 16px;font-size:var(--fz-display);line-height:var(--lh-display);font-weight:var(--fw-display);color:var(--text-strong);}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
-.hide{ display:none !important; }
-.sheet-tabs{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:flex-start; }
-.tab,.btn-tab{ background:#fff;color:var(--primary-600); border:1px solid var(--primary-600);border-radius:var(--radius-lg); padding:6px 18px;font-size:var(--fz-body);font-weight:600;cursor:pointer;min-width:170px;text-align:center; }
-body.dark .tab, body.dark .btn-tab{background:transparent}
-.tab:hover,.btn-tab:hover{background:rgba(31,111,229,.06)}
-.tab.active,.btn-tab.active{background:var(--primary-600);color:#fff;border-color:var(--primary-600)}
-.tab:focus-visible,.btn-tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.refresh-bar{ display:flex; gap:10px; align-items:center; justify-content:flex-end; margin:4px 0 6px; }
-.clock{ font-weight:900; letter-spacing:.5px; font-variant-numeric: tabular-nums; }
-.seg-group{ display:flex; gap:8px; flex-wrap:wrap; }
-.seg-btn{ background:#fff; color:var(--primary-600); border:1px solid var(--primary-600); border-radius:var(--radius-lg); padding:6px 14px; font-size:var(--fz-body); font-weight:700; cursor:pointer; min-width:72px; text-align:center; }
-body.dark .seg-btn{ background:transparent; }
-.seg-btn:hover{ background:rgba(31,111,229,.06); }
-.seg-btn.active{ background:var(--primary-600); color:#fff; border-color:var(--primary-600); }
-.seg-btn:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
-.seg-btn[disabled]{ cursor:not-allowed; }
-.veh-list{display:grid;grid-template-columns:repeat(auto-fit, minmax(480px,1fr));gap:12px;margin-top:16px;}
-.veh-card{background:rgba(255,255,255,0.85);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px;}
-body.dark .veh-card{background:rgba(15,23,42,0.28);}
-.veh-title-main{font-weight:700;font-size:var(--fz-title);line-height:var(--lh-title);color:var(--text-strong);}
-.veh-title-sub{font-size:var(--fz-sub);line-height:var(--lh-sub);color:var(--text-muted);}
-.step-row{display:grid;grid-template-columns:180px 1fr auto;align-items:center;gap:10px;margin-bottom:6px;}
-.step-time{font-size:var(--fz-label);line-height:var(--lh-label);font-weight:600;color:rgba(15,23,42,.75);text-align:right;min-width:70px;font-feature-settings:"tnum" 1, "lnum" 1; font-variant-numeric:tabular-nums lining-nums;}
-body.dark .step-time{color:#cbd5e1}
-.step-select{min-width:170px;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;font-size:var(--fz-body);}
-.step-select:disabled{background:#e2e8f0;cursor:not-allowed;}
-.textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;background:#fff;font-size:var(--fz-body);}
-.textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.btn,.step-btn{ border:0;border-radius:var(--radius-md);padding:8px 14px; background:#0f6efc;color:#fff;font-size:var(--fz-body);font-weight:600;cursor:pointer; transition:background-color .12s ease,border-color .12s ease,filter .12s ease; min-width:64px;text-align:center; }
-.btn--sm{padding:6px 12px}
-.btn--lg{padding:10px 18px;font-size:15px}
-.btn:focus-visible,.step-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
-.btn[disabled],.step-btn[disabled]{background:var(--gray-300)!important;color:var(--gray-700)!important;cursor:not-allowed}
-.btn--primary{background:var(--primary-600);} .btn--primary:hover{background:var(--primary-700);} .btn--primary:active{background:var(--primary-800);}
-.btn--success{background:var(--success-600);} .btn--success:hover{background:var(--success-700);} .btn--success:active{background:var(--success-800);}
-.btn--danger{background:var(--danger-600);}  .btn--danger:hover{background:var(--danger-700);}  .btn--danger:active{background:var(--danger-800);}
-.btn--secondary{background:#fff;color:var(--primary-600);border:1px solid var(--primary-600);} 
-body.dark .btn--secondary{background:transparent}
-.btn--secondary:hover{background:rgba(31,111,229,.06)}
-.btn-group{display:flex;gap:8px;flex-wrap:wrap}
-.notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;z-index:9990;}
-.notif.show{opacity:1;transform:translateY(0);}
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; display: block; }
-.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 16px; border-radius: 12px; min-width: 280px; max-width: 90vw; box-shadow: 0 10px 30px rgba(0,0,0,0.25); z-index: 10001; display: block; }
-body.dark .modal{ background:#0b1325; color:#e2e8f0 }
-.modal h3{ margin:0 0 10px; font-size:16px }
-.modal .row{ display:flex; gap:8px; align-items:center; margin:8px 0 }
-.modal input{ width:56px; padding:6px 8px; border:1px solid var(--border); border-radius:8px }
-.modal .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px }
-.modal .time-edit{ display:flex; align-items:center; justify-content:center; gap:10px; margin:8px 0 4px; }
-.modal .time-input{ width:64px; text-align:center; padding:6px 8px; border:1px solid var(--border); border-radius:10px; font-weight:600; }
-.modal .colon{ font-size:20px; line-height:1; opacity:.5; margin:0 2px; user-select:none; }
-.modal .hint{ font-size:.9rem; line-height:1.6; opacity:.8; margin:2px 0; }
-body.modal-open{ overflow:hidden; touch-action:none; }
-#loading.loading{ position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); z-index: 2147483000; }
-#loading.loading.show{ display: flex; }
-.loading-box{ display:flex; align-items:center; gap:10px; background: var(--surface); color: var(--text); border:1px solid var(--border); border-radius:12px; padding:12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); backdrop-filter: blur(8px); }
-.spinner{ width:20px; height:20px; border-radius:50%; border:2.5px solid #cbd5e1; border-top-color: var(--primary-600); animation: spin 1s linear infinite; }
-@keyframes spin{ to{ transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce){ .spinner{ animation: none; border-top-color:#cbd5e1; } }
-body.loading-open{ overflow:hidden; touch-action:none; overscroll-behavior: contain; }
-@supports (height: 100dvh){ .modal-backdrop{ height: 100dvh; } }
-body.login{ height: 100dvh; overflow: hidden; }
-body.login .wrap{ height: 100%; display: grid; place-items: center; }
-body.login #tabs, body.login #content, body.login #userInfo{ display: none !important; }
-body.login #signin{ display:block; }
-body.login .topbar-grid{ display:grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 12px; align-items:center; justify-items:center; text-align:center; }
-body.login .left-title h1{ font-size: clamp(36px, 8vw, 64px); line-height: 1.15; margin: 0; }
-#logoutBtn { white-space: nowrap; }
-#logoutBtn:hover { background:rgba(239,68,68,.1) !important; }  
-.main-tabs{ display:flex; gap:12px; margin:6px 0 8px; flex-wrap:wrap; }
-.main-tab{ background:#fff; color:var(--primary-600); border:1px solid var(--primary-600); border-radius:var(--radius-lg); padding:8px 20px; font-size:15px; font-weight:700; cursor:pointer; min-width:120px; text-align:center; }
-body.dark .main-tab{ background:transparent; }
-.main-tab:hover{ background:rgba(31,111,229,.06) }
-.main-tab.active{ background:var(--primary-600); color:#fff }
-.tab-pane{ margin-top:8px; }
-.dash-section{ margin:16px 0 24px; }
-.dash-title{ font-size:18px; font-weight:800; color:var(--text-strong); margin:0 0 8px; }
-.stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
-.stat-card{ border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.9); padding:12px; box-shadow:var(--shadow-card); }
-body.dark .stat-card{ background:rgba(15,23,42,.30); }
-.stat-head{ font-weight:800; margin-bottom:8px; color:var(--text-strong); }
-.stat-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.stat-pill{ border:1px solid var(--border); border-radius:10px; padding:10px 8px; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; }
-body.dark .stat-pill{ background:rgba(2,6,23,.5); }
-.stat-pill:hover{ filter:brightness(1.02); }
-.stat-num{ font-size:26px; font-weight:800; line-height:1; }
-.stat-num.done{ color:#2563eb; }
-.stat-num.todo{ color:#ef4444; }
-.stat-label{ font-size:12px; color:var(--text-muted); margin-top:4px; }
-.loc-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-top:8px; }
-.loc-pill{ border:1px dashed var(--border); border-radius:12px; padding:10px; background:rgba(255,255,255,.85); display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
-body.dark .loc-pill{ background:rgba(15,23,42,.28); }
-.loc-name{ font-weight:700; }
-.loc-num{ font-size:22px; font-weight:900; color:#2563eb; }
-.modal .dash-close{ position:absolute; right:10px; top:8px; font-size:22px; line-height:1; cursor:pointer; opacity:.7; }
-.modal .dash-close:hover{ opacity:1; }
-.list-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px dashed var(--border); }
-.list-left{ display:flex; flex-direction:column; gap:2px; }
-.list-title{ font-weight:800; }
-.list-sub{ font-size:13px; opacity:.85; }
-.detail-table{ width:100%; border-collapse:collapse; }
-.detail-table th, .detail-table td{ border:1px solid var(--border); padding:8px 10px; text-align:center; }
-.detail-table th{ background:#0f172a; color:#fff; }
-@media(max-width:768px){ .veh-list{ grid-template-columns:1fr; } .sheet-tabs{ gap:10px; } }
-.topbar-grid{ display:grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap:6px 12px; align-items:center; }
-.topbar-grid .left-title{ grid-area: 1 / 1 / 2 / 2; }
-.topbar-grid .left-tabs{  grid-area: 2 / 1 / 3 / 2; }
-.topbar-grid .right-user{ grid-area: 1 / 2 / 2 / 3; display:flex; align-items:center; gap:12px; justify-content:flex-end; }
-.topbar-grid .right-refresh{ grid-area: 2 / 2 / 3 / 3; }
-.refresh-bar{ margin:0; display:flex; gap:8px; align-items:center; justify-content:flex-end; }
-.clock{ font-weight:800; font-variant-numeric: tabular-nums; letter-spacing:.5px; }
-body.login .right-refresh{ display:none !important; }
-.modal{ max-height: calc(100dvh - 48px); overflow:auto; padding-right:44px !important; max-width:96vw !important; border-radius:12px; }
-@supports not (height: 100dvh){ .modal{ max-height: 90vh; } }
-.detail-table th{ background: var(--primary-700) !important; color:#fff; }
-body.dark .detail-table th{ background: var(--primary-600) !important; }
-.detail-table, .detail-table th, .detail-table td{ border-color: var(--border); }
-.detail-table thead th:first-child{ border-top-left-radius:10px; }
-.detail-table thead th:last-child{  border-top-right-radius:10px; }
-body.login #mainTabs, body.login .right-refresh, body.login #userInfo, body.login #tabs, body.login #content, body.login .tab-pane { display: none !important; }
-.user-info{ display:flex; align-items:center; gap:12px; font-size:.875rem; }
-.indiv-row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
-.indiv-row select{ min-width:240px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff; }
-.indiv-row select[disabled]{ opacity:.6; cursor:not-allowed; }
-.indiv-actions .btn{ min-width:96px; }
-.indiv-cards-grid{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-top:8px; }
-.indiv-card{ border:1px solid var(--border); background:#fff; border-radius:12px; padding:12px; box-shadow:var(--shadow-card); cursor:pointer; }
-body.dark .indiv-card{ background:rgba(15,23,42,.30); }
-.indiv-card .top{ font-weight:600; margin-bottom:6px; }
-.mini-badge{ display:inline-block; font-size:12px; padding:2px 6px; border-radius:999px; background:#eef2ff; color:#3730a3; }
-.indiv-card .mid{ font-size:20px; font-weight:800; letter-spacing:.5px; margin-bottom:6px; }
-.indiv-card .bot{ color:#334155; font-size:14px; }
-.step-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
-.step-cell{ background:#1d4ed8; color:#fff; padding:8px; border-radius:8px; text-align:center; font-size:14px; }
-@media (max-width: 1200px){ .indiv-cards-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
-@media (max-width: 680px){ .indiv-cards-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } .indiv-row select{ min-width:180px; } }
-.single-list{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
-.single-card{ border:1px solid var(--border); background:rgba(255,255,255,.9); border-radius:12px; padding:14px; box-shadow:var(--shadow-card); text-align:center; cursor:pointer; }
-body.dark .single-card{ background:rgba(15,23,42,.30); }
-.single-card:hover{ filter:brightness(1.015); }
-.single-line{ font-size:var(--fz-title); line-height:var(--lh-title); font-weight:var(--fw-title); color:var(--text-strong); }
-.single-line + .single-line{ margin-top:6px; }
 
-/* =========== 手機版外掛樣式 (Mobile Add-on) =========== */
-/* 手機版固定導覽列 */
+/* =========== Base =========== */
+body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding-bottom: 40px; }
+.wrap{max-width:1080px;margin:0 auto;padding:16px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
+.hide{ display:none !important; }
+
+/* =========== Login Page Specific =========== */
+body.login { display: grid; place-items: center; height: 100vh; overflow: hidden; }
+/* 登入時強制隱藏所有干擾元素 */
+body.login #mobile-nav, 
+body.login #mobile-status-view, 
+body.login .topbar-grid, 
+body.login #main-content-wrap,
+body.login .wrap { /* 隱藏 wrap 避免邊距影響 */
+  display: none !important; 
+}
+body.login #signin-container { 
+  display: flex; flex-direction: column; align-items: center; gap: 20px; 
+  background: rgba(255,255,255,0.9); padding: 40px; border-radius: 20px; 
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+  min-width: 300px;
+}
+
+/* =========== Mobile Nav Bar =========== */
 #mobile-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: #fff; height: 50px; display: flex; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; }
-.m-nav-btn { flex: 1; border: none; background: transparent; font-size: 15px; font-weight: 700; color: var(--gray-600); border-right: 1px solid var(--border); cursor: pointer; padding: 0; margin: 0; }
+.m-nav-btn { flex: 1; border: none; background: transparent; font-size: 15px; font-weight: 700; color: var(--gray-500); border-right: 1px solid var(--gray-200); cursor: pointer; padding: 0; margin: 0; transition: background 0.2s, color 0.2s; white-space: nowrap; }
 .m-nav-btn:last-child { border-right: none; }
 .m-nav-btn.active { background: var(--primary-600); color: #fff; }
 
-/* 手機版極簡內容 */
+/* =========== Mobile Content =========== */
 #mobile-status-view { display: none; margin-top: 50px; padding: 16px; }
 .m-select { width: 100%; padding: 12px; font-size: 16px; font-weight: 700; border: 1px solid var(--primary-600); border-radius: 10px; background: #fff; color: var(--primary-600); margin-bottom: 16px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%231f6fe5%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 12px auto; }
-
 .m-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-card); }
-.m-card-title { font-size: 18px; font-weight: 800; margin-bottom: 12px; color: var(--text-strong); border-bottom: 2px solid var(--gray-200); padding-bottom: 8px; }
-.m-stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--border); }
+.m-card-title { font-size: 18px; font-weight: 800; margin-bottom: 12px; color: var(--gray-900); border-bottom: 2px solid var(--gray-100); padding-bottom: 8px; }
+.m-stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--gray-200); }
 .m-stat-row:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
-.m-stat-label { font-size: 15px; font-weight: 700; color: var(--text); flex: 1; }
+.m-stat-label { font-size: 15px; font-weight: 700; color: var(--gray-800); flex: 1; }
 .m-stat-nums { display: flex; gap: 12px; }
 .m-pill { display: flex; flex-direction: column; align-items: center; min-width: 50px; cursor: pointer; padding: 4px 8px; border-radius: 8px; transition: background 0.1s; }
 .m-pill:active { background: var(--gray-100); }
 .m-num { font-size: 22px; font-weight: 900; line-height: 1.1; }
 .m-num.done { color: var(--primary-600); } .m-num.todo { color: var(--danger-600); }
-.m-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.m-sub { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
 
-/* 底部抽屜 */
+/* =========== Bottom Drawer =========== */
 .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
 .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
 .bottom-drawer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10001; background: #fff; border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.7, 0.1, 1); max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 -5px 25px rgba(0,0,0,0.15); }
 .bottom-drawer.open { transform: translateY(0); }
-.drawer-header { padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; text-align: center; position: relative; }
+.drawer-header { padding: 12px 16px; border-bottom: 1px solid var(--gray-200); flex-shrink: 0; text-align: center; position: relative; }
 .drawer-handle { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 0 auto 12px; }
-.drawer-title { font-size: 18px; font-weight: 800; color: var(--text-strong); }
-.drawer-close { position: absolute; right: 16px; top: 20px; font-size: 24px; color: var(--text-muted); cursor: pointer; line-height: 1; }
+.drawer-title { font-size: 18px; font-weight: 800; color: var(--gray-900); }
+.drawer-close { position: absolute; right: 16px; top: 20px; font-size: 24px; color: var(--gray-500); cursor: pointer; line-height: 1; }
 .drawer-content { overflow-y: auto; padding: 0 16px 30px; flex: 1; -webkit-overflow-scrolling: touch; }
-.d-item { padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.d-item { padding: 12px 0; border-bottom: 1px solid var(--gray-100); display: flex; justify-content: space-between; align-items: center; }
 .d-info { display: flex; flex-direction: column; gap: 2px; }
-.d-main { font-size: 16px; font-weight: 700; color: var(--text-strong); }
+.d-main { font-size: 16px; font-weight: 700; color: var(--gray-900); }
+.d-sub { font-size: 13px; color: var(--gray-500); }
+.d-action .btn { padding: 6px 12px; font-size: 13px; border-radius: 6px; }
 
-/* =========== 響應式控制 (RWD Logic) =========== */
-@media (max-width: 767px) {
-  /* 預設手機模式 (Status Mode) */
-  body:not(.mode-web) #mobile-nav { display: flex; }
-  body:not(.mode-web) #mobile-status-view { display: block; }
-  body:not(.mode-web) .topbar-grid { display: none !important; }
-  body:not(.mode-web) #tabs, body:not(.mode-web) #content, 
-  body:not(.mode-web) #pane-dashboard, body:not(.mode-web) #pane-single { display: none !important; }
-
-  /* 網頁版模式 (Web Mode) */
-  body.mode-web #mobile-nav { display: none !important; }
-  body.mode-web .topbar-grid { display: grid !important; margin-top: 0; } /* 恢復電腦版Header */
-  body.mode-web .wrap { padding-top: 10px; }
-  
-  /* 微調手機網頁版模式下的Grid，避免擠壓 */
-  body.mode-web .topbar-grid { 
-    grid-template-columns: 1fr; 
-    grid-template-rows: auto auto auto auto; 
-    gap: 10px;
-    text-align: center;
-  }
-  body.mode-web .left-title { grid-area: 1/1/2/2; }
-  body.mode-web .right-user { grid-area: 2/1/3/2; justify-content: center; }
-  body.mode-web .left-tabs { grid-area: 3/1/4/2; justify-content: center; }
-  body.mode-web .right-refresh { grid-area: 4/1/5/2; justify-content: center; }
-  body.mode-web #mainTabs .main-tab { flex: 1; padding: 8px; font-size: 14px; }
+/* =========== Desktop Layout (還原電腦版) =========== */
+.topbar-grid { 
+  display: grid; 
+  grid-template-columns: 1fr auto; 
+  grid-template-rows: auto auto; 
+  gap: 10px 20px; 
+  align-items: center; 
+  margin-bottom: 16px;
+  /* 確保 Grid 區域定義明確 */
+  grid-template-areas: 
+    "title user" 
+    "tabs refresh";
 }
+.left-title { grid-area: title; }
+.right-user { grid-area: user; display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.right-user #signin { max-height: 44px; }
+.left-tabs { grid-area: tabs; }
+.right-refresh { grid-area: refresh; display: flex; justify-content: flex-end; align-items: center; }
 
-/* 電腦版強制隱藏手機元件 */
-@media (min-width: 768px) {
-  #mobile-nav, #mobile-status-view, .drawer-backdrop, .bottom-drawer { display: none !important; }
-  .topbar-grid { display: grid !important; }
-}
-</style>
-</head>
-<body>
+.main-tabs { display: flex; gap: 12px; }
+.main-tab { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 10px; padding: 8px 20px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.main-tab.active { background: var(--primary-600); color: #fff; }
+.refresh-bar { display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
+.clock { font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 20px; letter-spacing: 0.5px; }
+.seg-btn { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+.seg-btn.active { background: var(--primary-600); color: #fff; }
 
-<nav id="mobile-nav">
-  <button class="m-nav-btn active" id="btn-m-status" onclick="switchMobileMode('status')">最新狀態</button>
-  <button class="m-nav-btn" onclick="forceRefreshMobile()">立即更新</button>
-  <button class="m-nav-btn" id="btn-m-web" onclick="switchMobileMode('web')">網頁版</button>
-  <button class="m-nav-btn" onclick="logout()">登出</button>
-</nav>
-
-<div id="mobile-status-view">
-  <select id="mobile-sheet-select" class="m-select" onchange="onMobileSelectChange()">
-    <option value="ALL">▼ 所有車輛 (全部讀取)</option>
-  </select>
-  <div id="mobile-cards-container">
-    <div style="text-align:center; padding:40px; color:#666;">請稍候，正在連線...</div>
-  </div>
-  <div style="text-align:center; color:#999; font-size:12px; margin-top:20px;">每 2 分鐘自動更新</div>
-</div>
-
-<div class="drawer-backdrop" id="drawer-backdrop" onclick="closeDrawer()"></div>
-<div class="bottom-drawer" id="bottom-drawer">
-  <div class="drawer-header">
-    <div class="drawer-handle"></div>
-    <div class="drawer-title" id="drawer-title">標題</div>
-    <div class="drawer-close" onclick="closeDrawer()">✕</div>
-  </div>
-  <div class="drawer-content" id="drawer-list"></div>
-</div>
-
-<div class="wrap">
-  <div class="topbar-grid">
-    <div class="left-title">
-      <h1 id="pageTitle">車流人流退場情報</h1>
-    </div>
-    <div class="right-user">
-      <div id="signin"></div>
-      <div id="userInfo" class="hide user-info">
-      <span id="userDisplay"></span>
-        <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
-      </div>
-    </div>
-    <div class="left-tabs">
-      <div id="mainTabs" class="main-tabs">
-        <button class="main-tab active" data-target="pane-punch">登錄與修改</button>
-        <button class="main-tab" data-target="pane-dashboard">整體情報</button>
-        <button class="main-tab" data-target="pane-single">個別情報</button>
-      </div>
-    </div>
-    <div class="right-refresh">
-      <div class="refresh-bar">
-        <div class="clock" id="clockDisplay" aria-live="polite">--:--:--</div>
-        <div class="seg-group" id="refreshControls"></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="pane-punch" class="tab-pane">
-    <div id="tabs" class="card hide" style="padding-bottom:6px;">
-      <div class="sheet-tabs" id="sheetTabs"></div>
-    </div>
-    <div id="content" class="hide">
-      <div id="vehList" class="veh-list"></div>
-    </div>
-  </div>
-
-  <div id="pane-dashboard" class="tab-pane hide">
-    <div class="card" id="dashTabsBar" style="padding-bottom:6px;">
-      <div class="sheet-tabs" id="dashboardTabs"></div>
-    </div>
-    <div id="dashboard"></div>
-  </div>
-
-  <div id="pane-single" class="tab-pane hide">
-    <div class="card" id="singleControlsCard" style="padding-bottom:10px;">
-      <div class="single-controls" id="singleControls">
-        <select id="selSheet" class="step-select"><option value="">— 全部 Tab —</option></select>
-        <select id="selArea" class="step-select"><option value="">— 區域 —</option></select>
-        <select id="selCar" class="step-select"><option value="">— 車號 —</option></select>
-      </div>
-      <div class="single-actions">
-        <button id="btnQuery" class="btn btn--primary btn--sm">查詢</button>
-        <button id="btnReset" class="btn btn--secondary btn--sm">全部重設</button>
-      </div>
-    </div>
-    <div class="card" id="singleResultsCard">
-      <div id="singleResults" class="single-list" aria-live="polite"></div>
-    </div>
-  </div>
-</div>
-
-<div id="notif" class="notif"></div>
-<div id="loading" class="loading"><div class="loading-box"><div class="spinner"></div><div class="loading-text">處理中…</div></div></div>
-
-<script>
-/* 設定檔 (ID 已修正) */
-const GOOGLE_CLIENT_ID = '368914333961-b8j4o6h73hurdoq5k377f6v2e1pg0r3p.apps.googleusercontent.com';
-const API_BASE = 'https://script.google.com/macros/s/AKfycbxjGHiVKpNMG84OIHIvX4tGYgJ7gksxT0PItegG-7bpSeumnqgMPfwo-1Ocs1l9rMxC/exec';
-
-const STOP_OPTIONS = ['禪堂平台','法心北路','法心南路（西）','法心南路（東）','法大路','雙環路到三門','三門到大停車場','靈山勝境石往外','雙環路至法大一橋'];
-const SHEET_CONFIGS = [
-  { key:'地區專車退場（遊覽車平台）', sheet:'地區專車退場（遊覽車平台）', steps:['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台']},
-  { key:'地區專車退場（禪堂平台）', sheet:'地區專車退場（禪堂平台）', steps:['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','車已離開禪堂平台']},
-  { key:'水陸專車退場', sheet:'水陸專車退場', steps:['已 Call 車排車隊','已排好車隊','退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','車暫停位置','車已離開遊覽車平台']},
-  { key:'288法青退場', sheet:'288法青退場', steps:['退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台']}
-];
-
-const REFRESH_PRESETS = [ { label:'5分', ms: 300000 }, { label:'2分', ms: 120000 }, { label:'60秒', ms: 60000 }, { label:'30秒', ms: 30000 } ];
-let refreshMs = 120000;
-let dashTimer = null;
-let currentDashFilter = 'ALL';
-let currentUser = null;
-let currentSheetKey = SHEET_CONFIGS[0].key;
-let sheetData = [];
-let idToken = null;
-let ALL_SHEETS = {}; // 供手機版與個別情報使用
-let SINGLE_ITEMS = []; // 供個別情報查詢
-
-/* 初始化 */
-window.onload = function(){
-  // 1. 手機判斷
-  if(window.innerWidth <= 767) {
-    switchMobileMode('status');
-  } else {
-    document.body.classList.add('mode-web');
-  }
-
-  // 2. 手機選單初始化
-  const ms = document.getElementById('mobile-sheet-select');
-  if(ms) {
-      ms.innerHTML = ''; 
-      SHEET_CONFIGS.forEach((c) => {
-        let o = document.createElement('option');
-        o.value = c.key; o.textContent = c.key; ms.appendChild(o);
-      });
-      ms.value = SHEET_CONFIGS[0].key;
-  }
-
-  // 3. 時鐘與控制列
-  startClock();
-  buildRefreshControls();
-  updateRefreshControlsVisibility();
-
-  // 4. 登入
-  const saved = localStorage.getItem('ddcc_user_token');
-  if (saved) {
-    idToken = saved;
-    fetch(API_BASE + '?action=verify', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ idToken }) })
-    .then(r=>r.json())
-    .then(j=>{
-      if (j.error) throw new Error(j.error);
-      currentUser = j;
-      finishLoginUI();
-      buildTabs();
-      loadSheetData(currentSheetKey);
-      
-      // 手機版自動載入
-      if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
-          onMobileSelectChange();
-      }
-      // 載入 Single Items 供查詢
-      loadAllForSingle();
-    }).catch(()=>{ logout(); initGoogleSignIn(); });
-  } else {
-    initGoogleSignIn();
-  }
-
-  // 5. 綁定事件
-  document.getElementById('logoutBtn').addEventListener('click', logout);
-  document.getElementById('mainTabs').addEventListener('click', (e)=>{
-    const btn=e.target.closest('.main-tab'); if(!btn) return; switchPane(btn.dataset.target);
-  });
-  
-  // 綁定個別情報事件
-  if(document.getElementById('btnQuery')) {
-      document.getElementById('btnQuery').onclick = runSingleQuery;
-      document.getElementById('btnReset').onclick = resetSingleUI;
-      ['selSheet','selArea','selCar'].forEach(id => {
-         document.getElementById(id).onchange = rebuildSelectOptions;
-      });
-  }
-  
-  // 手機自動刷新
-  setInterval(() => {
-    if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
-      const key = document.getElementById('mobile-sheet-select').value;
-      fetchSingleSheet(key).then(renderMobileStats);
-    }
-  }, 120000);
-};
-
-/* ===== 手機版邏輯 (Mobile Logic) ===== */
-async function onMobileSelectChange() {
-  const key = document.getElementById('mobile-sheet-select').value;
-  document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;"><div class="spinner" style="margin:0 auto 10px;"></div>正在讀取...</div>`;
-  if(!ALL_SHEETS[key]) await fetchSingleSheet(key);
-  renderMobileStats();
-}
-
-async function forceRefreshMobile() {
-  const key = document.getElementById('mobile-sheet-select').value;
-  if(!idToken) return showNotif('請先登入', true);
-  showNotif('正在更新...', false);
-  await fetchSingleSheet(key);
-  renderMobileStats();
-}
-
-async function fetchSingleSheet(targetKey) {
-  const cfg = SHEET_CONFIGS.find(c => c.key === targetKey);
-  if(!cfg) return;
-  try {
-    // 帶上 idToken
-    const r = await fetch(`${API_BASE}?action=get&sheet=${encodeURIComponent(cfg.sheet)}&idToken=${encodeURIComponent(idToken||'')}&_t=${new Date().getTime()}`);
-    const j = await r.json();
-    if(j.error) throw new Error(j.error);
-    const vals = j.values || [];
-    
-    // 強力表頭搜尋
-    let hIdx = vals.findIndex(r => Array.isArray(r) && (r.join('').includes('區域') || r.join('').includes('車號')));
-    if(hIdx === -1) hIdx = 0; // 保底
-
-    ALL_SHEETS[targetKey] = {
-      cfg, header: vals[hIdx].map(String),
-      rows: vals.slice(hIdx+1).filter(r => r[1]), 
-      hIdx
-    };
-  } catch(e) { console.error(e); }
-}
-
-function renderMobileStats() {
-  const container = document.getElementById('mobile-cards-container');
-  const key = document.getElementById('mobile-sheet-select').value;
-  const data = ALL_SHEETS[key];
-  if(!data) { container.innerHTML = '<div style="text-align:center;padding:40px;">無資料</div>'; return; }
-
-  container.innerHTML = '';
-  const { cfg, header, rows } = data;
-  const steps = cfg.steps.filter(s => s !== '車暫停位置');
-
-  const card = document.createElement('div');
-  card.className = 'm-card';
-  steps.forEach(step => {
-    const colIdx = header.indexOf(step);
-    let done=0, todo=0;
-    if(colIdx!==-1) rows.forEach(r => { const v = r[colIdx]; (v && String(v).trim()!=='—' && String(v).trim()!=='-') ? done++ : todo++; });
-    
-    const div = document.createElement('div');
-    div.className = 'm-stat-row';
-    div.innerHTML = `<div class="m-stat-label">${step}</div><div class="m-stat-nums">
-    <div class="m-pill" onclick="openDrawer('${cfg.key}', '${step}', 'done')"><div class="m-num done">${done}</div><div class="m-sub">完成</div></div>
-    <div class="m-pill" onclick="openDrawer('${cfg.key}', '${step}', 'todo')"><div class="m-num todo">${todo}</div><div class="m-sub">未完成</div></div></div>`;
-    card.appendChild(div);
-  });
-  
-  if(header.indexOf('車暫停位置') >= 0) {
-    const stopCol = header.indexOf('車暫停位置');
-    const counts = {}; STOP_OPTIONS.forEach(s => counts[s] = 0);
-    rows.forEach(r => { const v = String(r[stopCol]||'').trim(); if(counts[v] !== undefined) counts[v]++; });
-    const locDiv = document.createElement('div');
-    locDiv.style.marginTop='16px'; locDiv.innerHTML = `<div class="m-card-title" style="font-size:16px;border:none;padding:0;">停車位置</div>`;
-    const grid = document.createElement('div'); grid.style.display='grid'; grid.style.gridTemplateColumns='repeat(3,1fr)'; grid.style.gap='8px';
-    STOP_OPTIONS.forEach(opt => {
-      const p = document.createElement('div'); p.className='m-pill'; p.style.border='1px solid var(--border)';
-      p.onclick = () => openDrawer(cfg.key, '車暫停位置', 'loc', opt);
-      p.innerHTML = `<div style="font-size:12px;font-weight:700;text-align:center">${opt}</div><div class="m-num" style="color:#2563eb">${counts[opt]}</div>`;
-      grid.appendChild(p);
-    });
-    locDiv.appendChild(grid); card.appendChild(locDiv);
-  }
-  container.appendChild(card);
-}
-
-function switchMobileMode(mode) {
-  const btnStatus = document.getElementById('btn-m-status');
-  const btnWeb = document.getElementById('btn-m-web');
-  if (mode === 'status') {
-    document.body.classList.remove('mode-web');
-    btnStatus.classList.add('active'); btnWeb.classList.remove('active');
-    onMobileSelectChange(); 
-  } else {
-    document.body.classList.add('mode-web');
-    btnStatus.classList.remove('active'); btnWeb.classList.add('active');
-    if(currentUser) { loadSheetData(currentSheetKey); }
-  }
-}
-
-function openDrawer(key, step, type, val) {
-  const data = ALL_SHEETS[key]; if(!data) return;
-  const list = document.getElementById('drawer-list');
-  const colIdx = data.header.indexOf(step);
-  let items = [];
-  if(type === 'loc') {
-    document.getElementById('drawer-title').textContent = val;
-    items = data.rows.filter(r => String(r[colIdx]||'').trim() === val);
-  } else {
-    document.getElementById('drawer-title').textContent = `${step} (${type==='done'?'完成':'未完成'})`;
-    items = data.rows.filter(r => {
-      const v = r[colIdx]; const isDone = (v && String(v).trim()!=='—' && String(v).trim()!=='-');
-      return type==='done' ? isDone : !isDone;
-    });
-  }
-  list.innerHTML = items.length ? '' : '<div style="text-align:center;padding:20px;color:#999">無資料</div>';
-  items.forEach(r => {
-    const area = r[1]; const car = r[2];
-    const div = document.createElement('div'); div.className = 'd-item';
-    let btnHtml = '';
-    if(type==='todo' && step!=='車暫停位置' && currentUser && currentUser.permission==='全功能') {
-      btnHtml = `<div class="d-action"><button class="btn" onclick="quickPunch('${key}','${step}','${area}','${car}',this)">打卡</button></div>`;
-    }
-    div.innerHTML = `<div class="d-info"><div class="d-main">${area} <span style="color:#2563eb;margin-left:5px;">${car}</span></div></div>${btnHtml}`;
-    list.appendChild(div);
-  });
-  document.getElementById('drawer-backdrop').classList.add('open');
-  document.getElementById('bottom-drawer').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-function closeDrawer() {
-  document.getElementById('drawer-backdrop').classList.remove('open');
-  document.getElementById('bottom-drawer').classList.remove('open');
-  document.body.style.overflow = '';
-}
-async function quickPunch(key, step, area, car, btn) {
-  if(!confirm(`確認幫 ${car} 打卡？`)) return;
-  btn.textContent='...'; btn.disabled=true;
-  const data = ALL_SHEETS[key];
-  const rIdx = data.rows.findIndex(r => r[1]===area && r[2]===car);
-  const realRow = data.hIdx + 2 + rIdx;
-  const col = data.header.indexOf(step) + 1;
-  const now = getTaipeiHHMMSS();
-  try {
-    await fetch(API_BASE+'?action=update', { method: 'POST', body: JSON.stringify({ sheet:data.cfg.sheet, idToken, email:currentUser.email, writes:[{row:realRow, col, value:now}] }) });
-    btn.parentElement.innerHTML = `<span style="color:green">${now}</span>`;
-    await fetchSingleSheet(key); renderMobileStats();
-  } catch(e) { alert('失敗'); btn.textContent='打卡'; btn.disabled=false; }
-}
-
-/* ===== 電腦版 & 原始邏輯 ===== */
-function initGoogleSignIn() {
-  enterLoginView();
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
-  google.accounts.id.renderButton(document.getElementById('signin'), { theme:'outline', size:'large' });
-}
-function enterLoginView(){
-  updateRefreshControlsVisibility();
-  document.body.classList.add('login');
-  // 手機與電腦版在 CSS 中已處理隱藏
-}
-function switchPane(targetId){
-  if (!currentUser) { showNotif('請先登入', true); return; }
-  document.querySelectorAll('#mainTabs .main-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
-  ['pane-punch','pane-dashboard','pane-single'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.classList.toggle('hide', id !== targetId);
-  });
-  updateRefreshControlsVisibility();
-  if (targetId === 'pane-dashboard') {
-    buildDashboardTabs(); buildDashboard(false); startDashboardAutoRefresh();
-  } else {
-    stopDashboardAutoRefresh();
-  }
-  if (targetId === 'pane-single') initSinglePage();
-}
-function isDashboardVisible() { return !document.getElementById('pane-dashboard').classList.contains('hide'); }
-function startDashboardAutoRefresh() {
-  stopDashboardAutoRefresh();
-  dashTimer = setInterval(() => { if (isDashboardVisible()) buildDashboard(true); }, refreshMs);
-}
-function stopDashboardAutoRefresh() { if (dashTimer) { clearInterval(dashTimer); dashTimer = null; } }
-document.addEventListener('visibilitychange', () => {
-  updateRefreshControlsVisibility();
-  if (document.hidden) stopDashboardAutoRefresh(); else if (isDashboardVisible()) startDashboardAutoRefresh();
-});
-function startClock(){
-  const el = document.getElementById('clockDisplay');
-  const tick = ()=>{ if (el) el.textContent = getTaipeiHHMMSS(); };
-  tick(); setInterval(tick, 1000);
-}
-function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
-function buildRefreshControls(){
-  const box = document.getElementById('refreshControls'); if (!box) return; box.innerHTML = '';
-  REFRESH_PRESETS.forEach(p=>{
-    const btn = document.createElement('button'); btn.className = 'seg-btn'; btn.textContent = p.label; btn.dataset.ms = String(p.ms);
-    if (p.ms === refreshMs){ btn.classList.add('active'); btn.disabled = true; }
-    btn.onclick = ()=> openRefreshSaveDialog(p.ms, p.label); box.appendChild(btn);
-  });
-  const nowBtn = document.createElement('button'); nowBtn.className = 'seg-btn'; nowBtn.textContent = '立即更新';
-  nowBtn.onclick = ()=> { if (isDashboardVisible()) buildDashboard(false); else showNotif('切到「整體情報」即可看到最新資料', false); };
-  box.appendChild(nowBtn);
-}
-function updateRefreshControlsVisibility(){
-  try{ const c = document.getElementById('refreshControls'); if(c) c.classList.toggle('hide', !isDashboardVisible() || document.body.classList.contains('login')); }catch(e){}
-}
-async function loadSheetData(key){
-  const cfg = SHEET_CONFIGS.find(s=>s.key===key);
-  document.getElementById('vehList').textContent = '讀取中...';
-  const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}&idToken=${encodeURIComponent(idToken||'')}`);
-  const j = await r.json();
-  if (j.error){ document.getElementById('vehList').textContent = '❌ '+j.error; return; }
-  sheetData = j.values || [];
-  renderVehicles(cfg, sheetData);
-}
-function renderVehicles(cfg, data) {
-  const box = document.getElementById('vehList'); box.innerHTML = '';
-  const canWrite = currentUser?.permission === '全功能';
-  const headerRowIdx = data.findIndex(row => Array.isArray(row) && String(row[0]||'').trim()==='編號');
-  if (headerRowIdx === -1){ box.textContent='找不到表頭'; return; }
-  const header = data[headerRowIdx].map(c=>String(c||'').trim());
-  const rows = data.slice(headerRowIdx+1).filter(r => Array.isArray(r) && String(r[1]||'').trim() && String(r[2]||'').trim());
-  if (!rows.length){ box.textContent='(這張表目前沒有車輛資料)'; return; }
-  rows.forEach((row, idx) => {
-    const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim(); const baseRow = headerRowIdx+2+idx;
-    const card = document.createElement('div'); card.className='veh-card';
-    card.innerHTML = `<div><div class="veh-title-main">${area}</div><div class="veh-title-sub">${car}</div></div>`;
-    const stepsBox=document.createElement('div');
-    cfg.steps.forEach(st=>{
-      const colIdx=header.indexOf(st); const rawVal = (colIdx!==-1 && row[colIdx]!=null) ? String(row[colIdx]).trim(): '';
-      const displayVal = rawVal?formatSheetTime(rawVal):'';
-      const rowEl=document.createElement('div'); rowEl.className='step-row';
-      if (st==='車暫停位置'){
-          rowEl.innerHTML = `<div class="step-label">${st}</div>`;
-          const sel=document.createElement('select'); sel.className='step-select';
-          sel.innerHTML = `<option value="">請選擇</option>` + STOP_OPTIONS.map(o=>`<option value="${o}" ${o===rawVal?'selected':''}>${o}</option>`).join('');
-          if (!canWrite) sel.disabled=true;
-          else sel.onchange=()=>onStopSelect(cfg.key, baseRow, st, sel.value);
-          rowEl.appendChild(sel);
-      } else {
-          rowEl.innerHTML = `<div class="step-label">${st}</div><div class="step-time">${displayVal||'—'}</div>`;
-          const btnG=document.createElement('div'); btnG.className='btn-group';
-          if (!displayVal) {
-              const btnP=document.createElement('button'); btnP.className='btn btn--primary btn--sm'; btnP.textContent='打卡';
-              if (!canWrite) btnP.disabled=true; else btnP.onclick=()=>quickPunch(cfg.key, st, area, car, btnP, baseRow); // Reuse quickPunch logic
-              btnG.appendChild(btnP);
-          } else if (canWrite) {
-             const btnE=document.createElement('button'); btnE.className='btn btn--success btn--sm'; btnE.textContent='修'; btnE.onclick=()=>onEditTimeClick(cfg.key, baseRow, st, displayVal);
-             const btnD=document.createElement('button'); btnD.className='btn btn--danger btn--sm'; btnD.textContent='刪'; btnD.onclick=()=>onDeleteTimeClick(cfg.key, baseRow, st);
-             btnG.appendChild(btnE); btnG.appendChild(btnD);
-          }
-          rowEl.appendChild(btnG);
-      }
-      stepsBox.appendChild(rowEl);
-    });
-    card.appendChild(stepsBox); box.appendChild(card);
-  });
-}
-async function onStopSelect(key, row, step, val){
-    if(!val)return;
-    const d = ALL_SHEETS[key] || {cfg: SHEET_CONFIGS.find(c=>c.key===key)}; // Fallback
-    // 需要取得正確 col，這裡簡化直接用 sheetData 重新抓，或者重整
-    // 為求穩，重整比較快
-    await withLoading(async()=>{
-        // 這裡需要完整邏輯，但篇幅有限，建議與 quickPunch 共用後端呼叫
-        // 暫時略過完整實作，概念同前
-    });
-}
-async function loadAllForSingle(){
-    const reqs = SHEET_CONFIGS.map(async cfg => {
-        const r = await fetch(`${API_BASE}?action=get&sheet=${encodeURIComponent(cfg.sheet)}&idToken=${encodeURIComponent(idToken||'')}`);
-        const j = await r.json();
-        if(j.values) {
-            const hIdx = j.values.findIndex(r=>String(r[1]).includes('區域'));
-            if(hIdx!==-1) {
-                const header = j.values[hIdx];
-                j.values.slice(hIdx+1).forEach(row=>{ if(row[1]&&row[2]) SINGLE_ITEMS.push({sheetKey:cfg.key, cfg, header, row}); });
-            }
-        }
-    });
-    await Promise.all(reqs);
-    initSinglePage();
-}
-function initSinglePage(){ rebuildSelectOptions(); }
-function rebuildSelectOptions(){
-    // 恢復您原有的三選單連動邏輯
-    const s1=document.getElementById('selSheet'), s2=document.getElementById('selArea'), s3=document.getElementById('selCar');
-    // (省略冗長邏輯，請確認電腦版 JS 是否已還原)
-}
-function showLoading(){document.getElementById('loading').classList.add('show');}
-function hideLoading(){document.getElementById('loading').classList.remove('show');}
-function showNotif(msg,isErr){ const box=document.getElementById('notif'); box.textContent=msg; box.style.background=isErr?'rgba(248,113,113,.9)':'rgba(15,23,42,.85)'; box.classList.add('show'); setTimeout(()=>box.classList.remove('show'), 2500); }
-</script>
-</body>
-</html>
+/* Desktop Cards */
+.dash-title{ font-size:18px; font-weight:800; color:var(--text-strong); margin:0 0 8px; }
+.stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+.stat-card{ border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.9); padding:12px; box-shadow:var(--shadow-card); }
+.stat-head{ font-weight:800; margin-bottom:8px; color:var(--text-strong); }
+.stat-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.stat-pill{ border:1px solid var(--border); border-radius:10px; padding:10px 4px; background:#fff; display:flex; flex-direction:column; align-items:center; cursor:pointer; }
+.stat-num{ font-size:32px; font-weight:900; line-height:1; }
+.stat-num.done{ color:#2563eb; } .stat-num.todo{ color:#ef4444; }
+.stat-label{ font-size:14px; color:var(--text-muted); margin-top:4px; font-weight: normal; }
+.loc-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:8px; }
+.loc-pill{ border:1px dashed var(--border); border-radius:12px; padding:10px; background:rgba(255,255,255,.85); display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
+.loc-name{ font-weight:700; font-size:15px; }
+.loc-num{ font-size:32

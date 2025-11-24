@@ -236,6 +236,11 @@ let dashTimer = null;
 const REFRESH_INTERVAL = 120000; 
 
 window.onload = function(){
+  // 1. 先從 localStorage 拿 Token (關鍵！)
+  const saved = localStorage.getItem('ddcc_user_token');
+  if(saved) idToken = saved;
+
+  // 2. 初始化介面
   if(window.innerWidth <= 767) {
     switchMobileMode('status');
   } else {
@@ -256,19 +261,19 @@ window.onload = function(){
       now.toLocaleTimeString('zh-TW', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
   }, 1000);
 
-  // 手機優先載入
-  if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
-    onMobileSelectChange(); 
+  // 3. 決定要不要載入資料 (如果已有 Token)
+  if (idToken) {
+    // 有 Token，嘗試驗證 + 載入
+    verifyToken(idToken);
+    
+    // 為了速度，不等待驗證結果，先嘗試用這個 Token 載入資料
+    if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
+      onMobileSelectChange(); 
+    } else {
+      loadAllSheetsForDesktop();
+    }
   } else {
-    // 電腦版先顯示 Loading 佔位
-    loadAllSheetsForDesktop();
-  }
-
-  const saved = localStorage.getItem('ddcc_user_token');
-  if(saved) {
-    idToken = saved;
-    verifyToken(saved);
-  } else {
+    // 沒 Token，顯示登入
     initGoogleSignIn();
   }
   
@@ -279,12 +284,17 @@ async function onMobileSelectChange() {
   const key = document.getElementById('mobile-sheet-select').value;
   document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;"><div class="spinner" style="margin:0 auto 10px;"></div>正在讀取...</div>`;
   
-  if(!ALL_SHEETS[key]) await fetchSingleSheet(key);
+  if(!ALL_SHEETS[key]) {
+      if (idToken) await fetchSingleSheet(key);
+      else document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:20px;">請先登入</div>`;
+  }
   renderMobileStats();
 }
 
 async function forceRefreshMobile() {
   const key = document.getElementById('mobile-sheet-select').value;
+  if (!idToken) return showNotif('請先登入');
+  
   showNotif('正在更新...');
   document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;"><div class="spinner" style="margin:0 auto 10px;"></div>更新中...</div>`;
   await fetchSingleSheet(key);
@@ -301,15 +311,19 @@ async function fetchSingleSheet(targetKey) {
   if(!cfg) return;
 
   try {
-    // ★★★ 安全修復：這裡把 idToken 補回來了！ ★★★
+    // ★★★ 關鍵修復：把 idToken 補回來！後端驗證需要它！ ★★★
     const r = await fetch(`${API_BASE}?action=get&sheet=${encodeURIComponent(cfg.sheet)}&idToken=${encodeURIComponent(idToken||'')}&_t=${new Date().getTime()}`);
     const text = await r.text();
     let j;
     try { j = JSON.parse(text); } catch(e) { throw new Error("伺服器忙碌中"); }
     
     if(j.error) {
-      if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">讀取錯誤: ${j.error} <br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
-      else alert('讀取錯誤: ' + j.error);
+      const msg = `讀取錯誤: ${j.error}`;
+      if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">${msg}<br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
+      else {
+          // 電腦版如果出錯，提示但不蓋掉整個畫面(如果有舊資料)
+          alert(msg);
+      }
       hideLoading(); return;
     }
 
@@ -319,14 +333,13 @@ async function fetchSingleSheet(targetKey) {
       hideLoading(); return;
     }
 
-    // ★★★ 強力搜尋：只要該行有「區域」和「車號」就算 ★★★
     let hIdx = vals.findIndex(r => {
       if (!Array.isArray(r)) return false;
       const rowStr = r.join('').replace(/\s/g, ''); 
       return rowStr.includes('區域') || rowStr.includes('車號');
     });
     
-    if(hIdx === -1) hIdx = 0; // 強制保底
+    if(hIdx === -1) hIdx = 0;
 
     ALL_SHEETS[targetKey] = {
       cfg, header: vals[hIdx].map(String),
@@ -347,7 +360,9 @@ function renderMobileStats() {
   const data = ALL_SHEETS[key];
 
   if(!data) {
-    container.innerHTML = `<div style="text-align:center;padding:40px;">資料未載入<br><br><button class="btn" onclick="forceRefreshMobile()">載入資料</button></div>`;
+    // 只有在真的沒有資料時才顯示，避免覆蓋錯誤訊息
+    if (!container.innerHTML.includes('錯誤'))
+        container.innerHTML = `<div style="text-align:center;padding:40px;">資料未載入<br><br><button class="btn" onclick="forceRefreshMobile()">載入資料</button></div>`;
     return;
   }
 
@@ -420,7 +435,20 @@ function initGoogleSignIn() {
 async function handleCredential(resp) {
   const token = resp.credential;
   localStorage.setItem('ddcc_user_token', token);
+  // 登入成功後，立刻設定 token 並載入資料，不等待 verify
+  idToken = token;
   verifyToken(token);
+  
+  // 介面更新
+  document.body.classList.remove('login');
+  document.getElementById('signin-container').style.display = 'none';
+  document.getElementById('userInfo').style.display = 'flex';
+  
+  if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
+      onMobileSelectChange();
+  } else {
+      loadAllSheetsForDesktop();
+  }
 }
 
 async function verifyToken(token) {
@@ -432,20 +460,18 @@ async function verifyToken(token) {
     if(j.error) throw new Error(j.error);
     
     currentUser = j;
-    idToken = token;
+    idToken = token; // 確保是最新的
     
     document.body.classList.remove('login');
     document.getElementById('signin-container').style.display = 'none';
     document.getElementById('userInfo').style.display = 'flex';
     document.getElementById('userDisplay').innerHTML = `${j.name} (${j.permission})`;
     
-    if(window.innerWidth > 767 || document.body.classList.contains('mode-web')) {
-        loadAllSheetsForDesktop();
-    }
-    
   } catch(e) {
     console.error(e);
+    // 如果驗證失敗（例如 token 過期），強制登出
     localStorage.removeItem('ddcc_user_token');
+    idToken = null;
     initGoogleSignIn();
   }
 }

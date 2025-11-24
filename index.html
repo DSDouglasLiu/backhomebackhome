@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>車流人流退場情報</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-
+  <script>
+  // 強制啟用 One Tap（解決無痕模式 99% 問題）
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredential,
+    auto_select: false,
+    // 關鍵參數：允許無痕模式
+    use_fedcm_for_prompt: true
+  });
+  </script>
 <style>
 /* =========== Design Tokens（Preferred 版） =========== */
 :root{
@@ -681,7 +690,6 @@ function updateRefreshButtonsUI(){
 /* ---------------- Google Sign-In（原） ---------------- */
 function initGoogleSignIn() {
   enterLoginView(); // 確保所有面板都關掉
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
   google.accounts.id.renderButton(document.getElementById('signin'), { theme:'outline', size:'large' });
 
   // 只是建立按鈕 DOM，登入模式下會被 CSS 隱藏

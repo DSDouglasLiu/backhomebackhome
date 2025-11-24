@@ -27,12 +27,12 @@ body{ margin:0; min-height:100vh; background:var(--page-bg); color:var(--text); 
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
 .hide{ display:none !important; }
 
-/* =========== Login Page (完全獨立) =========== */
+/* =========== Login Page Specific =========== */
 body.login { display: grid; place-items: center; height: 100vh; overflow: hidden; }
 body.login #mobile-nav, body.login #mobile-status-view, body.login .topbar-grid, body.login #main-content-wrap { display: none !important; }
 body.login #signin-container { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(255,255,255,0.9); padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
 
-/* =========== Mobile Nav Bar (手機專用) =========== */
+/* =========== Mobile Nav Bar =========== */
 #mobile-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: #fff; height: 50px; display: flex; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; }
 .m-nav-btn { flex: 1; border: none; background: transparent; font-size: 15px; font-weight: 700; color: var(--gray-500); border-right: 1px solid var(--gray-200); cursor: pointer; padding: 0; margin: 0; transition: background 0.2s, color 0.2s; white-space: nowrap; }
 .m-nav-btn:last-child { border-right: none; }
@@ -69,23 +69,21 @@ body.login #signin-container { display: flex; flex-direction: column; align-item
 .d-sub { font-size: 13px; color: var(--gray-500); }
 .d-action .btn { padding: 6px 12px; font-size: 13px; border-radius: 6px; }
 
-/* =========== Desktop & Web Mode Layout (還原您原本的 CSS) =========== */
+/* =========== Desktop Layout =========== */
 .topbar-grid { 
   display: grid; 
   grid-template-columns: 1fr auto; 
   grid-template-rows: auto auto; 
+  grid-template-areas: "title user" "tabs refresh";
   gap: 10px 20px; 
   align-items: center; 
   margin-bottom: 16px;
-  /* 強制還原原本的 Grid Areas 定義 */
-  grid-template-areas: "title user" "tabs refresh";
 }
 .left-title { grid-area: title; }
 .right-user { grid-area: user; display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
-.right-user #signin { max-height: 44px; } 
+.right-user #signin { max-height: 44px; }
 .left-tabs { grid-area: tabs; }
 .right-refresh { grid-area: refresh; display: flex; justify-content: flex-end; align-items: center; }
-
 .main-tabs { display: flex; gap: 12px; }
 .main-tab { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); border-radius: 10px; padding: 8px 20px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .main-tab.active { background: var(--primary-600); color: #fff; }
@@ -109,7 +107,7 @@ body.login #signin-container { display: flex; flex-direction: column; align-item
 .loc-name{ font-weight:700; font-size:15px; }
 .loc-num{ font-size:32px; font-weight:900; color:#2563eb; line-height:1; }
 
-/* ======= 補回「登錄與修改」及「個別情報」的樣式 ======= */
+/* Lists & Punch Cards */
 .veh-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
 .veh-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-card); }
 .veh-title-main { font-weight: 700; font-size: 18px; color: var(--text-strong); }
@@ -117,11 +115,18 @@ body.login #signin-container { display: flex; flex-direction: column; align-item
 .step-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 4px; }
 .step-label { font-size: 14px; font-weight: 600; }
 .step-time { font-size: 14px; font-weight: bold; color: #2563eb; }
+.step-select { padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: #fff;}
+
 .single-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .single-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: transform 0.2s; }
 .single-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 .single-line { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-.step-select { padding: 6px; border: 1px solid var(--border); border-radius: 6px; }
+
+/* Modal internal (confirm/edit) */
+.time-edit { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 15px 0; }
+.time-input { width: 60px; text-align: center; padding: 8px; border-radius: 8px; border: 1px solid #ccc; font-size: 18px; }
+.modal h3 { margin-top: 0; }
+.modal .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
 /* =========== RWD Logic =========== */
 @media (min-width: 768px) {
@@ -129,27 +134,26 @@ body.login #signin-container { display: flex; flex-direction: column; align-item
   .topbar-grid { display: grid !important; }
   #main-content-wrap { display: block !important; }
 }
-
 @media (max-width: 767px) {
   body:not(.mode-web) #mobile-nav { display: flex; }
   body:not(.mode-web) #mobile-status-view { display: block; }
   body:not(.mode-web) .topbar-grid { display: none !important; }
   body:not(.mode-web) #main-content-wrap { display: none !important; }
-  
   body.mode-web #mobile-nav { display: none !important; } 
   body.mode-web .topbar-grid { display: grid !important; margin-top: 0; grid-template-columns: 1fr auto; }
   body.mode-web #main-content-wrap { display: block !important; }
   body.mode-web #mobile-status-view { display: none !important; }
   body.mode-web #mainTabs .main-tab { padding: 10px 5px; font-size: 14px; flex: 1; text-align: center; }
   body.mode-web .wrap { padding-top: 10px; }
-  
   body.mode-web .topbar-grid { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto; gap: 10px; grid-template-areas: "title" "user" "tabs" "refresh"; text-align: center; }
   body.mode-web .right-user, body.mode-web .right-refresh { justify-content: center; }
   body.mode-web .main-tabs { justify-content: center; }
 }
 
 .btn { background: var(--primary-600); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.btn--sm { padding: 4px 10px; font-size: 13px; }
 .btn--secondary { background: #fff; color: var(--primary-600); border: 1px solid var(--primary-600); }
+.btn--danger { background: var(--danger-600); color: #fff; }
 .loading { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: none; align-items: center; justify-content: center; z-index: 20000; }
 .loading.show { display: flex; }
 .spinner { width: 30px; height: 30px; border: 3px solid #e5e7eb; border-top-color: var(--primary-600); border-radius: 50%; animation: spin 1s linear infinite; }
@@ -217,18 +221,20 @@ body.login #signin-container { display: flex; flex-direction: column; align-item
 
   <div id="main-content-wrap">
     <div id="pane-dashboard2" class="tab-pane"><div id="dashboard2"></div></div>
+    
     <div id="pane-punch" class="tab-pane hide">
       <div id="sheetTabs" class="sheet-tabs" style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;"></div>
       <div id="vehList" class="veh-list"></div>
     </div>
+    
     <div id="pane-single" class="tab-pane hide">
       <div class="card">
         <div id="singleControls" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:10px;">
-           <select id="selSheet" class="step-select"><option>Tab</option></select>
-           <select id="selArea" class="step-select"><option>區域</option></select>
-           <select id="selCar" class="step-select"><option>車號</option></select>
+           <select id="selSheet" class="step-select"><option value="">— Tab —</option></select>
+           <select id="selArea" class="step-select"><option value="">— 區域 —</option></select>
+           <select id="selCar" class="step-select"><option value="">— 車號 —</option></select>
         </div>
-        <div style="display:flex;justify-content:flex-end;padding:10px;gap:8px;">
+        <div style="display:flex; justify-content:flex-end; padding:0 10px 10px; gap:10px;">
            <button class="btn" onclick="runSingleQuery()">查詢</button>
            <button class="btn btn--secondary" onclick="resetSingleUI()">重設</button>
         </div>
@@ -256,9 +262,9 @@ const STOP_OPTIONS = ['禪堂平台','法心北路','法心南路（西）','法
 let currentUser = null;
 let idToken = null;
 let ALL_SHEETS = {}; 
+let SINGLE_ITEMS = []; // 補回給個別情報用
 let dashTimer = null;
 let currentSheetKey = SHEET_CONFIGS[0].key;
-let SINGLE_ITEMS = [];
 const REFRESH_INTERVAL = 120000; 
 
 window.onload = function(){
@@ -282,6 +288,12 @@ window.onload = function(){
       now.toLocaleTimeString('zh-TW', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
   }, 1000);
 
+  if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
+    onMobileSelectChange(); 
+  } else {
+    loadAllSheetsForDesktop();
+  }
+
   const saved = localStorage.getItem('ddcc_user_token');
   if(saved) {
     idToken = saved;
@@ -291,24 +303,11 @@ window.onload = function(){
   }
   
   startAutoRefresh();
-  initSinglePage(); // 初始化查詢頁選單
+  // 綁定查詢頁選單事件
+  ['selSheet','selArea','selCar'].forEach(id => {
+     document.getElementById(id).addEventListener('change', rebuildSelectOptions);
+  });
 };
-
-/* Mobile Logic */
-async function onMobileSelectChange() {
-  const key = document.getElementById('mobile-sheet-select').value;
-  document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;"><div class="spinner" style="margin:0 auto 10px;"></div>正在讀取...</div>`;
-  if(!ALL_SHEETS[key]) await fetchSingleSheet(key);
-  renderMobileStats();
-}
-
-async function forceRefreshMobile() {
-  const key = document.getElementById('mobile-sheet-select').value;
-  showNotif('正在更新...');
-  document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;"><div class="spinner" style="margin:0 auto 10px;"></div>更新中...</div>`;
-  await fetchSingleSheet(key);
-  renderMobileStats();
-}
 
 /* Core Fetch */
 async function fetchSingleSheet(targetKey) {
@@ -333,16 +332,12 @@ async function fetchSingleSheet(targetKey) {
     }
 
     const vals = j.values || [];
-    if (vals.length === 0) {
-      if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;padding:20px;">目前沒有資料 <br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
-      hideLoading(); return;
-    }
-
     let hIdx = vals.findIndex(r => {
       if (!Array.isArray(r)) return false;
       const rowStr = r.join('').replace(/\s/g, ''); 
       return rowStr.includes('區域') || rowStr.includes('車號');
     });
+    
     if(hIdx === -1) hIdx = 0;
 
     ALL_SHEETS[targetKey] = {
@@ -351,10 +346,14 @@ async function fetchSingleSheet(targetKey) {
       hIdx
     };
     
-    // 同步更新 Single Items 供查詢用
+    // 每次抓完資料，同步更新 SINGLE_ITEMS 供查詢用
+    // 先清除舊資料
+    SINGLE_ITEMS = SINGLE_ITEMS.filter(item => item.sheetKey !== targetKey);
     ALL_SHEETS[targetKey].rows.forEach(r => {
         SINGLE_ITEMS.push({ sheetKey: targetKey, cfg, header: ALL_SHEETS[targetKey].header, row: r });
     });
+    // 如果當前在個別情報頁，更新下拉選單
+    if (SINGLE_ITEMS.length > 0) rebuildSelectOptions();
 
   } catch(e) {
     if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">連線失敗<br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
@@ -363,7 +362,22 @@ async function fetchSingleSheet(targetKey) {
   hideLoading();
 }
 
-/* Render Mobile */
+/* Mobile Logic */
+async function onMobileSelectChange() {
+  const key = document.getElementById('mobile-sheet-select').value;
+  document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;"><div class="spinner" style="margin:0 auto 10px;"></div>正在讀取...</div>`;
+  if(!ALL_SHEETS[key]) await fetchSingleSheet(key);
+  renderMobileStats();
+}
+
+async function forceRefreshMobile() {
+  const key = document.getElementById('mobile-sheet-select').value;
+  showNotif('正在更新...');
+  document.getElementById('mobile-cards-container').innerHTML = `<div style="text-align:center;padding:40px;color:#666;"><div class="spinner" style="margin:0 auto 10px;"></div>更新中...</div>`;
+  await fetchSingleSheet(key);
+  renderMobileStats();
+}
+
 function renderMobileStats() {
   const container = document.getElementById('mobile-cards-container');
   const key = document.getElementById('mobile-sheet-select').value;
@@ -468,6 +482,8 @@ async function verifyToken(token) {
     if(j.error) throw new Error(j.error);
     
     currentUser = j;
+    idToken = token; 
+    
     document.body.classList.remove('login');
     document.getElementById('signin-container').style.display = 'none';
     document.getElementById('userInfo').style.display = 'flex';
@@ -487,14 +503,22 @@ function logout() {
   location.reload();
 }
 
-/* Desktop Logic */
+/* Desktop & Shared Logic */
 async function loadAllSheetsForDesktop() {
   showLoading();
   const reqs = SHEET_CONFIGS.map(c => fetchSingleSheet(c.key));
   await Promise.all(reqs);
   hideLoading();
-  renderDashboard2();
-  loadSheetData(currentSheetKey); // 載入打卡頁預設表
+  
+  // 確保載入後初始化下拉選單 (如果有資料)
+  if (SINGLE_ITEMS.length > 0) rebuildSelectOptions();
+  
+  const activeTab = document.querySelector('.main-tab.active');
+  if (activeTab && activeTab.dataset.target === 'pane-dashboard2') {
+      renderDashboard2();
+  } else if (activeTab && activeTab.dataset.target === 'pane-punch') {
+      loadSheetData(currentSheetKey);
+  }
 }
 
 function renderDashboard2() {
@@ -533,6 +557,7 @@ function renderDashboard2() {
          </div></div>`;
     });
     html += '</div>';
+    
     if(d.header.indexOf('車暫停位置') >= 0) {
        const sc = d.header.indexOf('車暫停位置');
        const cc = {};
@@ -548,12 +573,32 @@ function renderDashboard2() {
        lh += '</div>';
        html += lh;
     }
+
     card.innerHTML += html;
     box.appendChild(card);
   });
 }
 
-/* ======= 補回的「登錄與修改」邏輯 ======= */
+/* Tab Switching */
+document.getElementById('mainTabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.main-tab');
+  if(btn) {
+    document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('#main-content-wrap .tab-pane').forEach(p=>p.classList.add('hide'));
+    const target = btn.dataset.target;
+    document.getElementById(target).classList.remove('hide');
+    
+    if(target === 'pane-dashboard2') {
+        if(Object.keys(ALL_SHEETS).length === 0) loadAllSheetsForDesktop();
+        else renderDashboard2();
+    } else if(target === 'pane-punch') {
+        loadSheetData(currentSheetKey);
+    }
+  }
+});
+
+/* ========== 登錄與修改頁邏輯 (已修復) ========== */
 function loadSheetData(key) {
   currentSheetKey = key;
   document.getElementById('sheetTabs').innerHTML = SHEET_CONFIGS.map(c => 
@@ -572,57 +617,228 @@ function loadSheetData(key) {
 function renderVehicles(cfg, rows, header) {
   const box = document.getElementById('vehList');
   box.innerHTML = '';
-  rows.forEach(r => {
+  
+  if(rows.length === 0) {
+      box.innerHTML = '<div>目前無資料</div>';
+      return;
+  }
+
+  rows.forEach((r, idx) => {
       const area = r[1]; const car = r[2];
+      // 真實行號 = headerIndex + 2 + arrayIndex
+      const realRow = ALL_SHEETS[cfg.key].hIdx + 2 + idx;
+      
       const card = document.createElement('div');
       card.className = 'veh-card';
       let html = `<div><div class="veh-title-main">${area}</div><div class="veh-title-sub">${car}</div></div>`;
       
       cfg.steps.forEach(st => {
-          const cIdx = header.indexOf(st);
-          const v = cIdx!==-1 ? r[cIdx] : '';
-          const time = (v && st!=='車暫停位置') ? v.match(/\d{1,2}:\d{2}/) : v;
-          html += `<div class="step-row"><div class="step-label">${st}</div><div class="step-time">${time||'—'}</div>
-          <button class="btn btn--sm" onclick="quickPunch('${cfg.key}','${st}','${area}','${car}',this)">打卡</button></div>`;
+          if(st === '車暫停位置') {
+               const cIdx = header.indexOf(st);
+               const v = cIdx!==-1 ? r[cIdx] : '';
+               html += `<div class="step-row"><div class="step-label">車暫停位置</div>
+               <select class="step-select" onchange="onStopSelect('${cfg.key}', ${realRow}, '${st}', this.value)">
+                 <option value="">請選擇</option>
+                 ${STOP_OPTIONS.map(o => `<option value="${o}" ${o===v?'selected':''}>${o}</option>`).join('')}
+               </select>
+               </div>`;
+          } else {
+               const cIdx = header.indexOf(st);
+               const v = cIdx!==-1 ? r[cIdx] : '';
+               const isDone = (v && String(v).trim()!=='—' && String(v).trim()!=='-');
+               const time = isDone ? (v.match ? (v.match(/\d{1,2}:\d{2}/) || [v])[0] : v) : '—';
+               
+               // 如果已經完成，顯示時間與修改/刪除鈕；未完成顯示打卡鈕
+               if(isDone) {
+                   html += `<div class="step-row"><div class="step-label">${st}</div>
+                   <div style="display:flex;align-items:center;gap:5px;">
+                     <div class="step-time">${time}</div>
+                     <button class="btn btn--secondary btn--sm" onclick="onEditTimeClick('${cfg.key}', ${realRow}, '${st}', '${time}')">修</button>
+                     <button class="btn btn--danger btn--sm" onclick="onDeleteTimeClick('${cfg.key}', ${realRow}, '${st}')">刪</button>
+                   </div></div>`;
+               } else {
+                   html += `<div class="step-row"><div class="step-label">${st}</div>
+                   <button class="btn btn--sm" onclick="quickPunch('${cfg.key}', '${st}', '${area}', '${car}', this, ${realRow})">打卡</button></div>`;
+               }
+          }
       });
       card.innerHTML = html;
       box.appendChild(card);
   });
 }
 
-/* ======= 補回的「個別情報」邏輯 ======= */
-function initSinglePage() {
-    const s1 = document.getElementById('selSheet');
-    s1.innerHTML = '<option value="">全部</option>' + SHEET_CONFIGS.map(c=>`<option>${c.key}</option>`).join('');
+/* ========== 個別情報查詢邏輯 (已修復) ========== */
+// 使用 SINGLE_ITEMS (已在 fetchSingleSheet 時同步)
+function rebuildSelectOptions() {
+    const selSheet = document.getElementById('selSheet');
+    const selArea = document.getElementById('selArea');
+    const selCar = document.getElementById('selCar');
+    
+    const sVal = selSheet.value;
+    const aVal = selArea.value;
+    const cVal = selCar.value;
+    
+    // 1. 篩選資料集
+    let filtered = SINGLE_ITEMS.filter(i => 
+        (!sVal || i.sheetKey === sVal) && 
+        (!aVal || String(i.row[1]).trim() === aVal) &&
+        (!cVal || String(i.row[2]).trim() === cVal)
+    );
+    
+    // 2. 取得唯一值
+    const sheets = [...new Set(filtered.map(i => i.sheetKey))].sort();
+    const areas = [...new Set(filtered.map(i => String(i.row[1]).trim()))].sort();
+    const cars = [...new Set(filtered.map(i => String(i.row[2]).trim()))].sort();
+    
+    // 3. 更新選項 (若只有一個選項則自動選取)
+    updateSelect(selSheet, sheets, 'Tab', sVal);
+    updateSelect(selArea, areas, '區域', aVal);
+    updateSelect(selCar, cars, '車號', cVal);
 }
+
+function updateSelect(el, items, ph, cur) {
+    el.innerHTML = `<option value="">— ${ph} —</option>` + items.map(i => `<option value="${i}">${i}</option>`).join('');
+    if (items.includes(cur)) el.value = cur;
+    else if (items.length === 1) el.value = items[0];
+}
+
 function runSingleQuery() {
-    const sheet = document.getElementById('selSheet').value;
-    const area = document.getElementById('selArea').value;
-    const car = document.getElementById('selCar').value;
-    // 這裡使用 SINGLE_ITEMS 進行篩選，邏輯同前版，省略以節省長度，重點是框架已恢復
-    document.getElementById('singleResults').innerHTML = '查詢功能已修復 (需配合完整篩選邏輯)';
+    const sVal = document.getElementById('selSheet').value;
+    const aVal = document.getElementById('selArea').value;
+    const cVal = document.getElementById('selCar').value;
+    
+    const res = SINGLE_ITEMS.filter(i => 
+        (!sVal || i.sheetKey === sVal) && 
+        (!aVal || String(i.row[1]).trim() === aVal) &&
+        (!cVal || String(i.row[2]).trim() === cVal)
+    );
+    
+    renderSingleCards(res);
 }
+
 function resetSingleUI() {
+    document.getElementById('selSheet').value = '';
+    document.getElementById('selArea').value = '';
+    document.getElementById('selCar').value = '';
+    rebuildSelectOptions();
     document.getElementById('singleResults').innerHTML = '';
 }
 
-document.getElementById('mainTabs').addEventListener('click', (e)=>{
-  const btn = e.target.closest('.main-tab');
-  if(btn) {
-    document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('#main-content-wrap .tab-pane').forEach(p=>p.classList.add('hide'));
-    const target = btn.dataset.target;
-    document.getElementById(target).classList.remove('hide');
-    if(target === 'pane-dashboard2') {
-        if(Object.keys(ALL_SHEETS).length === 0) loadAllSheetsForDesktop();
-        else renderDashboard2();
-    } else if(target === 'pane-punch') {
-        loadSheetData(currentSheetKey);
+function renderSingleCards(items) {
+    const box = document.getElementById('singleResults');
+    box.innerHTML = '';
+    if(items.length === 0) {
+        box.innerHTML = '<div style="text-align:center;padding:20px;grid-column:1/-1">無符合資料</div>';
+        return;
     }
-  }
-});
+    items.forEach(it => {
+        const card = document.createElement('div');
+        card.className = 'single-card';
+        // 找出最新狀態
+        let latest = '尚未開始';
+        for(let i=it.cfg.steps.length-1; i>=0; i--) {
+            const st = it.cfg.steps[i];
+            const idx = it.header.indexOf(st);
+            const v = it.row[idx];
+            if(v && String(v).trim()!=='-' && String(v).trim()!=='—') {
+                latest = (st==='車暫停位置') ? `停於：${v}` : st;
+                break;
+            }
+        }
+        
+        card.innerHTML = `<div class="single-line">${it.row[1]}</div>
+        <div class="single-line">${it.row[2]}</div>
+        <div class="single-line" style="color:#2563eb">${latest}</div>
+        <div style="margin-top:8px;font-size:12px;color:#666">${it.sheetKey}</div>`;
+        card.onclick = () => openDetailModal(it.sheetKey, it.row); // Reuse detail modal
+        box.appendChild(card);
+    });
+}
 
+/* ================= 通用互動函式 (打卡/修改/刪除) ================= */
+// 快速打卡 (可選傳入 rowNum)
+async function quickPunch(key, step, area, car, btn, specificRow) {
+  if(!currentUser || currentUser.permission !== '全功能') return alert('權限不足');
+  if(!confirm(`確認幫 ${car} 打卡？`)) return;
+  
+  const data = ALL_SHEETS[key];
+  // 如果沒傳 specificRow，就自己算
+  let realRow = specificRow;
+  if (!realRow) {
+      const rIdx = data.rows.findIndex(r => r[1]===area && r[2]===car);
+      if(rIdx===-1) return;
+      realRow = data.hIdx + 2 + rIdx;
+  }
+  
+  const col = data.header.indexOf(step) + 1;
+  const now = new Date().toLocaleTimeString('zh-TW',{hour12:false});
+  
+  if(btn) { btn.textContent='...'; btn.disabled=true; }
+  
+  try {
+    await fetch(API_BASE+'?action=update', {
+      method: 'POST',
+      body: JSON.stringify({ sheet:data.cfg.sheet, idToken, email:currentUser.email, writes:[{row:realRow, col, value:now}] })
+    });
+    // 更新成功後重整
+    await fetchSingleSheet(key);
+    // 根據當前頁面決定重繪哪裡
+    if (document.querySelector('#pane-punch').classList.contains('hide') === false) {
+        loadSheetData(key);
+    } else if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
+        renderMobileStats();
+    } else {
+        renderDashboard2();
+    }
+    if(btn) btn.parentElement.innerHTML = `<span style="color:green">${now}</span>`;
+  } catch(e) {
+    alert('失敗'); if(btn) { btn.textContent='打卡'; btn.disabled=false; }
+  }
+}
+
+async function onStopSelect(key, row, step, val) {
+   if(!val) return;
+   const data = ALL_SHEETS[key];
+   const col = data.header.indexOf(step) + 1;
+   await withLoading(async () => {
+       await fetch(API_BASE+'?action=update', {
+          method: 'POST',
+          body: JSON.stringify({ sheet:data.cfg.sheet, idToken, email:currentUser.email, writes:[{row, col, value:val}] })
+       });
+       await fetchSingleSheet(key);
+   });
+}
+
+async function onEditTimeClick(key, row, step, oldVal) {
+    const newVal = prompt("請輸入新時間 (HH:mm:ss)", oldVal);
+    if(newVal === null || newVal === oldVal) return;
+    const data = ALL_SHEETS[key];
+    const col = data.header.indexOf(step) + 1;
+    await withLoading(async () => {
+       await fetch(API_BASE+'?action=update', {
+          method: 'POST',
+          body: JSON.stringify({ sheet:data.cfg.sheet, idToken, email:currentUser.email, writes:[{row, col, value:newVal}] })
+       });
+       await fetchSingleSheet(key);
+       loadSheetData(key);
+   });
+}
+
+async function onDeleteTimeClick(key, row, step) {
+    if(!confirm("確定要刪除此時間嗎？")) return;
+    const data = ALL_SHEETS[key];
+    const col = data.header.indexOf(step) + 1;
+    await withLoading(async () => {
+       await fetch(API_BASE+'?action=update', {
+          method: 'POST',
+          body: JSON.stringify({ sheet:data.cfg.sheet, idToken, email:currentUser.email, writes:[{row, col, value:""}] })
+       });
+       await fetchSingleSheet(key);
+       loadSheetData(key);
+   });
+}
+
+/* ================= 其他功能 ================= */
 function switchMobileMode(mode) {
   const btnStatus = document.getElementById('btn-m-status');
   const btnWeb = document.getElementById('btn-m-web');
@@ -661,7 +877,6 @@ function openDrawer(key, step, type, val) {
   if(!data) return;
   const list = document.getElementById('drawer-list');
   const colIdx = data.header.indexOf(step);
-  
   let items = [];
   if(type === 'loc') {
     document.getElementById('drawer-title').textContent = val;
@@ -674,7 +889,6 @@ function openDrawer(key, step, type, val) {
       return type==='done' ? isDone : !isDone;
     });
   }
-  
   list.innerHTML = items.length ? '' : '<div style="text-align:center;padding:20px;color:#999">無資料</div>';
   items.forEach(r => {
     const area = r[1]; const car = r[2];
@@ -687,45 +901,33 @@ function openDrawer(key, step, type, val) {
     div.innerHTML = `<div class="d-info"><div class="d-main">${area} <span style="color:#2563eb;margin-left:5px;">${car}</span></div></div>${btnHtml}`;
     list.appendChild(div);
   });
-  
   document.getElementById('drawer-backdrop').classList.add('open');
   document.getElementById('bottom-drawer').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
-
 function closeDrawer() {
   document.getElementById('drawer-backdrop').classList.remove('open');
   document.getElementById('bottom-drawer').classList.remove('open');
   document.body.style.overflow = '';
 }
-
-async function quickPunch(key, step, area, car, btn) {
-  if(!confirm(`確認幫 ${car} 打卡？`)) return;
-  btn.textContent = '...'; btn.disabled = true;
-  const data = ALL_SHEETS[key];
-  const rIdx = data.rows.findIndex(r => r[1]===area && r[2]===car);
-  if(rIdx===-1) return;
-  const realRow = data.hIdx + 2 + rIdx;
-  const col = data.header.indexOf(step) + 1;
-  const now = new Date().toLocaleTimeString('zh-TW',{hour12:false});
-  try {
-    await fetch(API_BASE+'?action=update', {
-      method: 'POST',
-      body: JSON.stringify({ sheet:data.cfg.sheet, idToken, email:currentUser.email, writes:[{row:realRow, col, value:now}] })
-    });
-    btn.parentElement.innerHTML = `<span style="color:green">${now}</span>`;
-    fetchSingleSheet(key).then(renderMobileStats);
-  } catch(e) {
-    alert('失敗'); btn.textContent='打卡'; btn.disabled=false;
-  }
-}
-
 function showLoading(){document.getElementById('loading').classList.add('show');}
 function hideLoading(){document.getElementById('loading').classList.remove('show');}
 function showNotif(msg){
   const n = document.getElementById('notif');
   n.textContent = msg; n.style.opacity = 1;
   setTimeout(()=>n.style.opacity=0, 2000);
+}
+/* Simple format helpers */
+function formatSheetTime(v){ return (v&&v.match)?(v.match(/\d{1,2}:\d{2}/)||[''])[0]:v; }
+function openDetailModal(key, row) {
+   // 簡單顯示詳情，若需要完整功能可參考舊版，這裡提供基礎版
+   const d = ALL_SHEETS[key];
+   let msg = `${key}\n${row[1]} ${row[2]}\n\n`;
+   d.cfg.steps.forEach(s=>{
+       const idx = d.header.indexOf(s);
+       msg += `${s}: ${row[idx]||'—'}\n`;
+   });
+   alert(msg);
 }
 </script>
 </body>

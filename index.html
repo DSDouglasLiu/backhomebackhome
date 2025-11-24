@@ -400,7 +400,22 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
     box-shadow: var(--shadow-card) !important; /* 與其他卡片完全一致 */
   }
 }
-  
+/* ======================= 最終修法：電腦版永遠不顯示手機專用內容 ====================== */
+@media (min-width: 768px) {
+  /* 電腦（含平板）完全隱藏手機專用標題列與下拉選單 */
+  #mobileHeader,
+  #mobileSheetSelector,
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* 確保手機真的只顯示手機專用內容 */
+@media (max-width: 767px) {
+  .mobile-only {
+    display: block !important;
+  }
+}  
 </style>
 </head>
 <body>

@@ -322,37 +322,64 @@ async function forceRefreshMobile() {
   renderMobileStats();
 }
 
-// 抓取單張表資料 (核心函式)
+// 抓取單張表資料 (強力容錯版)
 async function fetchSingleSheet(targetKey) {
-  // ★★★ 關鍵修正：移除 currentUser 檢查，未登入也能讀取 ★★★
-  
-  // 顯示局部 Loading (不要全螢幕遮擋)
+  // 顯示局部 Loading
   const container = document.getElementById('mobile-cards-container');
   if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
-    container.innerHTML = `<div style="text-align:center;padding:40px;color:#666;">正在讀取 <b>${targetKey}</b>...</div>`;
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:#666;">
+      <div class="spinner" style="margin:0 auto 10px;"></div>
+      正在讀取 <b>${targetKey}</b>...
+    </div>`;
   } else {
     showLoading();
   }
 
   const cfg = SHEET_CONFIGS.find(c => c.key === targetKey);
-  if(!cfg) return;
+  if(!cfg) {
+    container.innerHTML = `<div style="text-align:center;padding:20px;color:red;">設定錯誤：找不到 ${targetKey}</div>`;
+    hideLoading();
+    return;
+  }
 
   try {
-    // ★★★ 關鍵修正：移除 URL 中的 idToken，避免網址過長導致失敗 ★★★
+    // 呼叫 API
     const r = await fetch(`${API_BASE}?action=get&sheet=${encodeURIComponent(cfg.sheet)}`);
-    const j = await r.json();
+    
+    // 先讀成文字，避免 JSON 解析失敗導致程式當掉
+    const text = await r.text();
+    let j;
+    try {
+      j = JSON.parse(text);
+    } catch(e) {
+      throw new Error("伺服器回傳格式錯誤 (非 JSON)，可能是 Apps Script 部署問題。");
+    }
     
     if(j.error) {
       container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">讀取錯誤: ${j.error}</div>`;
+      hideLoading();
       return;
     }
 
     const vals = j.values || [];
-    // 寬鬆找表頭
-    const hIdx = vals.findIndex(r => Array.isArray(r) && String(r[1]).includes('區域') && String(r[2]).includes('車號'));
+    if (vals.length === 0) {
+      container.innerHTML = `<div style="text-align:center;padding:20px;">此工作表目前沒有資料</div>`;
+      hideLoading();
+      return;
+    }
+
+    // ★★★ 強力表頭搜尋：搜尋整列，不限欄位 ★★★
+    const hIdx = vals.findIndex(r => {
+      if (!Array.isArray(r)) return false;
+      const rowStr = r.join('').replace(/\s/g, ''); // 移除空白後串接
+      return rowStr.includes('區域') && rowStr.includes('車號');
+    });
     
     if(hIdx === -1) {
-      container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">找不到表頭 (區域/車號)</div>`;
+      container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">
+        <b>找不到表頭</b><br>請確認 Excel 內是否有「區域」與「車號」欄位
+      </div>`;
+      hideLoading();
       return;
     }
 
@@ -360,12 +387,14 @@ async function fetchSingleSheet(targetKey) {
     ALL_SHEETS[targetKey] = {
       cfg,
       header: vals[hIdx].map(String),
-      rows: vals.slice(hIdx+1).filter(r => r[1] && r[2]),
+      rows: vals.slice(hIdx+1).filter(r => r[1] && String(r[1]).trim() !== ''), // 過濾掉區域為空的行
       hIdx
     };
 
   } catch(e) {
-    container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">連線失敗，請檢查網路</div>`;
+    container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">
+      <b>連線失敗</b><br>${e.message}
+    </div>`;
     console.error(e);
   }
   

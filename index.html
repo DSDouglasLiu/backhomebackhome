@@ -692,8 +692,6 @@ function initGoogleSignIn() {
   enterLoginView(); // 確保所有面板都關掉
   google.accounts.id.renderButton(document.getElementById('signin'), { theme:'outline', size:'large' });
 
-  // 只是建立按鈕 DOM，登入模式下會被 CSS 隱藏
-  buildTabs();
 }
 
 function buildTabs(){
@@ -788,10 +786,25 @@ async function handleCredential(resp) {
   idToken = resp.credential;
   localStorage.setItem(TOKEN_STORAGE_KEY, idToken);
   try {
-    const r = await fetch(API_BASE + '?action=verify', { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken }) });
-    const j = await r.json(); if (j.error) throw new Error(j.error);
-    currentUser = j; finishLoginUI(); loadSheetData(currentSheetKey);
-  } catch (err) { showNotif('登入失敗：' + err.message, true); logout(); }
+    const r = await fetch(API_BASE + '?action=verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ idToken })
+    });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+
+    currentUser = j;
+    finishLoginUI();
+
+    // 關鍵三行！登入成功後才執行
+    buildTabs();                    // ← 建立上方工作表按鈕
+    loadSheetData(currentSheetKey); // ← 載入預設分會資料
+
+  } catch (err) {
+    showNotif('登入失敗：' + err.message, true);
+    logout();
+  }
 }
 function finishLoginUI() {
   updateRefreshControlsVisibility();

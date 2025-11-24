@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>車流人流退場情報</title>
+  <title>車流人流退場情報 (除錯版)</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   
 <style>
@@ -373,7 +373,6 @@ async function forceRefreshMobile() {
 async function fetchSingleSheet(targetKey) {
   const container = document.getElementById('mobile-cards-container');
   
-  // 只有手機極簡模式才顯示局部 Loading
   if(window.innerWidth <= 767 && !document.body.classList.contains('mode-web')) {
     // 已經在外面設定了
   } else {
@@ -384,41 +383,50 @@ async function fetchSingleSheet(targetKey) {
   if(!cfg) return;
 
   try {
+    // ★★★ 終極除錯：直接把回傳結果印出來 ★★★
     const r = await fetch(`${API_BASE}?action=get&sheet=${encodeURIComponent(cfg.sheet)}&_t=${new Date().getTime()}`);
     const text = await r.text();
     let j;
-    try { j = JSON.parse(text); } catch(e) { throw new Error("伺服器忙碌中"); }
+    try { 
+        j = JSON.parse(text); 
+    } catch(e) { 
+        // 解析失敗，直接顯示後端回傳的原始文字
+        throw new Error("後端回傳錯誤：\n" + text.substring(0, 200)); 
+    }
     
     if(j.error) {
-      if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">讀取錯誤: ${j.error} <br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
+      if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">API錯誤: ${j.error} <br><button class="btn" onclick="forceRefreshMobile()">重試</button></div>`;
+      else alert("API錯誤: " + j.error);
       hideLoading(); return;
     }
 
     const vals = j.values || [];
     if (vals.length === 0) {
-      if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;padding:20px;">目前沒有資料 <br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
+      if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;padding:20px;">工作表 ${targetKey} 是空的 <br><button class="btn" onclick="forceRefreshMobile()">重試</button></div>`;
       hideLoading(); return;
     }
 
-    const hIdx = vals.findIndex(r => {
+    // ★★★ 寬鬆判斷：只要該行有內容就當作標題候選 ★★★
+    // 嘗試尋找包含「區域」或「車號」的行，若找不到，則預設第 1 行 (index 0)
+    let hIdx = vals.findIndex(r => {
       if (!Array.isArray(r)) return false;
-      const rowStr = r.join('').replace(/\s/g, ''); 
-      return rowStr.includes('區域') && rowStr.includes('車號');
+      const rowStr = r.join(''); 
+      return rowStr.includes('區域') || rowStr.includes('車號');
     });
     
-    if(hIdx === -1) {
-      if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">找不到表頭<br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
-      hideLoading(); return;
-    }
+    // 如果真的找不到，就用第一行當標題（死馬當活馬醫）
+    if(hIdx === -1) hIdx = 0;
 
     ALL_SHEETS[targetKey] = {
       cfg, header: vals[hIdx].map(String),
-      rows: vals.slice(hIdx+1).filter(r => r[1] && String(r[1]).trim() !== ''), 
+      rows: vals.slice(hIdx+1).filter(r => r[1]), // 只過濾第2欄為空的
       hIdx
     };
 
   } catch(e) {
-    if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">連線失敗<br><button class="btn" onclick="forceRefreshMobile()">重新載入</button></div>`;
+    const errMsg = e.message || "未知錯誤";
+    if(window.innerWidth <= 767) container.innerHTML = `<div style="text-align:center;color:red;padding:20px;">連線失敗<br>${errMsg}<br><button class="btn" onclick="forceRefreshMobile()">重試</button></div>`;
+    else alert("連線失敗：" + errMsg);
     console.error(e);
   }
   hideLoading();
@@ -445,10 +453,16 @@ function renderMobileStats() {
   steps.forEach(step => {
     const colIdx = header.indexOf(step);
     let done=0, todo=0;
-    rows.forEach(r => {
-      const v = colIdx>=0 ? r[colIdx] : '';
-      (v && String(v).trim()!=='—' && String(v).trim()!=='-') ? done++ : todo++;
-    });
+    
+    // 如果找不到欄位，這行會報錯，加個保護
+    if (colIdx === -1) {
+        console.warn(`找不到欄位: ${step}`);
+    } else {
+        rows.forEach(r => {
+          const v = r[colIdx];
+          (v && String(v).trim()!=='—' && String(v).trim()!=='-') ? done++ : todo++;
+        });
+    }
 
     const div = document.createElement('div');
     div.className = 'm-stat-row';
@@ -525,7 +539,7 @@ async function verifyToken(token) {
     document.getElementById('userInfo').style.display = 'flex';
     document.getElementById('userDisplay').innerHTML = `${j.name} (${j.permission})`;
     
-    // 登入成功，若是電腦版，立刻載入所有資料
+    // 登入成功，更新電腦版資料
     if(window.innerWidth > 767 || document.body.classList.contains('mode-web')) {
         loadAllSheetsForDesktop();
     }
@@ -545,12 +559,10 @@ function logout() {
 /* ================= 電腦版邏輯 ================= */
 async function loadAllSheetsForDesktop() {
   showLoading();
-  // 平行載入所有表格
   const reqs = SHEET_CONFIGS.map(c => fetchSingleSheet(c.key));
   await Promise.all(reqs);
   hideLoading();
   
-  // 載入完成後，自動觸發 Dashboard 渲染
   renderDashboard2();
 }
 
@@ -588,7 +600,7 @@ function renderDashboard2() {
   });
 }
 
-/* 電腦版 Tab 切換 (修正版：強制渲染) */
+/* 電腦版 Tab 切換 */
 document.getElementById('mainTabs').addEventListener('click', (e)=>{
   const btn = e.target.closest('.main-tab');
   if(btn) {
@@ -599,12 +611,10 @@ document.getElementById('mainTabs').addEventListener('click', (e)=>{
     const target = btn.dataset.target;
     document.getElementById(target).classList.remove('hide');
     
-    // ★★★ 關鍵修復：切換 Tab 時，如果是最新狀態，檢查並強制渲染 ★★★
     if(target === 'pane-dashboard2') {
         if(Object.keys(ALL_SHEETS).length === 0) loadAllSheetsForDesktop();
         else renderDashboard2();
     } else {
-        // 其他 Tab 目前留空，但可以加載入邏輯
         if(target === 'pane-single') {
             document.getElementById('singleResults').innerHTML = '<div style="text-align:center;padding:20px;">請選擇上方條件進行查詢</div>';
         }
@@ -627,12 +637,10 @@ function switchMobileMode(mode) {
     btnStatus.classList.remove('active');
     btnWeb.classList.add('active');
     
-    // 切換網頁版時，若已登入，載入電腦版資料
     if(currentUser) {
         loadAllSheetsForDesktop();
     }
     
-    // 重置 Tab 狀態
     const tabs = document.querySelectorAll('.main-tab');
     tabs.forEach(t => t.classList.remove('active'));
     tabs[0].classList.add('active'); 

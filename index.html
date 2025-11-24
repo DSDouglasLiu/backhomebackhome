@@ -360,86 +360,10 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
     padding-top: 160px !important;
   }
 }
-  
 </style>
-    </div>
 
-    <!-- 右下：時鐘 + 自動更新頻率 -->
-    <div class="right-refresh">
-      <div class="refresh-bar">
-        <div class="clock" id="clockDisplay" aria-live="polite">--:--:--</div>
-        <div class="seg-group" id="refreshControls"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 第 1 頁：沿用（打卡 + 車卡） -->
-  <div id="pane-punch" class="tab-pane">
-    <div id="tabs" class="card hide" style="padding-bottom:6px;">
-      <div class="sheet-tabs" id="sheetTabs"></div>
-    </div>
-    <div id="content" class="hide">
-      <div id="vehList" class="veh-list"></div>
-    </div>
-  </div>
-
-  <!-- 第 2 頁：整體情報 -->
-  <div id="pane-dashboard" class="tab-pane hide">
-  <!-- 整體情報的 5 個子分頁 -->
-  <div class="card" id="dashTabsBar" style="padding-bottom:6px;">
-    <div class="sheet-tabs" id="dashboardTabs"></div>
-  </div>
-  <!-- 內容容器 -->
-  <div id="dashboard"></div>
-</div>
-
-
-  <!-- 第 3 頁：個別情報 -->
-  <div id="pane-single" class="tab-pane hide">
-  <div class="card" id="singleControlsCard" style="padding-bottom:10px;">
-    <div class="single-controls" id="singleControls">
-      <select id="selSheet" class="step-select" aria-label="Tab（可不選）">
-        <option value="">— 全部 Tab —</option>
-      </select>
-      <select id="selArea" class="step-select" aria-label="區域車次編號（可不選）">
-        <option value="">— 全部 區域車次編號 —</option>
-      </select>
-      <select id="selCar" class="step-select" aria-label="車號（可不選）">
-        <option value="">— 全部 車號 —</option>
-      </select>
-    </div>
-    <div class="single-actions">
-      <button id="btnQuery" class="btn btn--primary btn--sm">查詢</button>
-      <button id="btnReset" class="btn btn--secondary btn--sm">全部重設</button>
-    </div>
-  </div>
-
-  <div class="card" id="singleResultsCard">
-    <div id="singleResults" class="single-list" aria-live="polite"></div>
-  </div>
-</div>
-
-<div id="pane-dashboard2" class="tab-pane hide">
-  <div class="card" id="dashTabsBar2" style="padding-bottom:6px;">
-    <div class="sheet-tabs" id="dashboardTabs2"></div>
-  </div>
-  <div id="dashboard2"></div>
-</div>
-  
-</div>
-
-<div id="notif" class="notif"></div>
-
-<!-- 全螢幕 Loading Overlay -->
-<div id="loading" class="loading" role="status" aria-live="polite" aria-busy="true">
-  <div class="loading-box">
-    <div class="spinner" aria-hidden="true"></div>
-    <div class="loading-text">處理中…</div>
-  </div>
-</div>
-<div class="wrap">
-
-  <!-- ======== 手機專用標題列 + 下拉選單（貼這裡！）======== -->
+  <!-- ==================================================== -->
+  <!-- 手機專用標題列 + 下拉選單（放在最上面） -->
   <div id="mobileHeader" class="mobile-only">
     <div class="title">車流人流退場情報</div>
     <div class="user-row">
@@ -456,13 +380,97 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
   </select>
   <!-- ==================================================== -->
 
-  <!-- 下面是你原本的所有內容，全部保留不動 -->
+  <!-- 原本電腦版頂部（手機隱藏） -->
   <div class="topbar-grid">
     <!-- 左上：標題（登入與登入後皆顯示） -->
     <div class="left-title">
       <h1 id="pageTitle">車流人流退場情報</h1>
     </div>
-    ...  
+    <!-- 右上：登入資訊 -->
+    <div class="right-user">
+      <div id="signin"></div>
+      <div id="userInfo" hide class="user-info">
+        <span id="userDisplay"></span>
+        <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
+      </div>
+    </div>
+    <!-- 左下：三個主頁籤 -->
+    <div class="left-tabs">
+      <div id="mainTabs" class="main-tabs" style="justify-content: space-between;">
+        <button class="main-tab" data-target="pane-dashboard2">最新狀態</button>
+        <button class="main-tab" data-target="pane-single">個別情報</button>
+        <button class="main-tab active" data-target="pane-punch">登錄與修改</button>
+      </div>
+    </div>
+    <!-- 右下：時鐘 + 自動更新頻率 -->
+    <div class="right-refresh">
+      <div class="refresh-bar">
+        <div class="clock" id="clockDisplay" aria-live="polite">--:--:--</div>
+        <div class="seg-group" id="refreshControls"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 第 1 頁：登錄與修改 -->
+  <div id="pane-punch" class="tab-pane">
+    <div id="tabs" class="card hide" style="padding-bottom:6px;">
+      <div class="sheet-tabs" id="sheetTabs"></div>
+    </div>
+    <div id="content" class="hide">
+      <div id="vehList" class="veh-list"></div>
+    </div>
+  </div>
+
+  <!-- 第 2 頁：整體情報（舊版，保留但不顯示） -->
+  <div id="pane-dashboard" class="tab-pane hide">
+    <div class="card" id="dashTabsBar" style="padding-bottom:6px;">
+      <div class="sheet-tabs" id="dashboardTabs"></div>
+    </div>
+    <div id="dashboard"></div>
+  </div>
+
+  <!-- 第 3 頁：個別情報 -->
+  <div id="pane-single" class="tab-pane hide">
+    <div class="card" id="singleControlsCard" style="padding-bottom:10px;">
+      <div class="single-controls" id="singleControls">
+        <select id="selSheet" class="step-select" aria-label="Tab（可不選）">
+          <option value="">— 全部 Tab —</option>
+        </select>
+        <select id="selArea" class="step-select" aria-label="區域車次編號（可不選）">
+          <option value="">— 全部 區域車次編號 —</option>
+        </select>
+        <select id="selCar" class="step-select" aria-label="車號（可不選）">
+          <option value="">— 全部 車號 —</option>
+        </select>
+      </div>
+      <div class="single-actions">
+        <button id="btnQuery" class="btn btn--primary btn--sm">查詢</button>
+        <button id="btnReset" class="btn btn--secondary btn--sm">全部重設</button>
+      </div>
+    </div>
+    <div class="card" id="singleResultsCard">
+      <div id="singleResults" class="single-list" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- 最新狀態頁面（主要頁面） -->
+  <div id="pane-dashboard2" class="tab-pane hide">
+    <div class="card" id="dashTabsBar2" style="padding-bottom:6px;">
+      <div class="sheet-tabs" id="dashboardTabs2"></div>
+    </div>
+    <div id="dashboard2"></div>
+  </div>
+
+</div> <!-- .wrap 結束 -->
+
+<div id="notif" class="notif"></div>
+<!-- 全螢幕 Loading Overlay -->
+<div id="loading" class="loading" role="status" aria-live="polite" aria-busy="true">
+  <div class="loading-box">
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="loading-text">處理中…</div>
+  </div>
+</div>
 
 <script>
 const GOOGLE_CLIENT_ID = '368914333961-b8j4o6h73hurdoq5k377f6v2e1pg0r3p.apps.googleusercontent.com';

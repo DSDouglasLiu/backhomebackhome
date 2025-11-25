@@ -201,6 +201,18 @@ body.login #login-center {
 .detail-table th, .detail-table td{ border:1px solid var(--border); padding:8px 10px; text-align:center; }
 .detail-table th{ background:var(--primary-600); color:#fff; }
 .single-line { text-align: center; margin-bottom: 6px; }
+
+/* 分組標題樣式 */
+.group-header {
+  grid-column: 1 / -1;
+  background: var(--gray-100);
+  padding: 4px 8px;
+  font-weight: 700;
+  color: var(--primary-600);
+  border-radius: 4px;
+  margin: 8px 0 4px 0;
+  font-size: 0.9rem;
+}
 </style>
 </head>
 <!-- 強制預設 login class -->
@@ -284,21 +296,60 @@ body.login #login-center {
 const GOOGLE_CLIENT_ID = '368914333961-b8j4o6h73hurdoq5k377f6v2e1pg0r3p.apps.googleusercontent.com';
 const API_BASE = 'https://script.google.com/macros/s/AKfycbxjGHiVKpNMG84OIHIvX4tGYgJ7gksxT0PItegG-7bpSeumnqgMPfwo-1Ocs1l9rMxC/exec';
 
+// ★★★ 更新後的設定檔 (含操作分組與打卡順序) ★★★
 const SHEET_CONFIGS = [
-  { key:'地區專車退場（遊覽車平台）', sheet:'地區專車退場（遊覽車平台）', colorClass: 'theme-teal', steps:[
-    '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
-    '退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台'
-  ]},
-  { key:'地區專車退場（禪堂平台）', sheet:'地區專車退場（禪堂平台）', colorClass: 'theme-orange', steps:[
-    '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','車已離開禪堂平台'
-  ]},
-  { key:'水陸專車退場', sheet:'水陸專車退場', colorClass: 'theme-purple', steps:[
-    '已 Call 車排車隊','已排好車隊','車暫停位置','退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','車已離開遊覽車平台'
-  ]},
-  { key:'288法青退場', sheet:'288法青退場', colorClass: 'theme-pink', steps:[
-    '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
-  ]}
+  { 
+    key:'地區專車退場（遊覽車平台）', 
+    sheet:'地區專車退場（遊覽車平台）', 
+    colorClass: 'theme-teal', 
+    steps:[
+      '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
+      '退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台'
+    ],
+    operatorGroups: {
+        '主要操作人員': ['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','已 Call 車上遊覽車平台','車第二次上遊覽車平台','車已離開遊覽車平台'],
+        '第一組操作人員': ['退場人員已到齊','人已前往平台']
+    }
+  },
+  { 
+    key:'地區專車退場（禪堂平台）', 
+    sheet:'地區專車退場（禪堂平台）', 
+    colorClass: 'theme-orange', 
+    steps:[
+      '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
+      '人已前往禪堂平台','車已離開禪堂平台'
+    ],
+    operatorGroups: {
+        '主要操作人員': ['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置'],
+        '第二組操作人員': ['人已前往禪堂平台','車已離開禪堂平台']
+    }
+  },
+  { 
+    key:'水陸專車退場', 
+    sheet:'水陸專車退場', 
+    colorClass: 'theme-purple', 
+    steps:[
+      '已 Call 車排車隊','已排好車隊','車暫停位置',
+      '退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','人已前往平台','車已離開遊覽車平台'
+    ],
+    operatorGroups: {
+        '主要操作人員': ['已 Call 車排車隊','已排好車隊','車暫停位置','已 Call 車上遊覽車平台','車已上遊覽車平台','車已離開遊覽車平台'],
+        '第二組操作人員': ['退場人員已到齊','人已前往平台']
+    }
+  },
+  { 
+    key:'288法青退場', 
+    sheet:'288法青退場', 
+    colorClass: 'theme-pink', 
+    steps:[
+      '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
+    ],
+    operatorGroups: {
+        '主要操作人員': ['退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台']
+    }
+  }
 ];
+
 const STOP_OPTIONS = ['禪堂平台','法心北路','法心南路（西）','法心南路（東）','法大路'];
 const REFRESH_PRESETS = [{ label:'5分', ms:300000 }, { label:'2分', ms:120000 }, { label:'60秒', ms:60000 }, { label:'30秒', ms:30000 }];
 
@@ -528,22 +579,38 @@ function renderDashboardUI(){
         section.appendChild(title);
 
         const grid = document.createElement('div'); grid.className = 'stat-grid';
-        cfg.steps.forEach(step => {
-            if(step === '車暫停位置') return;
-            const colIdx = data.header.indexOf(step);
-            let done=0, todo=0;
-            data.rows.forEach(item => { 
-                const r = item.data;
-                const v = colIdx>=0?r[colIdx]:''; (v&&v!=='—') ? done++ : todo++; 
-            });
+        
+        // ★ 分組顯示邏輯 (主要/第二組) ★
+        const groups = cfg.operatorGroups || {'所有步驟': cfg.steps};
+        for(let groupName in groups){
+            // 如果分組有值，可以選擇顯示分組標題
+            if(Object.keys(groups).length > 1){
+                 const groupHeader = document.createElement('div');
+                 groupHeader.className = 'group-header'; // CSS 已定義
+                 groupHeader.textContent = groupName;
+                 groupHeader.style.gridColumn = '1 / -1'; // 跨滿整行
+                 groupHeader.style.marginTop = '12px';
+                 grid.appendChild(groupHeader);
+            }
 
-            const card = document.createElement('div'); card.className = 'stat-card';
-            card.innerHTML = `<div class="stat-head">${step}</div><div class="stat-row"></div>`;
-            const row = card.querySelector('.stat-row');
-            row.appendChild(createPill(done, '完成', 'done', () => openListModal2(cfg.key, step, 'done')));
-            row.appendChild(createPill(todo, '未完成', 'todo', () => openListModal2(cfg.key, step, 'todo')));
-            grid.appendChild(card);
-        });
+            groups[groupName].forEach(step => {
+                if(step === '車暫停位置') return;
+                const colIdx = data.header.indexOf(step);
+                let done=0, todo=0;
+                data.rows.forEach(item => { 
+                    const r = item.data;
+                    const v = colIdx>=0?r[colIdx]:''; (v&&v!=='—') ? done++ : todo++; 
+                });
+
+                const card = document.createElement('div'); card.className = 'stat-card';
+                card.innerHTML = `<div class="stat-head">${step}</div><div class="stat-row"></div>`;
+                const row = card.querySelector('.stat-row');
+                row.appendChild(createPill(done, '完成', 'done', () => openListModal2(cfg.key, step, 'done')));
+                row.appendChild(createPill(todo, '未完成', 'todo', () => openListModal2(cfg.key, step, 'todo')));
+                grid.appendChild(card);
+            });
+        }
+
         section.appendChild(grid);
         
         const stopIdx = data.header.indexOf('車暫停位置');
@@ -626,62 +693,76 @@ function renderVehicles(data) {
     card.appendChild(titleDiv);
 
     const stepsBox=document.createElement('div');
-    cfg.steps.forEach(st=>{
-        const colIdx = header.indexOf(st);
-        const rawVal = (colIdx!==-1) ? String(row[colIdx]||'').trim(): '';
+    
+    // ★ 使用分組顯示步驟 ★
+    const groups = cfg.operatorGroups || {'步驟': cfg.steps};
+    for(let groupName in groups){
+        const groupDiv = document.createElement('div');
         
-        const rowEl = document.createElement('div'); rowEl.className='step-row';
-        
-        // 1. Left Label
-        const labelEl = document.createElement('div');
-        labelEl.className = 'step-label';
-        labelEl.textContent = st;
-        rowEl.appendChild(labelEl);
-        
-        // 2. Middle Content
-        const middleEl = document.createElement('div');
-        middleEl.className = 'step-middle';
-        
-        if (st==='車暫停位置'){
-            const sel=document.createElement('select'); sel.className='step-select';
-            sel.innerHTML = '<option value="">— 請選擇 —</option>' + STOP_OPTIONS.map(o=>`<option value="${o}">${o}</option>`).join('');
-            if(rawVal) sel.value = rawVal;
-            sel.disabled = !canWrite;
-            if(canWrite) sel.addEventListener('change', () => doUpdate(cfg, baseRow, colIdx+1, sel.value, () => loadSheetData(cfg.key, true)));
-            middleEl.appendChild(sel);
-        } else {
-            const timeSpan=document.createElement('span'); timeSpan.className='step-time'; timeSpan.textContent=rawVal?formatSheetTime(rawVal):'—';
-            middleEl.appendChild(timeSpan);
+        // 只有當有多組時才顯示標題
+        if(Object.keys(groups).length > 1) {
+            groupDiv.innerHTML = `<div style="font-size:0.85rem; color:var(--text-muted); margin:8px 0 4px; font-weight:700; background:#f1f5f9; padding:4px 8px; border-radius:4px;">${groupName}</div>`;
         }
-        rowEl.appendChild(middleEl);
-
-        // 3. Right Buttons
-        const btnG = document.createElement('div'); btnG.className='btn-group';
         
-        if (st !== '車暫停位置' && canWrite) { 
-             if(!rawVal) {
-                const stepIdx = cfg.steps.indexOf(st);
-                const prevStep = stepIdx>0 ? cfg.steps[stepIdx-1] : null;
-                const prevCol = prevStep ? header.indexOf(prevStep) : -1;
-                const prevDone = !prevStep || (prevCol>=0 && row[prevCol]);
-                
-                const btn = createBtn('打卡','btn btn--primary btn--sm', ()=>doUpdate(cfg, baseRow, colIdx+1, getTaipeiHHMMSS(), ()=>loadSheetData(cfg.key, true)));
-                if(!prevDone) { btn.disabled=true; btn.style.opacity=0.5; btn.title='前一步驟未完成'; }
-                btnG.appendChild(btn);
+        groups[groupName].forEach(st => {
+            const colIdx = header.indexOf(st);
+            const rawVal = (colIdx!==-1) ? String(row[colIdx]||'').trim(): '';
+            
+            const rowEl = document.createElement('div'); rowEl.className='step-row';
+            
+            // 1. Left Label
+            const labelEl = document.createElement('div');
+            labelEl.className = 'step-label';
+            labelEl.textContent = st;
+            rowEl.appendChild(labelEl);
+            
+            // 2. Middle Content
+            const middleEl = document.createElement('div');
+            middleEl.className = 'step-middle';
+            
+            if (st==='車暫停位置'){
+                const sel=document.createElement('select'); sel.className='step-select';
+                sel.innerHTML = '<option value="">— 請選擇 —</option>' + STOP_OPTIONS.map(o=>`<option value="${o}">${o}</option>`).join('');
+                if(rawVal) sel.value = rawVal;
+                sel.disabled = !canWrite;
+                if(canWrite) sel.addEventListener('change', () => doUpdate(cfg, baseRow, colIdx+1, sel.value, () => loadSheetData(cfg.key, true)));
+                middleEl.appendChild(sel);
             } else {
-                const btnEdit=createBtn('修改','btn btn--success btn--sm', ()=>{
-                    const nv=prompt('輸入時間',rawVal); if(nv) doUpdate(cfg, baseRow, colIdx+1, nv, ()=>loadSheetData(cfg.key, true));
-                });
-                const btnDel=createBtn('刪除','btn btn--danger btn--sm', ()=>{
-                    if(confirm('刪除?')) doUpdate(cfg, baseRow, colIdx+1, '', ()=>loadSheetData(cfg.key, true));
-                });
-                btnG.appendChild(btnEdit); btnG.appendChild(btnDel);
+                const timeSpan=document.createElement('span'); timeSpan.className='step-time'; timeSpan.textContent=rawVal?formatSheetTime(rawVal):'—';
+                middleEl.appendChild(timeSpan);
             }
-        }
-        rowEl.appendChild(btnG);
+            rowEl.appendChild(middleEl);
 
-        stepsBox.appendChild(rowEl);
-    });
+            // 3. Right Buttons
+            const btnG = document.createElement('div'); btnG.className='btn-group';
+            
+            if (st !== '車暫停位置' && canWrite) { 
+                if(!rawVal) {
+                    const stepIdx = cfg.steps.indexOf(st);
+                    const prevStep = stepIdx>0 ? cfg.steps[stepIdx-1] : null;
+                    const prevCol = prevStep ? header.indexOf(prevStep) : -1;
+                    const prevDone = !prevStep || (prevCol>=0 && row[prevCol]);
+                    
+                    const btn = createBtn('打卡','btn btn--primary btn--sm', ()=>doUpdate(cfg, baseRow, colIdx+1, getTaipeiHHMMSS(), ()=>loadSheetData(cfg.key, true)));
+                    if(!prevDone) { btn.disabled=true; btn.style.opacity=0.5; btn.title='前一步驟未完成'; }
+                    btnG.appendChild(btn);
+                } else {
+                    const btnEdit=createBtn('修改','btn btn--success btn--sm', ()=>{
+                        const nv=prompt('輸入時間',rawVal); if(nv) doUpdate(cfg, baseRow, colIdx+1, nv, ()=>loadSheetData(cfg.key, true));
+                    });
+                    const btnDel=createBtn('刪除','btn btn--danger btn--sm', ()=>{
+                        if(confirm('刪除?')) doUpdate(cfg, baseRow, colIdx+1, '', ()=>loadSheetData(cfg.key, true));
+                    });
+                    btnG.appendChild(btnEdit); btnG.appendChild(btnDel);
+                }
+            }
+            rowEl.appendChild(btnG);
+
+            groupDiv.appendChild(rowEl);
+        });
+        stepsBox.appendChild(groupDiv);
+    }
+    
     card.appendChild(stepsBox);
     box.appendChild(card);
   });

@@ -478,28 +478,10 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
 
   <!-- 第 3 頁：個別情報 -->
   <div id="pane-single" class="tab-pane hide">
-  <div class="card" id="singleControlsCard" style="padding-bottom:10px;">
-    <div class="single-controls" id="singleControls">
-      <select id="selSheet" class="step-select" aria-label="Tab（可不選）">
-        <option value="">— 全部 Tab —</option>
-      </select>
-      <select id="selArea" class="step-select" aria-label="區域車次編號（可不選）">
-        <option value="">— 全部 區域車次編號 —</option>
-      </select>
-      <select id="selCar" class="step-select" aria-label="車號（可不選）">
-        <option value="">— 全部 車號 —</option>
-      </select>
-    </div>
-    <div class="single-actions">
-      <button id="btnQuery" class="btn btn--primary btn--sm">查詢</button>
-      <button id="btnReset" class="btn btn--secondary btn--sm">全部重設</button>
-    </div>
-  </div>
-
-  <div class="card" id="singleResultsCard">
+    <div class="card" id="singleResultsCard">
     <div id="singleResults" class="single-list" aria-live="polite"></div>
   </div>
-</div>
+  </div>
 
 <div id="pane-dashboard2" class="tab-pane hide">
 <div class="card" id="dashTabsBar2" style="padding: 8px 16px;"> <div class="sheet-tabs" id="dashboardTabs2"></div>
@@ -816,37 +798,52 @@ async function handleCredential(resp) {
     currentUser = j; finishLoginUI(); loadSheetData(currentSheetKey);
   } catch (err) { showNotif('登入失敗：' + err.message, true); logout(); }
 }
-function finishLoginUI() {
-  updateRefreshControlsVisibility();
-  document.body.classList.remove('login');
-  document.getElementById('signin').classList.add('hide');
-  const ui = document.getElementById('userInfo'); 
-  ui.classList.remove('hide');
-  ui.style.display = ''; // 還原由 CSS 控制
+// 通用成功視窗（打卡、修改、刪除、停車位置共用）
+function showSuccessModal(area, car, step, action = '打卡成功') {
+  const actions = {
+    '打卡成功': '#22c55e',
+    '修改成功': '#3b82f6',
+    '刪除成功': '#ef4444',
+    '停車位置已更新': '#8b5cf6'
+  };
+  const color = actions[action] || '#22c55e';
 
-  const nameSafe  = escapeHtml(currentUser.name || '');
-  const emailSafe = escapeHtml(currentUser.email || '');
-  const permSafe  = escapeHtml(currentUser.permission || '');
-  document.getElementById('userDisplay').innerHTML =
-    `${nameSafe} &lt;${emailSafe}&gt; ｜ 權限：<b>${permSafe}</b>`;
-
-  document.getElementById('tabs').classList.remove('hide');
-  document.getElementById('content').classList.remove('hide');
-
-  if (currentUser.permission === '檢視') 
-    showNotif('目前為「檢視」權限：所有按鈕與下拉皆為唯讀', false);
-
-  // === 關鍵：登入後預設開啟「最新狀態」頁面 ===
-  switchPane('pane-dashboard2');
-
-  // 讓「最新狀態」這個 tab 高亮
-  document.querySelectorAll('#mainTabs .main-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.target === 'pane-dashboard2');
-  });
-
-  // 恢復 tab 可聚焦
-  document.querySelectorAll('#mainTabs .main-tab')
-    .forEach(b => { b.tabIndex = 0; b.removeAttribute('aria-disabled'); });
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.style.textAlign = 'center';
+  box.style.padding = '28px 20px';
+  box.style.maxWidth = '340px';
+  box.innerHTML = `
+    <div style="font-size:24px;font-weight:800;margin-bottom:8px;color:var(--text-strong);">
+      ${escapeHtml(area)}
+    </div>
+    <div style="font-size:28px;font-weight:900;margin-bottom:16px;color:var(--text-strong);">
+      ${escapeHtml(car)}
+    </div>
+    <div style="font-size:16px;color:var(--text-muted);margin-bottom:8px;">
+      ${escapeHtml(step)}
+    </div>
+    <div style="font-size:22px;font-weight:800;color:${color};margin:20px 0;">
+      ${action}
+    </div>
+    <button class="btn btn--primary btn--lg" style="width:100%;margin-top:8px;">確定</button>
+  `;
+  const close = openModal(box);
+  box.querySelector('button').onclick = () => {
+    close();
+    // 即時重排這張卡片
+    const card = document.querySelector(`.veh-card .veh-title-sub[data-car="${car}"]`)?.closest('.veh-card');
+    if (card) {
+      const container = document.getElementById('vehList');
+      const sortedCards = Array.from(container.children).sort((a, b) => {
+        const aComp = a.__completion || 0;
+        const bComp = b.__completion || 0;
+        return aComp - bComp;
+      });
+      container.innerHTML = '';
+      sortedCards.forEach(c => container.appendChild(c));
+    }
+  };
 }
 function logout() {
   localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -1168,7 +1165,6 @@ function renderVehicles(cfg, data) {
 
         // 確保 sleep 存在
         if(typeof sleep === 'function') await sleep(250);
-        await reloadSheet();
       }, '儲存備註…');
 
       showNotif('備註已儲存', false);
@@ -1209,11 +1205,11 @@ async function onStopSelect(cfg,rowNumber,header,st,value,span){
     if(!j.ok) throw new Error(j.error||'unknown'); 
     
     await sleep(200); 
-    await reloadSheet();
   },'更新中…'); 
   
   span.textContent=value||''; 
   showNotif(value?'已更新車暫停位置':'已清除車暫停位置',false);
+  showSuccessModal(area, car, '車暫停位置', '停車位置已更新');
 }
 // 打卡按鈕事件
 async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
@@ -1279,7 +1275,6 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
 
       // 稍微等一下，確保後端寫入完成再重載
       await sleep(200);
-      await reloadSheet();
     }, '打卡中…');
 
     // ✅ 後端成功更新後，才更新前端畫面
@@ -1289,6 +1284,7 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
     btnDel.disabled   = false;
     unlockNext(rowEl);
     showNotif('已打卡', false);
+    showSuccessModal(area, car, st, '打卡成功');
 
   } catch (err) {
     console.error('打卡失敗：', err);
@@ -1332,18 +1328,16 @@ async function onEditTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit
 
         if(!j.ok) throw new Error(j.error||'更新失敗');
         await sleep(200);
-        await reloadSheet();
       }, '儲存中…');
 
       const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim()==='—';
       timeSpan.textContent = formatSheetTime(newHHMMSS);
       if (wasEmpty) unlockNext(rowEl);
-
       btnPunch.disabled = true;
       btnEdit.disabled  = false;
       btnDel.disabled   = false;
-
       showNotif('已修改時間', false);
+      showSuccessModal(area, car, st, '修改成功');
     } catch (err) {
       console.error('修改時間失敗：', err);
       showNotif('修改時間失敗：' + err.message, true);
@@ -1351,57 +1345,55 @@ async function onEditTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit
   });
 }
 
-  
-async function onDeleteTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit,btnDel,rowEl){
+async function onDeleteTimeClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl) {
   if (!currentUser) return alert('請先登入');
-  if (currentUser.permission!=='全功能') return alert('權限不足');
+  if (currentUser.permission !== '全功能') return alert('權限不足');
 
   const colIdx = header.indexOf(st);
-  if (colIdx===-1) return alert('此欄位不存在：'+st);
+  if (colIdx === -1) return alert('此欄位不存在：' + st);
 
-  openConfirmDialog('確定要刪除打卡時間？', async ()=>{
+  // 必須先從 rowEl 取得區域與車號（因為這裡沒有傳進來）
+  const vehCard = rowEl.closest('.veh-card');
+  const area = vehCard.querySelector('.veh-title-main').textContent.trim();
+  const car  = vehCard.querySelector('.veh-title-sub').textContent.trim();
+
+  openConfirmDialog('確定要刪除打卡時間？', async () => {
     try {
-      await withLoading(async()=>{
+      await withLoading(async () => {
         const body = {
-          sheet:  cfg.sheet,
-          email:  currentUser.email || '',
-          idToken: (typeof idToken !== 'undefined' ? idToken : ''),
-          mode:   'delete',
-          writes: [{ row: rowNumber, col: colIdx+1, value: '' }]
+          sheet: cfg.sheet,
+          email: currentUser.email || '',
+          idToken: idToken || '',
+          mode: 'delete',
+          writes: [{ row: rowNumber, col: colIdx + 1, value: '' }]
         };
 
-        const r = await fetch(API_BASE+'?action=update',{
-          method:'POST',
-          headers:{'Content-Type':'text/plain;charset=utf-8'},
+        const r = await fetch(API_BASE + '?action=update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(body)
         });
 
-        let j;
-        try{
-          j = await r.json();
-        } catch(e){
-          throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
-        }
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || '更新失敗');
 
-        if(!j.ok) throw new Error(j.error||'更新失敗');
-        await sleep(200);
-        await reloadSheet();
+        // 成功後直接局部更新 UI（不再 reloadSheet）
+        timeSpan.textContent = '—';
+        btnPunch.disabled = false;
+        btnEdit.disabled = true;
+        btnDel.disabled = true;
+        lockFollowing(rowEl);
+
+        showNotif('已刪除', false);
+        showSuccessModal(area, car, st, '刪除成功');
       }, '刪除中…');
 
-      timeSpan.textContent = '';
-      btnPunch.disabled    = false;
-      btnEdit.disabled     = true;
-      btnDel.disabled      = true;
-      lockFollowing(rowEl);
-      showNotif('已刪除', false);
     } catch (err) {
       console.error('刪除時間失敗：', err);
-      showNotif('刪除時間失敗：' + err.message, true);
+      showNotif('刪除失敗：' + err.message, true);
     }
   });
-}
-
-  
+}  
 function reloadSheet(){ loadSheetData(currentSheetKey); }
 function unlockNext(rowEl){
   const nextRow=rowEl?.nextElementSibling; if(!nextRow) return;

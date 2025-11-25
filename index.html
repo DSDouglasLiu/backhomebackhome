@@ -227,8 +227,21 @@ body.login .tab-pane {
 .detail-table th, .detail-table td{ border:1px solid var(--border); padding:8px 10px; text-align:center; }
 .detail-table th{ background:var(--primary-600); color:#fff; }
 .single-line { text-align: center; margin-bottom: 6px; }
+
+/* 分組標題樣式 */
+.group-header {
+  grid-column: 1 / -1;
+  background: var(--gray-100);
+  padding: 4px 8px;
+  font-weight: 700;
+  color: var(--primary-600);
+  border-radius: 4px;
+  margin: 8px 0 4px 0;
+  font-size: 0.9rem;
+}
 </style>
 </head>
+<!-- 強制預設 login class -->
 <body class="login">
 
 <div class="wrap">
@@ -318,9 +331,9 @@ const SHEET_CONFIGS = [
       '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
       '退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台'
     ],
-    // 用來標示哪些是主要操作，非主要的會變色
     operatorGroups: {
-        '主要操作人員': ['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','已 Call 車上遊覽車平台','車第二次上遊覽車平台','車已離開遊覽車平台']
+        '主要操作人員': ['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','已 Call 車上遊覽車平台','車第二次上遊覽車平台','車已離開遊覽車平台'],
+        '第一組操作人員': ['退場人員已到齊','人已前往平台']
     }
   },
   { 
@@ -332,7 +345,8 @@ const SHEET_CONFIGS = [
       '人已前往禪堂平台','車已離開禪堂平台'
     ],
     operatorGroups: {
-        '主要操作人員': ['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置']
+        '主要操作人員': ['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置'],
+        '第二組操作人員': ['人已前往禪堂平台','車已離開禪堂平台']
     }
   },
   { 
@@ -344,7 +358,8 @@ const SHEET_CONFIGS = [
       '退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','人已前往平台','車已離開遊覽車平台'
     ],
     operatorGroups: {
-        '主要操作人員': ['已 Call 車排車隊','已排好車隊','車暫停位置','已 Call 車上遊覽車平台','車已上遊覽車平台','車已離開遊覽車平台']
+        '主要操作人員': ['已 Call 車排車隊','已排好車隊','車暫停位置','已 Call 車上遊覽車平台','車已上遊覽車平台','車已離開遊覽車平台'],
+        '第二組操作人員': ['退場人員已到齊','人已前往平台']
     }
   },
   { 

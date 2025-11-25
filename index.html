@@ -356,32 +356,86 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
 </head>
 <body>
 <div class="wrap">
-  <!-- 兩列兩欄的頂部排版 -->
+  <!-- 頂部欄位 -->
   <div class="topbar-grid">
-    <!-- 左上：標題（登入與登入後皆顯示） -->
     <div class="left-title">
       <h1 id="pageTitle">車流人流退場情報</h1>
     </div>
-
-    <!-- 右上：登入資訊 -->
     <div class="right-user">
       <div id="signin"></div>
       <div id="userInfo" class="hide user-info">
-      <span id="userDisplay"></span>
-        <button id="logoutBtn" class="btn btn--secondary btn--sm" style="padding:6px 12px;">登出</button>
+        <span id="userDisplay"></span>
+        <button id="logoutBtn" class="btn btn--secondary btn--sm">登出</button>
       </div>
     </div>
-
-    <!-- 左下：三個主頁籤 -->
     <div class="left-tabs">
-      <div class="card" style="padding: 8px 16px; margin: 0;">
-    <div id="mainTabs" class="main-tabs">
-     <!-- <div id="mainTabs" class="main-tabs" style="justify-content: space-between;">
-  <!-- 最左邊：最新狀態（原本的整體情報 II） -->
-  <button class="main-tab active" data-target="pane-dashboard2">最新狀態</button>
-  <button class="main-tab" data-target="pane-single">個別情報</button>
-  <button class="main-tab" data-target="pane-punch">登錄與修改</button>
+      <div class="card" style="padding:8px 16px;margin:0;">
+        <div id="mainTabs" class="main-tabs">
+          <button class="main-tab active" data-target="pane-dashboard2">最新狀態</button>
+          <button class="main-tab" data-target="pane-single">個別情報</button>
+          <button class="main-tab" data-target="pane-punch">登錄與修改</button>
+        </div>
+      </div>
+    </div>
+    <div class="right-refresh">
+      <div class="refresh-bar">
+        <div class="clock" id="clockDisplay">--:--:--</div>
+        <div class="seg-group" id="refreshControls"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 登錄與修改頁面（乾淨版） -->
+  <div id="pane-punch" class="tab-pane">
+    <div id="tabs" class="card hide" style="padding-bottom:6px;">
+      <div class="sheet-tabs" id="sheetTabs"></div>
+    </div>
+    <div id="content" class="hide">
+      <div id="vehList" class="veh-list"></div>
+    </div>
+  </div>
+
+  <!-- 個別情報頁面（完整保留） -->
+  <div id="pane-single" class="tab-pane hide">
+    <div class="card" style="padding-bottom:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <select id="selSheet" class="step-select">
+          <option value="">— 全部 Tab —</option>
+        </select>
+        <select id="selArea" class="step-select">
+          <option value="">— 全部 區域車次編號 —</option>
+        </select>
+        <select id="selCar" class="step-select">
+          <option value="">— 全部 車號 —</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px;">
+        <button id="btnQuery" class="btn btn--primary">查詢</button>
+        <button id="btnReset" class="btn btn--secondary">全部重設</button>
+      </div>
+    </div>
+    <div class="card">
+      <div id="singleResults" class="single-list" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- 最新狀態頁面（保持原樣） -->
+  <div id="pane-dashboard2" class="tab-pane hide">
+    <div class="card" style="padding:8px 16px;">
+      <div class="sheet-tabs" id="dashboardTabs2"></div>
+    </div>
+    <div id="dashboard2"></div>
+  </div>
 </div>
+
+<div id="notif" class="notif"></div>
+
+<!-- Loading Overlay -->
+<div id="loading" class="loading">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-text">處理中…</div>
+  </div>
 </div>
       
 <!-- 完全隱藏原本的「整體情報」按鈕（不會出現在畫面上） -->

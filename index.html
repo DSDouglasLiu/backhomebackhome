@@ -328,13 +328,16 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
 
     <!-- 左下：三個主頁籤 -->
     <div class="left-tabs">
-      <div id="mainTabs" class="main-tabs" style="justify-content: space-between;">
+      <div class="card" style="padding: 8px 16px; margin: 0;">
+    <div id="mainTabs" class="main-tabs">
+     <!-- <div id="mainTabs" class="main-tabs" style="justify-content: space-between;">
   <!-- 最左邊：最新狀態（原本的整體情報 II） -->
   <button class="main-tab active" data-target="pane-dashboard2">最新狀態</button>
   <button class="main-tab" data-target="pane-single">個別情報</button>
   <button class="main-tab" data-target="pane-punch">登錄與修改</button>
 </div>
-
+</div>
+      
 <!-- 完全隱藏原本的「整體情報」按鈕（不會出現在畫面上） -->
 <style>
   /* 隱藏原本的整體情報按鈕（pane-dashboard） */
@@ -351,7 +354,49 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
   margin-top: 4px !important;
   line-height: 1.4 !important;        /* 與小標題視覺一致 */
 }
-  
+/* ================== 新增：彩色按鈕與排版優化 ================== */
+
+/* 1. 確保 Tab 容器內容物「垂直置中」且「靠左對齊」 */
+.sheet-tabs, 
+.main-tabs { 
+  display: flex; 
+  gap: 12px !important;       /* 統一間距 */
+  align-items: center;        /* 上下垂直置中 (解決高度不一問題) */
+  justify-content: flex-start !important; /* 全部靠左 */
+  flex-wrap: wrap;
+}
+
+/* 2. 定義各個按鈕的專屬顏色 (Active=填滿, 非Active=外框色) */
+
+/* (A) 所有車輛 & 預設 (藍色) - 保持原樣或明確指定 */
+.btn-tab[data-key="ALL"].active { background: var(--primary-600); border-color: var(--primary-600); }
+.btn-tab[data-key="ALL"]:not(.active) { color: var(--primary-600); border-color: var(--primary-600); }
+
+/* (B) 地區專車（遊覽車平台） - 天藍色 */
+.btn-tab[data-key="地區專車退場（遊覽車平台）"].active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+.btn-tab[data-key="地區專車退場（遊覽車平台）"]:not(.active) { color: #0ea5e9; border-color: #0ea5e9; }
+
+/* (C) 地區專車（禪堂平台） - 紫色 */
+.btn-tab[data-key="地區專車退場（禪堂平台）"].active { background: #8b5cf6; border-color: #8b5cf6; color: #fff; }
+.btn-tab[data-key="地區專車退場（禪堂平台）"]:not(.active) { color: #8b5cf6; border-color: #8b5cf6; }
+
+/* (D) 水陸專車退場 - 琥珀色 */
+.btn-tab[data-key="水陸專車退場"].active { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+.btn-tab[data-key="水陸專車退場"]:not(.active) { color: #f59e0b; border-color: #f59e0b; }
+
+/* (E) 288法青退場 - 翠綠色 */
+.btn-tab[data-key="288法青退場"].active { background: #10b981; border-color: #10b981; color: #fff; }
+.btn-tab[data-key="288法青退場"]:not(.active) { color: #10b981; border-color: #10b981; }
+
+/* 3. 修正上方 Main Tabs 的按鈕高度與字體，讓它跟下方一致 */
+.main-tab {
+  padding: 6px 18px;    /* 調整內距使其高度適中 */
+  min-width: 120px;     /* 稍微縮小最小寬度，避免太寬 */
+  height: auto;         /* 讓高度由 padding 決定 */
+  display: inline-flex; /* 確保文字在按鈕內置中 */
+  align-items: center;
+  justify-content: center;
+}  
 </style>
     </div>
 
@@ -411,8 +456,9 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
 </div>
 
 <div id="pane-dashboard2" class="tab-pane hide">
-  <div class="card" id="dashTabsBar2" style="padding-bottom:6px;">
-    <div class="sheet-tabs" id="dashboardTabs2"></div>
+<div class="card" id="dashTabsBar2" style="padding: 8px 16px;"> <div class="sheet-tabs" id="dashboardTabs2"></div>
+</div>
+  <div class="sheet-tabs" id="dashboardTabs2"></div>
   </div>
   <div id="dashboard2"></div>
 </div>

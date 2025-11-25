@@ -856,6 +856,76 @@ function openListModal2(sheetKey, step, type, locValue) {
         d.appendChild(btnGroup);
         c.appendChild(d);
     });
+    
+    // ★★★ NEW: Add "Add Car" section for Parking Location ★★★
+    if (step === '車暫停位置' && type === 'loc' && currentUser?.permission === '全功能') {
+        // 1. Identify previous step
+        const stepIdx = data.cfg.steps.indexOf(step);
+        const prevStep = stepIdx > 0 ? data.cfg.steps[stepIdx - 1] : null;
+        
+        if (prevStep) {
+            const prevColIdx = data.header.indexOf(prevStep);
+            const stopColIdx = data.header.indexOf(step);
+            
+            // 2. Find candidates
+            const candidates = data.rows.filter(item => {
+                const r = item.data;
+                const prevVal = r[prevColIdx];
+                const stopVal = r[stopColIdx];
+                // Logic: Previous completed AND Current empty
+                return (prevVal && prevVal !== '—') && (!stopVal || stopVal === '—');
+            });
+
+            // 3. Render UI
+            const addSection = document.createElement('div');
+            addSection.style.marginTop = '20px';
+            addSection.style.paddingTop = '15px';
+            addSection.style.borderTop = '1px solid #eee';
+            
+            if (candidates.length > 0) {
+                addSection.innerHTML = `<div style="font-weight:bold; margin-bottom:8px;">新增車輛至 ${locValue}</div>`;
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.gap = '8px';
+                
+                const sel = document.createElement('select');
+                sel.className = 'step-select'; 
+                sel.style.flex = '1';
+                sel.innerHTML = '<option value="">請選擇車輛...</option>';
+                
+                candidates.forEach(c => {
+                    const area = c.data[data.areaIdx];
+                    const car = c.data[data.carIdx];
+                    const opt = document.createElement('option');
+                    opt.value = c.rowIndex; 
+                    opt.textContent = `${area} ${car}`;
+                    sel.appendChild(opt);
+                });
+                
+                const btnAdd = createBtn('確定', 'btn btn--primary btn--sm', async () => {
+                    if(!sel.value) return;
+                    const targetRowIndex = parseInt(sel.value);
+                    await doUpdate(data.cfg, targetRowIndex, stopColIdx + 1, locValue, () => {
+                        box.remove(); 
+                        document.querySelector('.modal-backdrop').remove();
+                        buildDashboard2(true); 
+                    });
+                });
+                
+                row.appendChild(sel);
+                row.appendChild(btnAdd);
+                addSection.appendChild(row);
+            } else {
+                 const noCand = document.createElement('div');
+                 noCand.style.fontSize = '0.9rem';
+                 noCand.style.color = '#999';
+                 noCand.textContent = `(無可新增車輛 - 需完成「${prevStep}」)`;
+                 addSection.appendChild(noCand);
+            }
+            box.appendChild(addSection);
+        }
+    }
+    
     openModal(box);
 }
 

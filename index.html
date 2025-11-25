@@ -10,32 +10,20 @@
 /* =========== Design Tokens =========== */
 :root{
   --radius-md:10px; --radius-lg:12px; --radius-pill: 50px;
-
-  /* 基礎色 */
   --primary-600:#1f6fe5;
   --gray-50:#f8fafc;  --gray-100:#f1f5f9; --gray-200:#e5e7eb;
   --gray-500:#64748b; --gray-800:#1f2937; --gray-900:#0f172a;
-
-  --surface: rgba(255,255,255,.9);
+  --surface: rgba(255,255,255,.95);
   --page-bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
   --text-strong: var(--gray-900);
   --text: var(--gray-800);
   --text-muted: var(--gray-500);
   --border: rgba(148,163,184,0.4);
-  --focus:#93c5fd;
-
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-float: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-
-  /* 字級 */
-  --fz-display:28px; --lh-display:36px; --fw-display:700;
-  --fz-title:18px;   --lh-title:24px;   --fw-title:700;
-  --fz-sub:14px;     --lh-sub:20px;     --fw-sub:600;
-  --fz-body:14px;    --lh-body:20px;    --fw-body:400;
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 body.dark{
-  --surface: rgba(15,23,42,.65);
+  --surface: rgba(15,23,42,.75);
   --page-bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
   --text-strong:#e5eaf3; --text:#e2e8f0; --text-muted:#93a3b5;
   --border: rgba(148,163,184,0.25);
@@ -45,14 +33,14 @@ body.dark{
 body{
   margin:0; min-height:100vh;
   background:var(--page-bg); color:var(--text);
-  font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+  font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;
 }
 .wrap{max-width:1200px; margin:0 auto; padding:16px 16px 48px;}
-h1{margin:0;font-size:var(--fz-display);line-height:var(--lh-display);font-weight:var(--fw-display);color:var(--text-strong);}
+h1{margin:0;font-size:28px;font-weight:700;color:var(--text-strong);}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
 .hide{ display:none !important; }
 
-/* =========== 按鈕容器樣式 (外框包一層) =========== */
+/* =========== 按鈕容器 =========== */
 .tab-container-styled {
   background: #fff;
   border: 1px solid var(--border);
@@ -66,191 +54,84 @@ h1{margin:0;font-size:var(--fz-display);line-height:var(--lh-display);font-weigh
 }
 body.dark .tab-container-styled { background: rgba(30, 41, 59, 0.8); }
 
-/* =========== 通用 Tab 按鈕 =========== */
+/* =========== 按鈕樣式 =========== */
 .btn-tab {
-  background: #fff;
-  color: var(--gray-500);
-  border: 1px solid transparent;
-  border-radius: var(--radius-pill);
-  padding: 6px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  min-width: 80px;
-  text-align: center;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+  background: #fff; color: var(--gray-500);
+  border: 1px solid transparent; border-radius: var(--radius-pill);
+  padding: 6px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s ease; white-space: nowrap;
 }
-body.dark .btn-tab { background: transparent; color: var(--gray-300); }
-
 .btn-tab:hover { background: var(--gray-50); color: var(--primary-600); }
+.btn-tab.active { background: var(--primary-600); color: #fff; border-color: var(--primary-600); box-shadow: 0 2px 4px rgba(31, 111, 229, 0.3); }
 
-.btn-tab.active {
-  background: var(--primary-600);
-  color: #fff;
-  border-color: var(--primary-600);
-  box-shadow: 0 2px 4px rgba(31, 111, 229, 0.3);
-}
-
-/* 上方 Main Tabs (上排) */
+/* 上方 Main Tabs */
 .main-tab {
-  background: #fff;
-  color: var(--primary-600);
-  border: 1px solid var(--primary-600);
-  border-radius: var(--radius-pill);
-  padding: 6px 18px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  min-width: 100px;
-  text-align: center;
-  transition: all 0.2s;
+  background: #fff; color: var(--primary-600);
+  border: 1px solid var(--primary-600); border-radius: var(--radius-pill);
+  padding: 6px 18px; font-size: 15px; font-weight: 700; cursor: pointer;
 }
-.main-tab:hover { background: rgba(31,111,229,0.05); }
-.main-tab.active {
-  background: var(--primary-600);
-  color: #fff;
-  box-shadow: 0 4px 6px rgba(31, 111, 229, 0.25);
-}
+.main-tab.active { background: var(--primary-600); color: #fff; box-shadow: 0 4px 6px rgba(31, 111, 229, 0.25); }
 
-/* =========== 多彩按鈕定義 (下排) =========== */
+/* 下方分類按鈕顏色 */
 .theme-teal   { --theme-color: #059669; }
 .theme-orange { --theme-color: #d97706; }
 .theme-purple { --theme-color: #7c3aed; }
 .theme-pink   { --theme-color: #db2777; }
 
-.btn-tab.colored-btn {
-  color: var(--theme-color);
-  border: 1px solid var(--theme-color);
-  background: #fff;
-}
-body.dark .btn-tab.colored-btn { background: transparent; }
+.btn-tab.colored-btn { color: var(--theme-color); border: 1px solid var(--theme-color); background: #fff; }
+.btn-tab.colored-btn.active { background: var(--theme-color); color: #fff; border-color: var(--theme-color); }
 
-.btn-tab.colored-btn:hover {
-  background: color-mix(in srgb, var(--theme-color), white 90%);
-}
-
-.btn-tab.colored-btn.active {
-  background: var(--theme-color);
-  color: #fff;
-  border-color: var(--theme-color);
-  box-shadow: 0 4px 6px color-mix(in srgb, var(--theme-color), transparent 60%);
-}
-
-/* ======= Refresh Bar & Controls ======= */
+/* 更新頻率列 */
 .refresh-bar{ display:flex; gap:12px; align-items:center; justify-content:flex-end; }
-.clock{ font-weight:800; font-variant-numeric: tabular-nums; letter-spacing:1px; font-size: 1.1rem; color: var(--text-strong); }
+.clock{ font-weight:800; font-variant-numeric: tabular-nums; letter-spacing:1px; font-size: 1.1rem; }
 .seg-group{ display:flex; gap:6px; background: #fff; border:1px solid var(--border); padding:4px; border-radius: var(--radius-pill); }
-body.dark .seg-group { background: rgba(0,0,0,0.2); }
-
-.seg-btn{
-  background:transparent; color:var(--text-muted);
-  border:none; border-radius:var(--radius-pill);
-  padding:4px 12px; font-size:13px; font-weight:600; cursor:pointer;
-  transition: all 0.2s;
-}
-.seg-btn:hover{ color:var(--primary-600); background: rgba(31,111,229,.05); }
+.seg-btn{ background:transparent; color:var(--text-muted); border:none; border-radius:var(--radius-pill); padding:4px 12px; font-weight:600; cursor:pointer; }
 .seg-btn.active{ background: #fff; color:var(--primary-600); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-body.dark .seg-btn.active{ background: var(--gray-800); color: #fff; }
-
 .seg-btn.now-btn { color: var(--primary-600); border: 1px solid var(--primary-600); margin-left: 4px; }
-.seg-btn.now-btn:hover { background: var(--primary-600); color: #fff; }
 
-/* =========== Layout Grids =========== */
-.topbar-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  gap: 12px 24px;
-  align-items: center;
-  margin-bottom: 8px;
-}
+/* 版面配置 */
+.topbar-grid { display: grid; grid-template-columns: auto 1fr; gap: 12px 24px; align-items: center; margin-bottom: 8px; }
 .topbar-grid .left-title { grid-area: 1 / 1 / 2 / 2; }
-.topbar-grid .right-user  { grid-area: 1 / 2 / 2 / 3; justify-self: end; display:flex; align-items:center; gap:12px; }
-.topbar-grid .left-tabs   { grid-area: 2 / 1 / 3 / 3; }
 .topbar-grid .right-clock { grid-area: 1 / 2 / 2 / 3; justify-self: end; display:flex; align-items:center; gap:16px; } 
+.topbar-grid .left-tabs { grid-area: 2 / 1 / 3 / 3; }
 
 @media (min-width: 768px) {
-    .topbar-grid {
-        grid-template-columns: auto 1fr auto;
-        grid-template-rows: auto auto;
-    }
+    .topbar-grid { grid-template-columns: auto 1fr auto; }
     .topbar-grid .left-title { grid-area: 1 / 1 / 2 / 2; }
     .topbar-grid .right-clock { grid-area: 1 / 2 / 2 / 3; }
-    .topbar-grid .right-user { grid-area: 1 / 3 / 2 / 4; }
     .topbar-grid .left-tabs { grid-area: 2 / 1 / 3 / 4; display: flex; justify-content: space-between; align-items: center; }
 }
 
-/* =========== Login View =========== */
+/* 登入畫面 */
 #login-center { display: none; }
+body.login #login-center { display: flex !important; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; }
+body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: none !important; }
+.login-card { background: rgba(255,255,255,0.95); padding: 48px 60px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.8); text-align: center; backdrop-filter: blur(8px); }
 
-body.login #login-center {
-  display: flex !important;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 85vh;
-}
-
-body.login #dash-topbar,
-body.login #mainTabs,
-body.login .tab-pane,
-body.login .refresh-bar,
-body.login #userInfo {
-  display: none !important;
-}
-
-.login-card {
-  background: rgba(255,255,255,0.95);
-  padding: 48px 60px;
-  border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-  border: 1px solid rgba(255,255,255,0.8);
-  text-align: center;
-  backdrop-filter: blur(8px);
-  max-width: 90vw;
-}
-
-/* =========== 內容卡片樣式 =========== */
-.veh-list{display:grid;grid-template-columns:repeat(auto-fit, minmax(350px,1fr));gap:12px;margin-top:12px;}
-.veh-card{
-  background:#fff; border-radius:var(--radius-lg); border:1px solid var(--border); padding:16px;
-  display:flex; flex-direction:column; gap:10px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-}
-body.dark .veh-card{background:rgba(15,23,42,0.4);}
-.veh-title-main{font-weight:700;font-size:1.25rem; color:var(--text-strong);}
-.veh-title-sub{font-size:0.95rem; color:var(--text-muted);}
-
+/* 卡片與列表 */
+.veh-list, .single-list { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:12px; margin-top:12px; }
+.veh-card, .indiv-card { background:#fff; border-radius:12px; border:1px solid var(--border); padding:16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.veh-title-main{font-weight:700;font-size:1.25rem;}
 .step-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding: 4px 0; border-bottom: 1px dashed var(--gray-200); }
 .step-row:last-child { border-bottom: none; }
-.step-label { font-weight: 600; color: var(--text); flex: 1; }
-.step-time{ font-family: monospace; font-size: 1rem; font-weight: 600; color: var(--primary-600); }
-body.dark .step-time{color:#60a5fa}
-.step-select{min-width:140px;padding:6px 8px;border-radius:var(--radius-md);border:1px solid var(--border);background:#fff;font-size:14px;}
+.step-time{ font-family: monospace; font-weight: 600; color: var(--primary-600); }
+.step-select{min-width:140px;padding:6px;border-radius:8px;border:1px solid var(--border);}
 
-.btn,.step-btn{
-  border:0;border-radius:6px;padding:6px 12px;
-  background:#0f6efc;color:#fff;font-size:14px;font-weight:500;cursor:pointer;
-  transition:.2s;
-}
-.btn:hover{ filter: brightness(1.1); transform: translateY(-1px); }
-.btn:active{ transform: translateY(0); }
-.btn--primary{background:var(--primary-600);} .btn--primary:hover{background:#165bd1;}
-.btn--success{background:#22c55e;} .btn--success:hover{background:#16a34a;}
-.btn--danger{background:#ef4444;}  .btn--danger:hover{background:#dc2626;}
+.btn{ border:0;border-radius:6px;padding:6px 12px; color:#fff;font-weight:500;cursor:pointer; transition:.2s; }
+.btn:hover{ filter: brightness(1.1); }
+.btn--primary{background:var(--primary-600);}
+.btn--success{background:#22c55e;}
+.btn--danger{background:#ef4444;}
 .btn--secondary{background:#fff;color:var(--primary-600);border:1px solid var(--border);} 
 .btn--sm{ padding: 4px 10px; font-size: 13px; }
 .btn-group{display:flex;gap:6px;}
 
+/* 儀表板統計 */
 .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top: 10px;}
 .stat-card{ border:1px solid var(--border); border-radius:12px; background:#fff; padding:12px; text-align: center; }
-body.dark .stat-card{ background:rgba(15,23,42,.30); }
-.stat-head{ font-weight:700; margin-bottom:8px; color:var(--text-strong); font-size: 1rem; }
+.stat-head{ font-weight:700; margin-bottom:8px; }
 .stat-row{ display:flex; gap:8px; justify-content: center; }
-.stat-pill{
-    flex: 1; border-radius: 8px; padding: 8px; cursor: pointer; background: var(--gray-50); border: 1px solid transparent;
-    transition: all 0.2s;
-}
+.stat-pill{ flex: 1; border-radius: 8px; padding: 8px; cursor: pointer; background: var(--gray-50); border: 1px solid transparent; transition: all 0.2s; }
 .stat-pill:hover { border-color: var(--primary-600); background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .stat-num{ font-size: 28px; font-weight: 800; line-height: 1; }
 .stat-num.done{ color:#2563eb; }
@@ -260,59 +141,44 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
 .loc-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:10px; }
 .loc-pill{ border:1px solid var(--border); border-radius:12px; padding:12px; background:#fff; display:flex; flex-direction:column; align-items:center; cursor:pointer; position: relative; overflow: hidden; }
 .loc-pill:hover { border-color: var(--primary-600); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1); }
-.loc-name{ font-weight:700; font-size: 15px; z-index: 1; }
-.loc-num{ font-size:32px; font-weight:900; color:#2563eb; z-index: 1; margin: 4px 0; }
+.loc-name{ font-weight:700; font-size: 15px; }
+.loc-num{ font-size:32px; font-weight:900; color:#2563eb; margin: 4px 0; }
 
-/* Modal & Notif */
+/* Modal */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); z-index: 9998; }
-.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 24px; border-radius: 16px; min-width: 320px; max-width: 90vw; box-shadow: 0 20px 40px rgba(0,0,0,0.3); z-index: 9999; animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90vh; overflow-y: auto; }
-@keyframes modalIn { from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
-.modal .dash-close{ position:absolute; right:16px; top:16px; font-size:24px; color: var(--gray-400); cursor:pointer; padding: 4px; border-radius: 50%; transition: .2s; }
-.modal .dash-close:hover { background: var(--gray-100); color: var(--gray-800); }
-.notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;z-index:9990;}
-.notif.show{opacity:1;transform:translateY(0);}
-
-#loading.loading{ position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,0.7); backdrop-filter: blur(5px); z-index: 10000; }
+.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 24px; border-radius: 16px; min-width: 320px; max-width: 90vw; box-shadow: 0 20px 40px rgba(0,0,0,0.3); z-index: 9999; max-height: 90vh; overflow-y: auto; }
+.modal .dash-close{ position:absolute; right:16px; top:16px; font-size:24px; color: var(--gray-400); cursor:pointer; }
+.notif{position:fixed;right:16px;bottom:16px;background:#1f2937;color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transition:.2s;z-index:10000;}
+.notif.show{opacity:1;transform:translateY(-10px);}
+#loading.loading{ position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,0.7); z-index: 10000; }
 #loading.loading.show{ display: flex; }
 .spinner{ width:30px; height:30px; border:3px solid var(--gray-200); border-top-color: var(--primary-600); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin{ to{ transform: rotate(360deg); } }
 
-.indiv-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow-card); transition: transform .2s; cursor: pointer; }
-.indiv-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-float); }
 .single-line { text-align: center; margin-bottom: 6px; }
 .detail-table{ width:100%; border-collapse:collapse; margin-top:8px; }
 .detail-table th, .detail-table td{ border:1px solid var(--border); padding:8px 10px; text-align:center; }
 .detail-table th{ background:var(--primary-600); color:#fff; }
-.time-edit{ display:flex; align-items:center; justify-content:center; gap:10px; margin:8px 0 4px; }
-.time-input{ width:64px; text-align:center; padding:6px 8px; border:1px solid var(--border); border-radius:10px; font-weight:600; }
-
-/* 清單項目樣式 */
 .list-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px dashed var(--border); }
 .list-left { display: flex; flex-direction: column; gap: 2px; }
 .list-title { font-weight: 800; }
-.list-sub { font-size: 13px; opacity: 0.85; }
-
 </style>
 </head>
 <body class="login">
 
 <div class="wrap">
-  
-  <!-- 獨立的登入畫面 -->
+  <!-- 登入畫面 -->
   <div id="login-center">
     <div class="login-card">
-      <h1 style="margin:0; color:#1f6fe5; font-size:32px; font-weight:800;">車流人流退場情報</h1>
-      <p style="margin:16px 0 32px; color:#64748b; font-size:1.1rem;">請登入以繼續使用系統</p>
+      <h1 style="margin:0; color:#1f6fe5; font-size:32px;">車流人流退場情報</h1>
+      <p style="margin:16px 0 32px; color:#64748b;">請登入以繼續使用系統</p>
       <div id="signin"></div>
     </div>
   </div>
 
-  <!-- 頂部導覽列 -->
+  <!-- 導覽列 -->
   <div class="topbar-grid" id="dash-topbar">
-    <div class="left-title">
-      <h1 id="pageTitle">車流人流退場情報</h1>
-    </div>
-
+    <div class="left-title"><h1 id="pageTitle">車流人流退場情報</h1></div>
     <div class="right-clock">
         <div class="clock" id="clockDisplay">--:--:--</div>
         <div id="userInfo" class="hide" style="font-size: 14px; text-align: right;">
@@ -320,27 +186,23 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
            <button id="logoutBtn" class="btn btn--secondary btn--sm" style="margin-left: 8px;">登出</button>
         </div>
     </div>
-
     <div class="left-tabs">
         <div class="tab-container-styled">
             <button class="main-tab active" data-target="pane-dashboard2">最新狀態</button>
             <button class="main-tab" data-target="pane-single">個別情報</button>
             <button class="main-tab" data-target="pane-punch">登錄與修改</button>
         </div>
-        
         <div class="refresh-bar">
-             <!-- 這裡會動態顯示/隱藏 -->
              <div class="seg-group" id="refreshControls"></div>
         </div>
     </div>
   </div>
 
-  <!-- 內容區 -->
+  <!-- 頁面內容 -->
   <div id="mainTabs" class="hide"></div>
 
-  <!-- 1. 登錄與修改頁 -->
+  <!-- 1. 登錄與修改 -->
   <div id="pane-punch" class="tab-pane hide">
-    <!-- 改用 styled container，確保顏色和樣式一致 -->
     <div style="margin: 16px 0;">
       <div class="tab-container-styled" id="sheetTabs"></div>
     </div>
@@ -349,7 +211,7 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
     </div>
   </div>
 
-  <!-- 2. 最新狀態 (整體情報 II) -->
+  <!-- 2. 最新狀態 -->
   <div id="pane-dashboard2" class="tab-pane hide">
     <div style="margin: 16px 0;">
         <div class="tab-container-styled" id="dashboardTabs2"></div>
@@ -361,31 +223,24 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
   <div id="pane-single" class="tab-pane hide">
     <div class="card" id="singleControlsCard">
       <div class="single-controls" style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <select id="selSheet" class="step-select" style="padding: 8px; border-radius: 8px; flex: 1; min-width: 150px;">
-          <option value="">— 全部 Tab —</option>
-        </select>
-        <select id="selArea" class="step-select" style="padding: 8px; border-radius: 8px; flex: 1; min-width: 150px;">
-          <option value="">— 全部 區域車次編號 —</option>
-        </select>
-        <select id="selCar" class="step-select" style="padding: 8px; border-radius: 8px; flex: 1; min-width: 150px;">
-          <option value="">— 全部 車號 —</option>
-        </select>
+        <select id="selSheet" class="step-select" style="flex:1"><option value="">— 全部 Tab —</option></select>
+        <select id="selArea" class="step-select" style="flex:1"><option value="">— 全部 區域車次編號 —</option></select>
+        <select id="selCar" class="step-select" style="flex:1"><option value="">— 全部 車號 —</option></select>
       </div>
       <div class="single-actions" style="margin-top: 12px; text-align: right;">
         <button id="btnQuery" class="btn btn--primary">查詢</button>
         <button id="btnReset" class="btn btn--secondary">全部重設</button>
       </div>
     </div>
-    <div id="singleResults" class="single-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px;"></div>
+    <div id="singleResults" class="single-list"></div>
   </div>
-
 </div>
 
 <div id="notif" class="notif"></div>
 <div id="loading" class="loading"><div class="spinner"></div></div>
 
 <script>
-/* ============ CONFIG & SETUP ============ */
+/* ============ CONFIG ============ */
 const GOOGLE_CLIENT_ID = '368914333961-b8j4o6h73hurdoq5k377f6v2e1pg0r3p.apps.googleusercontent.com';
 const API_BASE = 'https://script.google.com/macros/s/AKfycbxjGHiVKpNMG84OIHIvX4tGYgJ7gksxT0PItegG-7bpSeumnqgMPfwo-1Ocs1l9rMxC/exec';
 
@@ -398,28 +253,14 @@ const SHEET_CONFIGS = [
     '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','車已離開禪堂平台'
   ]},
   { key:'水陸專車退場', sheet:'水陸專車退場', colorClass: 'theme-purple', steps:[
-    '已 Call 車排車隊',
-    '已排好車隊',
-    '車暫停位置', 
-    '退場人員已到齊',
-    '已 Call 車上遊覽車平台',
-    '車已上遊覽車平台',
-    '車已離開遊覽車平台'
+    '已 Call 車排車隊','已排好車隊','車暫停位置','退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','車已離開遊覽車平台'
   ]},
   { key:'288法青退場', sheet:'288法青退場', colorClass: 'theme-pink', steps:[
     '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
   ]}
 ];
 const STOP_OPTIONS = ['禪堂平台','法心北路','法心南路（西）','法心南路（東）','法大路'];
-
-const REFRESH_PRESETS = [
-  { label:'5分',  ms: 5*60*1000 },
-  { label:'2分',  ms: 2*60*1000 },
-  { label:'60秒', ms: 60*1000 },
-  { label:'30秒', ms: 30*1000 }
-];
-const REFRESH_STORAGE_KEY = 'dash_refresh_ms';
-let refreshMs = parseInt(localStorage.getItem(REFRESH_STORAGE_KEY) || (2*60*1000), 10);
+const REFRESH_PRESETS = [{ label:'5分', ms:300000 }, { label:'2分', ms:120000 }, { label:'60秒', ms:60000 }, { label:'30秒', ms:30000 }];
 
 let currentUser = null;
 let idToken = null;
@@ -428,165 +269,70 @@ let currentDashFilter2 = 'ALL';
 let dashTimer = null;
 let ALL_SHEETS = {};
 let SINGLE_ITEMS = [];
-let sheetData = [];
+let refreshMs = 120000;
 
-/* ============ INITIALIZATION ============ */
-window.onload = function(){
-  startClock();
-  buildRefreshControls();
-  updateRefreshButtonsUI();
+/* ============ GLOBAL HELPER FUNCTIONS ============ */
+function showLoading(){ document.getElementById('loading').classList.add('show'); }
+function hideLoading(){ document.getElementById('loading').classList.remove('show'); }
+async function withLoading(fn){ showLoading(); try{ await fn(); }finally{ hideLoading(); } }
+function showNotif(m,e){ const b=document.getElementById('notif'); b.textContent=m; b.className='notif show'; b.style.background=e?'#ef4444':'#1f2937'; setTimeout(()=>b.className='notif',3000); }
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
+function formatSheetTime(v){ if(v&&v.includes('T')) return new Date(v).toLocaleTimeString('zh-TW',{hour12:false}); return v; }
 
-  document.querySelectorAll('.tab-container-styled .main-tab').forEach(btn => {
-      btn.addEventListener('click', () => {
-          switchPane(btn.dataset.target);
-      });
-  });
-
-  const saved = localStorage.getItem('ddcc_user_token');
-  if (saved) {
-    idToken = saved;
-    fetch(API_BASE + '?action=verify', {
-      method: 'POST',
-      headers: { 'Content-Type':'text/plain;charset=utf-8' },
-      body: JSON.stringify({ idToken })
-    }).then(r=>r.json()).then(j=>{
-       if(j.error) throw new Error(j.error);
-       currentUser = j;
-       finishLoginUI(); 
-       // 預載資料
-       buildTabs(); 
-       // 預設載入第一張表
-       loadSheetData(currentSheetKey, true);
-       // 預載個別情報資料
-       loadSingleData();
-    }).catch(e=>{
-       logout();
-       initGoogleSignIn(); 
-    });
-  } else {
-    initGoogleSignIn();
-  }
-  
-  document.getElementById('logoutBtn').addEventListener('click', logout);
-  
-  // 個別情報事件
-  document.getElementById('btnQuery').addEventListener('click', onSingleQuery);
-  document.getElementById('btnReset').addEventListener('click', onSingleReset);
-  ['selSheet','selArea','selCar'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.addEventListener('change', rebuildSelectOptions);
-  });
-};
-
-/* ============ UI BUILDERS ============ */
-function buildDashboardTabs2(){
-  const box = document.getElementById('dashboardTabs2');
-  if (!box) return;
-  box.innerHTML = '';
-
-  const allBtn = document.createElement('button');
-  allBtn.className = 'btn-tab active';
-  allBtn.textContent = '所有車輛';
-  allBtn.dataset.key = 'ALL';
-  allBtn.onclick = () => onDashTabClick(allBtn, 'ALL');
-  box.appendChild(allBtn);
-
-  SHEET_CONFIGS.forEach(cfg => {
-    const btn = document.createElement('button');
-    btn.className = `btn-tab colored-btn ${cfg.colorClass || ''}`;
-    btn.textContent = cfg.key;
-    btn.dataset.key = cfg.key;
-    btn.onclick = () => onDashTabClick(btn, cfg.key);
-    box.appendChild(btn);
-  });
+/* ============ UI COMPONENTS & ACTIONS ============ */
+function createBtn(text, cls, onClick){
+    const b = document.createElement('button'); b.className=cls; b.textContent=text; b.addEventListener('click', onClick); return b;
 }
 
-function onDashTabClick(btn, key) {
-    if (currentDashFilter2 === key) return;
-    currentDashFilter2 = key;
-    
-    const container = document.getElementById('dashboardTabs2');
-    container.querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    buildDashboard2(false);
-}
-
-function buildRefreshControls(){
-  const box = document.getElementById('refreshControls');
-  if(!box) return;
-  box.innerHTML = '';
-  
-  REFRESH_PRESETS.forEach(p=>{
-    const btn = document.createElement('button');
-    btn.className = 'seg-btn';
-    btn.textContent = p.label;
-    btn.dataset.ms = p.ms;
-    btn.onclick = ()=> {
-        refreshMs = p.ms;
-        localStorage.setItem(REFRESH_STORAGE_KEY, refreshMs);
-        updateRefreshButtonsUI();
-        if(isDashboardVisible()) startDashboardAutoRefresh();
-        showNotif(`已設定更新頻率：${p.label}`, false);
-    };
-    box.appendChild(btn);
-  });
-  
-  const nowBtn = document.createElement('button');
-  nowBtn.className = 'seg-btn now-btn';
-  nowBtn.textContent = '立即更新';
-  nowBtn.onclick = () => {
-      if(isDashboardVisible()) {
-          buildDashboard2(true);
-          // 這裡需要確保刷新後會更新頁面
-          // 呼叫 refreshAllActiveTodoModals 或直接 rebuild
-          // 為了簡單直接 rebuild
-          buildDashboard2(true);
-          showNotif('已重新整理', false);
-      } else {
-          showNotif('請先切換至「最新狀態」', true);
-      }
-  };
-  box.appendChild(nowBtn);
-}
-
-function updateRefreshButtonsUI(){
-    document.querySelectorAll('#refreshControls .seg-btn').forEach(b => {
-        if(b.classList.contains('now-btn')) return;
-        const ms = parseInt(b.dataset.ms);
-        b.classList.toggle('active', ms === refreshMs);
-    });
+function createPill(num, label, type, onClick){
+    const div = document.createElement('div');
+    div.className = 'stat-pill';
+    div.innerHTML = `<div class="stat-num ${type}">${num}</div><div class="stat-label">${label}</div>`;
+    div.addEventListener('click', onClick);
+    return div;
 }
 
 function startClock(){
   const el = document.getElementById('clockDisplay');
+  if(!el) return;
   setInterval(() => {
     const d = new Date();
     el.textContent = d.toLocaleTimeString('zh-TW', {hour12:false});
   }, 1000);
 }
 
-/* ============ CORE LOGIC (Switch Pane & Refresh Control) ============ */
+function buildRefreshControls(){
+  const box = document.getElementById('refreshControls'); 
+  if(!box) return;
+  box.innerHTML = '';
+  REFRESH_PRESETS.forEach(p=>{
+    const btn = createBtn(p.label, 'seg-btn', ()=>{ refreshMs=p.ms; updateRefreshButtonsUI(); if(isDashboardVisible()) startDashboardAutoRefresh(); });
+    btn.dataset.ms = p.ms; box.appendChild(btn);
+  });
+  box.appendChild(createBtn('立即更新','seg-btn now-btn', ()=>{ buildDashboard2(true); showNotif('已更新',false); }));
+}
+
+function updateRefreshButtonsUI(){
+    document.querySelectorAll('#refreshControls .seg-btn').forEach(b => { if(!b.classList.contains('now-btn')) b.classList.toggle('active', parseInt(b.dataset.ms)===refreshMs); });
+}
+
+/* ============ CORE LOGIC ============ */
 function switchPane(targetId){
   if(!currentUser) return;
   
-  // 1. 切換 Tab 狀態
   document.querySelectorAll('.tab-container-styled .main-tab').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.target === targetId);
   });
-
-  // 2. 顯示/隱藏面板
   document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hide'));
   const target = document.getElementById(targetId);
   if(target) target.classList.remove('hide');
 
-  // 3. 控制「更新頻率」按鈕顯示：只在 dashboard2 顯示
   const refreshBar = document.querySelector('.refresh-bar');
   if(refreshBar) {
-      refreshBar.style.visibility = (targetId === 'pane-dashboard2') ? 'visible' : 'hidden';
+      refreshBar.style.display = (targetId === 'pane-dashboard2') ? 'flex' : 'none';
   }
 
-  // 4. 執行各頁面初始化邏輯
   if(targetId === 'pane-dashboard2'){
       if(!document.getElementById('dashboardTabs2').hasChildNodes()){
           buildDashboardTabs2();
@@ -597,12 +343,10 @@ function switchPane(targetId){
   else if (targetId === 'pane-punch') {
       stopDashboardAutoRefresh();
       buildTabs();
-      // ★ 關鍵修復：切換過來時載入資料
       loadSheetData(currentSheetKey);
   } 
   else if (targetId === 'pane-single') {
       stopDashboardAutoRefresh();
-      // ★ 關鍵修復：確保下拉選單有資料
       if(SINGLE_ITEMS.length === 0) loadSingleData();
       else rebuildSelectOptions();
   } 
@@ -611,122 +355,77 @@ function switchPane(targetId){
   }
 }
 
-function isDashboardVisible(){
-    return !document.getElementById('pane-dashboard2').classList.contains('hide');
-}
-
-function startDashboardAutoRefresh(){
-    stopDashboardAutoRefresh();
-    dashTimer = setInterval(()=>{
-        if(isDashboardVisible()){
-            buildDashboard2(true);
-        }
-    }, refreshMs);
-}
-function stopDashboardAutoRefresh(){
-    if(dashTimer) clearInterval(dashTimer);
-}
+function isDashboardVisible(){ return !document.getElementById('pane-dashboard2').classList.contains('hide'); }
+function startDashboardAutoRefresh(){ stopDashboardAutoRefresh(); dashTimer = setInterval(()=> { if(isDashboardVisible()) buildDashboard2(true); }, refreshMs); }
+function stopDashboardAutoRefresh(){ clearInterval(dashTimer); }
 
 /* ============ GOOGLE AUTH ============ */
 function initGoogleSignIn() {
     document.body.classList.add('login');
-    const signinDiv = document.getElementById('signin');
-    if (signinDiv) {
-        signinDiv.innerHTML = ''; 
-        google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
-        google.accounts.id.renderButton(signinDiv, { theme:'outline', size:'large', shape:'pill', width: 250 });
+    const d = document.getElementById('signin'); 
+    if(d) {
+        d.innerHTML='';
+        google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: (r)=>{ idToken=r.credential; localStorage.setItem('ddcc_user_token',idToken); location.reload(); } });
+        google.accounts.id.renderButton(d, { theme:'outline', size:'large', shape:'pill', width: 250 });
     }
 }
-
-async function handleCredential(resp){
-    idToken = resp.credential;
-    localStorage.setItem('ddcc_user_token', idToken);
-    try {
-        const r = await fetch(API_BASE + '?action=verify', { method:'POST', body:JSON.stringify({idToken}) });
-        const j = await r.json();
-        if(j.error) throw new Error(j.error);
-        currentUser = j;
-        finishLoginUI();
-    } catch(e) { showNotif(e.message, true); }
-}
-
 function finishLoginUI(){
     document.body.classList.remove('login');
     document.getElementById('userInfo').classList.remove('hide');
     document.getElementById('userDisplay').textContent = `${currentUser.name} (${currentUser.permission})`;
-    switchPane('pane-dashboard2'); 
+    switchPane('pane-dashboard2');
+}
+function logout(){ localStorage.removeItem('ddcc_user_token'); location.reload(); }
+
+/* ============ API & DATA ============ */
+async function fetchSheetData(cfg){
+    const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}&idToken=${idToken}`);
+    const j = await r.json();
+    return { key:cfg.key, cfg, values:j.values||[] };
 }
 
-function logout(){
-    localStorage.removeItem('ddcc_user_token');
-    location.reload();
-}
-
-/* ============ DATA FETCHING - PUNCH PAGE ============ */
-function buildTabs(){
-    const box = document.getElementById('sheetTabs');
-    box.innerHTML = '';
-    SHEET_CONFIGS.forEach(cfg => {
-        const btn = document.createElement('button');
-        const active = (cfg.key===currentSheetKey ? ' active' : '');
-        // 同步配色
-        btn.className = `btn-tab colored-btn ${cfg.colorClass || ''}${active}`;
-        btn.textContent = cfg.key;
-        btn.onclick = () => {
-            currentSheetKey = cfg.key;
-            buildTabs();
-            loadSheetData(cfg.key);
-        };
-        box.appendChild(btn);
+async function doUpdate(cfg, row, col, value, callback){
+    await withLoading(async()=>{
+        await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({sheet:cfg.sheet, idToken, writes:[{row, col, value}]})});
+        callback();
     });
 }
 
-async function loadSheetData(key, silent = false){
-  const cfg = SHEET_CONFIGS.find(s=>s.key===key);
-  if (!silent) {
-    document.getElementById('vehList').textContent = '讀取資料中...';
-  }
-  try {
-      const r = await fetch(
-        API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
-      );
-      const j = await r.json();
-      if (j.error){
-        document.getElementById('vehList').textContent = '❌' + j.error;
-        return;
-      }
-      sheetData = j.values || [];
-      renderVehicles(cfg, sheetData);
-  } catch(e) {
-      document.getElementById('vehList').textContent = '載入失敗';
-  }
+/* ============ DASHBOARD LOGIC ============ */
+function buildDashboardTabs2(){
+  const box = document.getElementById('dashboardTabs2');
+  box.innerHTML = '';
+  const allBtn = createBtn('所有車輛', 'btn-tab active', () => onDashTabClick(allBtn, 'ALL'));
+  box.appendChild(allBtn);
+  SHEET_CONFIGS.forEach(cfg => {
+    const btn = createBtn(cfg.key, `btn-tab colored-btn ${cfg.colorClass||''}`, () => onDashTabClick(btn, cfg.key));
+    box.appendChild(btn);
+  });
 }
 
-/* ============ DATA FETCHING - DASHBOARD ============ */
+function onDashTabClick(btn, key) {
+    if (currentDashFilter2 === key) return;
+    currentDashFilter2 = key;
+    document.getElementById('dashboardTabs2').querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    buildDashboard2(false);
+}
+
 async function buildDashboard2(silent){
     if(!silent) showLoading();
-    
     const dash = document.getElementById('dashboard2');
-    
     try {
-        const requests = SHEET_CONFIGS.map(cfg => 
-            fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}&idToken=${idToken}`)
-            .then(r=>r.json())
-            .then(j=> ({ key:cfg.key, cfg, values:j.values||[] }))
-        );
+        const requests = SHEET_CONFIGS.map(cfg => fetchSheetData(cfg));
         const results = await Promise.all(requests);
-        
         ALL_SHEETS = {};
         results.forEach(res => {
-            const headIdx = res.values.findIndex(r => r[0]==='編號' && String(r[1]).startsWith('區域'));
-            ALL_SHEETS[res.key] = {
-                cfg: res.cfg,
-                header: headIdx>=0 ? res.values[headIdx] : [],
-                rows: headIdx>=0 ? res.values.slice(headIdx+1) : [],
-                headerIdx: headIdx
-            };
+            if(res.values.length){
+                const headIdx = res.values.findIndex(r => r[0] && String(r[0]).includes('編號'));
+                if(headIdx>=0) {
+                    ALL_SHEETS[res.key] = { cfg: res.cfg, header: res.values[headIdx], rows: res.values.slice(headIdx+1), headerIdx: headIdx };
+                }
+            }
         });
-
         dash.innerHTML = '';
         renderDashboardUI();
     } catch(e) { console.error(e); }
@@ -735,10 +434,8 @@ async function buildDashboard2(silent){
 
 function renderDashboardUI(){
     const container = document.getElementById('dashboard2');
-
     SHEET_CONFIGS.forEach(cfg => {
         if(currentDashFilter2 !== 'ALL' && currentDashFilter2 !== cfg.key) return;
-
         const data = ALL_SHEETS[cfg.key];
         if(!data || !data.rows.length) return;
 
@@ -759,31 +456,22 @@ function renderDashboardUI(){
         grid.className = 'stat-grid';
         
         cfg.steps.forEach(step => {
-            if(step === '車暫停位置') {
-                return; 
-            }
-
+            if(step === '車暫停位置') return;
             const colIdx = data.header.indexOf(step);
             let done=0, todo=0;
-            data.rows.forEach(r => {
-                const val = r[colIdx];
-                (val && val !== '—' && val !== '') ? done++ : todo++;
-            });
+            data.rows.forEach(r => { const v = r[colIdx]; (v && v !== '—') ? done++ : todo++; });
 
             const card = document.createElement('div');
             card.className = 'stat-card';
-            card.innerHTML = `
-                <div class="stat-head">${step}</div>
-                <div class="stat-row">
-                    <div class="stat-pill" onclick="openListModal2('${cfg.key}','${step}','done')">
-                        <div class="stat-num done">${done}</div>
-                        <div class="stat-label">完成</div>
-                    </div>
-                    <div class="stat-pill" onclick="openListModal2('${cfg.key}','${step}','todo')">
-                        <div class="stat-num todo">${todo}</div>
-                        <div class="stat-label">未完成</div>
-                    </div>
-                </div>`;
+            
+            const head = document.createElement('div'); head.className='stat-head'; head.textContent=step;
+            const row = document.createElement('div'); row.className='stat-row';
+            
+            const p1 = createPill(done, '完成', 'done', () => openListModal2(cfg.key, step, 'done'));
+            const p2 = createPill(todo, '未完成', 'todo', () => openListModal2(cfg.key, step, 'todo'));
+            
+            row.appendChild(p1); row.appendChild(p2);
+            card.appendChild(head); card.appendChild(row);
             grid.appendChild(card);
         });
         section.appendChild(grid);
@@ -793,181 +481,71 @@ function renderDashboardUI(){
             const locWrap = document.createElement('div');
             locWrap.className = 'loc-grid';
             locWrap.style.marginTop = '16px';
-            
             const counter = new Map();
             STOP_OPTIONS.forEach(n => counter.set(n, 0));
-            data.rows.forEach(r => {
-                const v = String(r[stopIdx] || '').trim();
-                if(counter.has(v)) counter.set(v, counter.get(v)+1);
-            });
+            data.rows.forEach(r => { const v = String(r[stopIdx] || '').trim(); if(counter.has(v)) counter.set(v, counter.get(v)+1); });
             
             STOP_OPTIONS.forEach(name => {
                 const n = counter.get(name) || 0;
                 const pill = document.createElement('div');
                 pill.className = 'loc-pill';
                 pill.innerHTML = `<div class="loc-name">${name}</div><div class="loc-num">${n}</div><div class="stat-label">台</div>`;
-                pill.onclick = () => openListModal2(cfg.key, '車暫停位置', 'loc', name);
+                pill.addEventListener('click', () => openListModal2(cfg.key, '車暫停位置', 'loc', name));
                 locWrap.appendChild(pill);
             });
             section.appendChild(locWrap);
         }
-
         container.appendChild(section);
     });
 }
 
-/* ============ DATA FETCHING - SINGLE PAGE ============ */
-async function loadSingleData(){
-  SINGLE_ITEMS = [];
+/* ============ PUNCH PAGE LOGIC ============ */
+function buildTabs(){
+    const box = document.getElementById('sheetTabs');
+    box.innerHTML = '';
+    SHEET_CONFIGS.forEach(cfg => {
+        const active = (cfg.key===currentSheetKey ? ' active' : '');
+        const btn = createBtn(cfg.key, `btn-tab colored-btn ${cfg.colorClass||''}${active}`, () => {
+            currentSheetKey = cfg.key;
+            buildTabs();
+            loadSheetData(cfg.key);
+        });
+        box.appendChild(btn);
+    });
+}
+
+async function loadSheetData(key, silent = false){
+  const cfg = SHEET_CONFIGS.find(s=>s.key===key);
+  if (!silent) document.getElementById('vehList').textContent = '讀取資料中...';
   try {
-      const requests = SHEET_CONFIGS.map(cfg => 
-          fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}&idToken=${idToken}`)
-          .then(r=>r.json())
-          .then(j=> ({ key:cfg.key, cfg, values:j.values||[] }))
-      );
-      const results = await Promise.all(requests);
-      
-      results.forEach(res => {
-          const headIdx = res.values.findIndex(r => r[0]==='編號');
-          if(headIdx < 0) return;
-          const header = res.values[headIdx];
-          const rows = res.values.slice(headIdx+1);
-          rows.forEach(r => {
-              if(r[1] && r[2]) SINGLE_ITEMS.push({ sheetKey: res.key, cfg: res.cfg, header, row: r });
-          });
-      });
-      
-      fillSheetOptions();
-      rebuildSelectOptions();
-  } catch(e) { console.error(e); }
+      const res = await fetchSheetData(cfg);
+      const headIdx = res.values.findIndex(r => r[0] && String(r[0]).includes('編號'));
+      if(headIdx < 0) { document.getElementById('vehList').textContent = '無資料'; return; }
+      renderVehicles(cfg, res.values[headIdx], res.values.slice(headIdx+1), headIdx);
+  } catch(e) { document.getElementById('vehList').textContent = '載入失敗'; }
 }
 
-function fillSheetOptions(){
-  const sel = document.getElementById('selSheet');
-  sel.innerHTML = '<option value="">— 全部 Tab —</option>' + 
-    SHEET_CONFIGS.map(s=>`<option value="${s.key}">${s.key}</option>`).join('');
-}
-
-function rebuildSelectOptions(){
-  const selSheet = document.getElementById('selSheet');
-  const selArea = document.getElementById('selArea');
-  const selCar = document.getElementById('selCar');
-  
-  const sheetVal = selSheet.value;
-  const areaVal = selArea.value;
-  const carVal = selCar.value;
-  
-  const filtered = SINGLE_ITEMS.filter(it => 
-      (!sheetVal || it.sheetKey === sheetVal) &&
-      (!areaVal || it.row[1] === areaVal) &&
-      (!carVal || it.row[2] === carVal)
-  );
-  
-  const areas = [...new Set(filtered.map(it => it.row[1]))].sort();
-  const cars = [...new Set(filtered.map(it => it.row[2]))].sort();
-  
-  // 保留原本選擇 (如果還在範圍內)
-  const newAreaHtml = '<option value="">— 全部 區域車次編號 —</option>' + areas.map(a=>`<option value="${a}">${a}</option>`).join('');
-  selArea.innerHTML = newAreaHtml;
-  if(areas.includes(areaVal)) selArea.value = areaVal;
-  
-  const newCarHtml = '<option value="">— 全部 車號 —</option>' + cars.map(c=>`<option value="${c}">${c}</option>`).join('');
-  selCar.innerHTML = newCarHtml;
-  if(cars.includes(carVal)) selCar.value = carVal;
-}
-
-function onSingleQuery(){
-  const sheetVal = document.getElementById('selSheet').value;
-  const areaVal = document.getElementById('selArea').value;
-  const carVal = document.getElementById('selCar').value;
-  
-  const filtered = SINGLE_ITEMS.filter(it => 
-      (!sheetVal || it.sheetKey === sheetVal) &&
-      (!areaVal || it.row[1] === areaVal) &&
-      (!carVal || it.row[2] === carVal)
-  );
-  
-  const box = document.getElementById('singleResults');
-  box.innerHTML = '';
-  
-  if(filtered.length === 0) {
-      box.innerHTML = '<div style="text-align:center; opacity:0.6; grid-column:1/-1">沒有符合的資料</div>';
-      return;
-  }
-  
-  filtered.forEach(it => {
-      const card = document.createElement('div');
-      card.className = 'indiv-card';
-      // 計算最新狀態
-      let status = '尚未開始';
-      for(let i=it.cfg.steps.length-1; i>=0; i--){
-          const st = it.cfg.steps[i];
-          const idx = it.header.indexOf(st);
-          if(it.row[idx] && it.row[idx] !== '—') {
-              status = (st === '車暫停位置') ? `位置：${it.row[idx]}` : st;
-              break;
-          }
-      }
-      
-      card.innerHTML = `
-        <div class="single-line" style="font-weight:bold; color:var(--primary-600)">${it.sheetKey}</div>
-        <div class="single-line" style="font-size:1.2rem; font-weight:800">${it.row[1]}</div>
-        <div class="single-line" style="font-size:1.1rem">${it.row[2]}</div>
-        <div class="single-line" style="margin-top:8px; color:var(--text-muted)">${status}</div>
-      `;
-      card.onclick = () => openDetailModal(it.cfg, it.row, it.header);
-      box.appendChild(card);
-  });
-}
-
-function onSingleReset(){
-    document.getElementById('selSheet').value = '';
-    document.getElementById('selArea').value = '';
-    document.getElementById('selCar').value = '';
-    rebuildSelectOptions();
-    document.getElementById('singleResults').innerHTML = '';
-}
-
-/* ============ RENDER VEHICLES (Punch Page) ============ */
-function renderVehicles(cfg, data) {
+function renderVehicles(cfg, header, rows, headIdx) {
   const box = document.getElementById('vehList'); box.innerHTML = '';
+  if (!rows.length){ box.textContent='(目前沒有資料)'; return; }
   const canWrite = currentUser?.permission === '全功能';
-  const headerRowIdx = data.findIndex(row => Array.isArray(row) && String(row[0]||'').trim()==='編號');
-  
-  if (headerRowIdx === -1){ box.textContent='找不到表頭'; return; }
-  const header = data[headerRowIdx].map(c=>String(c||'').trim());
-  const rows = data.slice(headerRowIdx+1).filter(r => Array.isArray(r) && String(r[0]||'').trim());
-  
-  if (!rows.length){ box.textContent='(這張表目前沒有車輛資料)'; return; }
 
-  const cards=[];
   rows.forEach((row, idx) => {
     const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim(); 
-    const baseRow = headerRowIdx+2+idx;
-    
-    let completed = 0;
-    cfg.steps.forEach(st => {
-        const colIdx = header.indexOf(st);
-        const val = (colIdx !== -1) ? row[colIdx] : '';
-        if(val && val !== '—') completed++;
-    });
-
+    const baseRow = headIdx+2+idx;
     const card = document.createElement('div');
     card.className = 'veh-card';
-    card.innerHTML = `<div>
-       <div class="veh-title-main">${escapeHtml(area)}</div>
-       <div class="veh-title-sub">${escapeHtml(car)}</div>
-    </div>`;
     
-    card.querySelector(':scope > div:first-child').onclick = () => openDetailModal(cfg, row, header);
-    card.querySelector(':scope > div:first-child').style.cursor = 'pointer';
+    const titleDiv = document.createElement('div');
+    titleDiv.innerHTML = `<div class="veh-title-main">${escapeHtml(area)}</div><div class="veh-title-sub">${escapeHtml(car)}</div>`;
+    titleDiv.style.cursor = 'pointer';
+    titleDiv.addEventListener('click', () => openDetailModal(cfg, row, header));
+    card.appendChild(titleDiv);
 
     const stepsBox=document.createElement('div');
     cfg.steps.forEach(st=>{
         const colIdx=header.indexOf(st);
         const rawVal = (colIdx!==-1) ? String(row[colIdx]||'').trim(): '';
-        const displayVal = rawVal ? formatSheetTime(rawVal) : '';
-        
         const rowEl=document.createElement('div'); rowEl.className='step-row';
         rowEl.innerHTML = `<div class="step-label">${st}</div>`;
         
@@ -975,31 +553,25 @@ function renderVehicles(cfg, data) {
             const sel=document.createElement('select'); sel.className='step-select';
             sel.innerHTML = '<option value="">— 請選擇 —</option>' + STOP_OPTIONS.map(o=>`<option value="${o}">${o}</option>`).join('');
             if(rawVal) sel.value = rawVal;
-            if(!canWrite) sel.disabled = true;
-            else sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value);
+            sel.disabled = !canWrite;
+            if(canWrite) sel.addEventListener('change', () => doUpdate(cfg, baseRow, colIdx+1, sel.value, () => loadSheetData(cfg.key, true)));
             rowEl.appendChild(sel);
         } else {
-            const timeSpan=document.createElement('span'); timeSpan.className='step-time'; 
-            timeSpan.textContent=displayVal||'—';
+            const timeSpan=document.createElement('span'); timeSpan.className='step-time'; timeSpan.textContent=rawVal?formatSheetTime(rawVal):'—';
             rowEl.appendChild(timeSpan);
-            
             const btnG=document.createElement('div'); btnG.className='btn-group';
             if(canWrite){
                 if(!rawVal) {
-                    const btnPunch=document.createElement('button'); 
-                    btnPunch.className='btn btn--primary btn--sm'; btnPunch.textContent='打卡';
-                    btnPunch.onclick = () => onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, rowEl);
-                    btnG.appendChild(btnPunch);
+                    const btn=createBtn('打卡','btn btn--primary btn--sm', ()=>doUpdate(cfg, baseRow, colIdx+1, getTaipeiHHMMSS(), ()=>loadSheetData(cfg.key, true)));
+                    btnG.appendChild(btn);
                 } else {
-                    const btnEdit=document.createElement('button'); 
-                    btnEdit.className='btn btn--success btn--sm'; btnEdit.textContent='修改';
-                    btnEdit.onclick = () => onEditTimeClick(cfg, baseRow, header, st, timeSpan, rowEl, displayVal);
-                    btnG.appendChild(btnEdit);
-                    
-                    const btnDel=document.createElement('button'); 
-                    btnDel.className='btn btn--danger btn--sm'; btnDel.textContent='刪除';
-                    btnDel.onclick = () => onDeleteTimeClick(cfg, baseRow, header, st, timeSpan);
-                    btnG.appendChild(btnDel);
+                    const btnEdit=createBtn('修改','btn btn--success btn--sm', ()=>{
+                        const nv=prompt('輸入時間',rawVal); if(nv) doUpdate(cfg, baseRow, colIdx+1, nv, ()=>loadSheetData(cfg.key, true));
+                    });
+                    const btnDel=createBtn('刪除','btn btn--danger btn--sm', ()=>{
+                        if(confirm('刪除?')) doUpdate(cfg, baseRow, colIdx+1, '', ()=>loadSheetData(cfg.key, true));
+                    });
+                    btnG.appendChild(btnEdit); btnG.appendChild(btnDel);
                 }
             }
             rowEl.appendChild(btnG);
@@ -1007,169 +579,166 @@ function renderVehicles(cfg, data) {
         stepsBox.appendChild(rowEl);
     });
     card.appendChild(stepsBox);
-    cards.push({ el:card, completed, origOrder:idx });
+    box.appendChild(card);
   });
-
-  cards.sort((a,b)=> (a.completed!==b.completed ? a.completed-b.completed : a.origOrder-b.origOrder));
-  cards.forEach(c=>box.appendChild(c.el));
 }
 
-/* ============ ACTIONS & MODALS ============ */
-async function onStopSelect(cfg, row, header, st, val){
-    await withLoading(async()=>{
-        const col = header.indexOf(st) + 1;
-        await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({
-            sheet:cfg.sheet, idToken, writes:[{row, col, value:val}]
-        })});
-        await loadSheetData(cfg.key, true);
-    }, '更新中...');
+/* ============ SINGLE PAGE LOGIC ============ */
+async function loadSingleData(){
+  SINGLE_ITEMS = [];
+  try {
+      const requests = SHEET_CONFIGS.map(cfg => fetchSheetData(cfg));
+      const results = await Promise.all(requests);
+      results.forEach(res => {
+          const headIdx = res.values.findIndex(r => r[0] && String(r[0]).includes('編號'));
+          if(headIdx < 0) return;
+          const header = res.values[headIdx];
+          const rows = res.values.slice(headIdx+1);
+          rows.forEach(r => {
+              if(r[1] && r[2]) SINGLE_ITEMS.push({ sheetKey: res.key, cfg: res.cfg, header, row: r });
+          });
+      });
+      fillSheetOptions();
+      rebuildSelectOptions();
+  } catch(e) { console.error(e); }
 }
 
-async function onPunchClick(cfg, row, header, st, span, btn, el){
-    const now = getTaipeiHHMMSS();
-    await withLoading(async()=>{
-        const col = header.indexOf(st) + 1;
-        await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({
-            sheet:cfg.sheet, idToken, writes:[{row, col, value:now}]
-        })});
-        await loadSheetData(cfg.key, true);
-    }, '打卡中...');
+function fillSheetOptions(){
+  const sel = document.getElementById('selSheet');
+  sel.innerHTML = '<option value="">— 全部 Tab —</option>' + SHEET_CONFIGS.map(s=>`<option value="${s.key}">${s.key}</option>`).join('');
 }
 
-async function onDeleteTimeClick(cfg, row, header, st, span){
-    if(!confirm('確定刪除?')) return;
-    await withLoading(async()=>{
-        const col = header.indexOf(st) + 1;
-        await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({
-            sheet:cfg.sheet, idToken, writes:[{row, col, value:''}]
-        })});
-        await loadSheetData(cfg.key, true);
-    }, '刪除中...');
+function rebuildSelectOptions(){
+  const sheetVal = document.getElementById('selSheet').value;
+  const areaVal = document.getElementById('selArea').value;
+  const carVal = document.getElementById('selCar').value;
+  
+  const filtered = SINGLE_ITEMS.filter(it => (!sheetVal || it.sheetKey === sheetVal) && (!areaVal || it.row[1] === areaVal) && (!carVal || it.row[2] === carVal));
+  
+  const areas = [...new Set(filtered.map(it => it.row[1]))].sort();
+  const cars = [...new Set(filtered.map(it => it.row[2]))].sort();
+  
+  updateSelect('selArea', areas, '— 全部 區域車次編號 —', areaVal);
+  updateSelect('selCar', cars, '— 全部 車號 —', carVal);
 }
 
-function onEditTimeClick(cfg, row, header, st, span, el, oldVal){
-    // 簡易實作：提示輸入時間
-    const newVal = prompt("請輸入新時間 (HH:mm:ss)", oldVal);
-    if(newVal && newVal !== oldVal){
-        withLoading(async()=>{
-            const col = header.indexOf(st) + 1;
-            await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({
-                sheet:cfg.sheet, idToken, writes:[{row, col, value:newVal}]
-            })});
-            await loadSheetData(cfg.key, true);
-        }, '修改中...');
-    }
+function updateSelect(id, options, placeholder, currentVal){
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="">${placeholder}</option>` + options.map(o=>`<option value="${o}">${o}</option>`).join('');
+    if(options.includes(currentVal)) sel.value = currentVal;
 }
 
-/* ★★★ 補回：清單彈窗完整功能 ★★★ */
+function onSingleQuery(){
+  const sheetVal = document.getElementById('selSheet').value;
+  const areaVal = document.getElementById('selArea').value;
+  const carVal = document.getElementById('selCar').value;
+  
+  const filtered = SINGLE_ITEMS.filter(it => (!sheetVal || it.sheetKey === sheetVal) && (!areaVal || it.row[1] === areaVal) && (!carVal || it.row[2] === carVal));
+  const box = document.getElementById('singleResults'); box.innerHTML = '';
+  
+  if(filtered.length === 0) { box.innerHTML = '<div style="text-align:center;opacity:0.6;grid-column:1/-1">無符合資料</div>'; return; }
+  
+  filtered.forEach(it => {
+      const card = document.createElement('div'); card.className = 'indiv-card';
+      let status = '尚未開始';
+      for(let i=it.cfg.steps.length-1; i>=0; i--){
+          const idx = it.header.indexOf(it.cfg.steps[i]);
+          if(it.row[idx] && it.row[idx] !== '—') { status = (it.cfg.steps[i] === '車暫停位置') ? `位置：${it.row[idx]}` : it.cfg.steps[i]; break; }
+      }
+      card.innerHTML = `<div class="single-line" style="color:var(--primary-600)">${it.sheetKey}</div><div class="single-line" style="font-size:1.2rem;font-weight:800">${it.row[1]}</div><div class="single-line">${it.row[2]}</div><div class="single-line" style="color:var(--text-muted)">${status}</div>`;
+      card.addEventListener('click', () => openDetailModal(it.cfg, it.row, it.header));
+      box.appendChild(card);
+  });
+}
+
+function onSingleReset(){
+    ['selSheet','selArea','selCar'].forEach(id=>document.getElementById(id).value='');
+    rebuildSelectOptions();
+    document.getElementById('singleResults').innerHTML = '';
+}
+
+/* ============ MODALS ============ */
 function openListModal2(sheetKey, step, type, locValue) {
     const data = ALL_SHEETS[sheetKey];
     if(!data) return;
-    
     const list = [];
-    if (type === 'loc') {
+    if(type==='loc'){
         const c = data.header.indexOf('車暫停位置');
-        data.rows.forEach(r => {
-            if (c >= 0 && String(r[c] || '').trim() === locValue) list.push(r);
-        });
+        data.rows.forEach(r => { if(String(r[c]||'').trim() === locValue) list.push(r); });
     } else {
         const c = data.header.indexOf(step);
-        data.rows.forEach(r => {
-            const v = c >= 0 ? r[c] : '';
-            const hasVal = (v && v !== '—' && v !== '');
-            if ((type === 'done' && hasVal) || (type === 'todo' && !hasVal)) list.push(r);
-        });
+        data.rows.forEach(r => { const v=r[c]; const ok=(v&&v!=='—'); if((type==='done'&&ok)||(type==='todo'&&!ok)) list.push(r); });
     }
-
-    const box = document.createElement('div');
-    box.className = 'modal';
-    box.innerHTML = `
-      <div class="dash-close">✕</div>
-      <h3 style="font-size:18px;margin:0 0 8px;">${sheetKey}：${step} (${type==='loc'?locValue : (type==='done'?'完成':'未完成')})</h3>
-      <div style="max-height:60vh; overflow:auto; padding-right:6px;">
-        ${list.length ? '' : '<div style="opacity:.7; text-align:center; padding:20px;">無資料</div>'}
-      </div>
-    `;
     
-    // 綁定關閉
-    box.querySelector('.dash-close').onclick = () => {
-        box.remove();
-        document.querySelector('.modal-backdrop')?.remove();
-        document.body.classList.remove('modal-open');
-    };
-
-    const container = box.querySelector('div[style*="overflow"]');
+    const box = document.createElement('div'); box.className = 'modal';
+    const title = `${sheetKey} - ${step} (${type==='loc'?locValue:type})`;
+    box.innerHTML = `<div class="dash-close">✕</div><h3>${title}</h3><div style="max-height:60vh;overflow:auto" id="mList"></div>`;
+    box.querySelector('.dash-close').onclick = () => { box.remove(); document.querySelector('.modal-backdrop').remove(); };
+    const c = box.querySelector('#mList');
+    if(!list.length) c.innerHTML='<div style="text-align:center;opacity:0.5">無資料</div>';
     list.forEach(r => {
-        const item = document.createElement('div');
-        item.className = 'list-item';
-        item.innerHTML = `
-          <div class="list-left">
-            <div class="list-title">${r[1]} ${r[2]}</div>
-          </div>
-          <button class="btn btn--secondary btn--sm">詳細</button>
-        `;
-        item.querySelector('button').onclick = () => openDetailModal(data.cfg, r, data.header);
-        container.appendChild(item);
+        const d = document.createElement('div'); d.className='list-item';
+        d.innerHTML = `<div class="list-left"><div class="list-title">${r[1]} ${r[2]}</div></div>`;
+        const b = createBtn('詳細', 'btn btn--secondary btn--sm', ()=>openDetailModal(data.cfg, r, data.header));
+        d.appendChild(b); c.appendChild(d);
     });
-
     openModal(box);
 }
 
 function openDetailModal(cfg, row, header){
     const box = document.createElement('div'); box.className = 'modal';
-    const area = row[1]; const car = row[2];
-    
-    let html = `<div class="dash-close">✕</div>
-    <h3>${area} ${car}</h3><table class="detail-table">`;
-    
+    let html = `<div class="dash-close">✕</div><h3>${row[1]} ${row[2]}</h3><table class="detail-table">`;
     cfg.steps.forEach(st => {
         const idx = header.indexOf(st);
-        const val = row[idx] || '';
-        html += `<tr><th>${st}</th><td>${val}</td></tr>`;
+        html += `<tr><th>${st}</th><td>${row[idx]||''}</td></tr>`;
     });
     html += `</table>`;
     box.innerHTML = html;
-    
-    box.querySelector('.dash-close').onclick = () => {
-        box.remove();
-        document.querySelector('.modal-backdrop')?.remove();
-        document.body.classList.remove('modal-open');
-    };
+    box.querySelector('.dash-close').onclick = () => { box.remove(); document.querySelector('.modal-backdrop').remove(); };
     openModal(box);
 }
 
 function openModal(el){
     const bg = document.createElement('div'); bg.className='modal-backdrop';
-    bg.onclick = () => {
-        el.remove();
-        bg.remove();
-        document.body.classList.remove('modal-open');
-    };
-    document.body.appendChild(bg);
-    document.body.appendChild(el);
-    document.body.classList.add('modal-open');
+    bg.onclick = () => { el.remove(); bg.remove(); };
+    document.body.appendChild(bg); document.body.appendChild(el);
 }
 
-/* 工具函式 */
-function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
-function formatSheetTime(val){
-  if(!val) return '';
-  if(val.includes('T')) { const d=new Date(val); return d.toLocaleTimeString('zh-TW',{hour12:false}); }
-  return val; 
-}
-function showNotif(msg, isErr){
-    const box = document.getElementById('notif');
-    box.textContent = msg;
-    box.style.backgroundColor = isErr ? '#ef4444' : '#1f2937';
-    box.className = 'notif show';
-    setTimeout(()=>box.className='notif', 3000);
-}
-function showLoading(){ document.getElementById('loading').classList.add('show'); }
-function hideLoading(){ document.getElementById('loading').classList.remove('show'); }
-async function withLoading(fn, msg){ showLoading(); try{ await fn(); }finally{ hideLoading(); } }
-const sleep = ms=>new Promise(r=>setTimeout(r,ms));
-function escapeHtml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+/* ============ WINDOW.ONLOAD (MAIN ENTRY) ============ */
+window.onload = function(){
+  startClock();
+  buildRefreshControls();
+  updateRefreshButtonsUI();
 
+  document.querySelectorAll('.tab-container-styled .main-tab').forEach(btn => {
+      btn.addEventListener('click', () => switchPane(btn.dataset.target));
+  });
+
+  const saved = localStorage.getItem('ddcc_user_token');
+  if (saved) {
+    idToken = saved;
+    fetch(API_BASE + '?action=verify', {
+      method: 'POST', headers: { 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken })
+    }).then(r=>r.json()).then(j=>{
+       if(j.error) throw new Error(j.error);
+       currentUser = j;
+       finishLoginUI();
+       buildTabs(); 
+       loadSheetData(currentSheetKey);
+       loadSingleData(); 
+    }).catch(e=>{
+       logout();
+       initGoogleSignIn();
+    });
+  } else {
+    initGoogleSignIn();
+  }
+  
+  document.getElementById('logoutBtn').addEventListener('click', logout);
+  document.getElementById('btnQuery').addEventListener('click', onSingleQuery);
+  document.getElementById('btnReset').addEventListener('click', onSingleReset);
+  ['selSheet','selArea','selCar'].forEach(id=>document.getElementById(id).addEventListener('change', rebuildSelectOptions));
+};
 </script>
 </body>
 </html>

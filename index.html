@@ -845,7 +845,8 @@ function renderVehicles(data) {
                 const prevCol = prevStep ? header.indexOf(prevStep) : -1;
                 
                 const prevVal = prevCol >= 0 ? String(row[prevCol] || '').trim() : '';
-                const prevDone = !prevStep || prevVal !== '';
+                // ★★★ 修正: 增加檢查 '—' (破折號)，避免被視為完成 ★★★
+                const prevDone = !prevStep || (prevVal !== '' && prevVal !== '—');
 
                 const btnClass = isSecondary ? 'btn btn--warning btn--sm' : 'btn btn--primary btn--sm';
                 const btn = createBtn('打卡', btnClass, ()=>doUpdate(cfg, baseRow, colIdx+1, getTaipeiHHMMSS(), ()=>loadSheetData(cfg.key, true)));
@@ -920,7 +921,8 @@ function openListModal2(sheetKey, step, type, locValue) {
              const prevCol = prevStep ? data.header.indexOf(prevStep) : -1;
              
              const prevVal = prevCol >= 0 ? String(r[prevCol] || '').trim() : '';
-             const prevDone = !prevStep || prevVal !== '';
+             // ★★★ 修正: 增加檢查 '—' (破折號) ★★★
+             const prevDone = !prevStep || (prevVal !== '' && prevVal !== '—');
              
              const btnPunch = createBtn('打卡', 'btn btn--primary btn--sm', async () => {
                  await doUpdate(data.cfg, item.rowIndex, colIdx+1, getTaipeiHHMMSS(), async () => {

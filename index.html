@@ -56,7 +56,7 @@ body.dark .tab-container-styled { background: rgba(30, 41, 59, 0.8); }
 .btn-tab {
   background: #fff; color: var(--gray-500);
   border: 1px solid transparent; border-radius: var(--radius-pill);
-  padding: 8px 20px; font-size: 1rem; font-weight: 800; cursor: pointer;
+  padding: 8px 20px; font-size: 1.25rem; font-weight: 800; cursor: pointer;
   transition: all 0.2s ease; white-space: nowrap;
 }
 .btn-tab:hover { background: var(--gray-50); color: var(--primary-600); }
@@ -66,7 +66,7 @@ body.dark .tab-container-styled { background: rgba(30, 41, 59, 0.8); }
 .main-tab {
   background: #fff; color: var(--primary-600);
   border: 1px solid var(--primary-600); border-radius: var(--radius-pill);
-  padding: 8px 22px; font-size: 1rem; font-weight: 800; cursor: pointer;
+  padding: 8px 22px; font-size: 1.25rem; font-weight: 800; cursor: pointer;
 }
 .main-tab.active { background: var(--primary-600); color: #fff; box-shadow: 0 4px 6px rgba(31, 111, 229, 0.25); }
 
@@ -131,7 +131,7 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 /* 三欄式排版 */
 .step-row {
   display: grid;
-  grid-template-columns: 40% 30% 30%; /* 標題:內容:按鈕 */
+  grid-template-columns: 38% 32% 30%;
   align-items: center;
   gap: 4px;
   padding: 6px 0;
@@ -153,7 +153,7 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 .stat-card.alt-group-card .stat-head { color: #c2410c; }
 
 .step-label { font-weight: 600; color: var(--text); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.step-middle { display: flex; justify-content: flex-start; align-items: center; padding-left: 4px; } /* 靠左對齊與車號平行 */
+.step-middle { display: flex; justify-content: center; align-items: center; text-align: center; }
 .btn-group { display: flex; justify-content: flex-end; gap: 4px; }
 
 .step-time{ font-family: monospace; font-weight: 600; color: var(--primary-600); font-size: 1rem; }
@@ -168,6 +168,7 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 .btn--warning:hover{background: #ea580c;}
 .btn--secondary{background:#fff;color:var(--primary-600);border:1px solid var(--border);} 
 .btn--sm{ padding: 4px 10px; font-size: 13px; }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); }
 
 /* Dashboard Stats */
 .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top: 10px;}
@@ -300,6 +301,7 @@ const SHEET_CONFIGS = [
       '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
       '退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台'
     ],
+    // 標示非主要操作的步驟 (第二組 - 橘色)
     secondarySteps: ['退場人員已到齊','人已前往平台']
   },
   { 
@@ -310,6 +312,7 @@ const SHEET_CONFIGS = [
       '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
       '人已前往禪堂平台','車已離開禪堂平台'
     ],
+    // 標示非主要操作的步驟 (第二組 - 橘色)
     secondarySteps: ['人已前往禪堂平台','車已離開禪堂平台']
   },
   { 
@@ -320,6 +323,7 @@ const SHEET_CONFIGS = [
       '已 Call 車排車隊','已排好車隊','車暫停位置',
       '退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','人已前往平台','車已離開遊覽車平台'
     ],
+    // 標示非主要操作的步驟 (第二組 - 橘色)
     secondarySteps: ['退場人員已到齊','人已前往平台']
   },
   { 
@@ -329,11 +333,12 @@ const SHEET_CONFIGS = [
     steps:[
       '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
     ],
+    // 全部都是主要操作 (藍色)
     secondarySteps: []
   }
 ];
 
-const STOP_OPTIONS = ['🅿️ 禪堂平台','🅿️ 法心北路','🅿️ 法心南路（西）','🅿️ 法心南路（東）','🅿️ 法大路'];
+const STOP_OPTIONS = ['禪堂平台','法心北路','法心南路（西）','法心南路（東）','法大路'];
 const REFRESH_PRESETS = [{ label:'5分', ms:300000 }, { label:'2分', ms:120000 }, { label:'60秒', ms:60000 }, { label:'30秒', ms:30000 }];
 
 let currentUser = null;
@@ -759,8 +764,11 @@ function renderVehicles(data) {
                 const stepIdx = cfg.steps.indexOf(st);
                 const prevStep = stepIdx>0 ? cfg.steps[stepIdx-1] : null;
                 const prevCol = prevStep ? header.indexOf(prevStep) : -1;
-                const prevDone = !prevStep || (prevCol>=0 && row[prevCol]);
                 
+                // ★★★ 修正：使用 trim() 並檢查非空字串，避免空白字元造成誤判 ★★★
+                const prevVal = prevCol >= 0 ? String(row[prevCol] || '').trim() : '';
+                const prevDone = !prevStep || prevVal !== '';
+
                 // ★ 根據是否為第二組，決定按鈕顏色
                 const btnClass = isSecondary ? 'btn btn--warning btn--sm' : 'btn btn--primary btn--sm';
                 const btn = createBtn('打卡', btnClass, ()=>doUpdate(cfg, baseRow, colIdx+1, getTaipeiHHMMSS(), ()=>loadSheetData(cfg.key, true)));
@@ -828,7 +836,10 @@ function openListModal2(sheetKey, step, type, locValue) {
              const stepIdx = data.cfg.steps.indexOf(step);
              const prevStep = stepIdx>0 ? data.cfg.steps[stepIdx-1] : null;
              const prevCol = prevStep ? data.header.indexOf(prevStep) : -1;
-             const prevDone = !prevStep || (prevCol>=0 && r[prevCol]);
+             
+             // ★★★ 修正：彈窗內的打卡按鈕也應用相同的嚴格檢查 ★★★
+             const prevVal = prevCol >= 0 ? String(r[prevCol] || '').trim() : '';
+             const prevDone = !prevStep || prevVal !== '';
              
              const btnPunch = createBtn('打卡', 'btn btn--primary btn--sm', async () => {
                  // ★★★ FIX: Return promise to wait for update
@@ -859,9 +870,11 @@ function openListModal2(sheetKey, step, type, locValue) {
             
             const candidates = data.rows.filter(item => {
                 const r = item.data;
-                const prevVal = r[prevColIdx];
-                const stopVal = r[stopColIdx];
-                return (prevVal && prevVal !== '—') && (!stopVal || stopVal === '—');
+                // ★★★ 修正：候選名單過濾也要 trim ★★★
+                const prevVal = String(r[prevColIdx] || '').trim();
+                const stopVal = String(r[stopColIdx] || '').trim();
+                // 規則：前一步已完成 (非空) 且 當前未設定 (空或—)
+                return (prevVal !== '' && prevVal !== '—') && (stopVal === '' || stopVal === '—');
             });
 
             const addSection = document.createElement('div');

@@ -110,7 +110,6 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
   transition: all 0.2s ease;
 }
 
-/* 強制讓個別情報卡片變成手指游標，並增加懸停效果 */
 .indiv-card { cursor: pointer !important; }
 .indiv-card:hover {
   border-color: var(--primary-600);
@@ -308,8 +307,7 @@ function parseSheetData(values, cfg) {
     
     const validItems = [];
     
-    // ★★★ FIX: Only include rows where BOTH Area and Car exist ★★★
-    // Also store the 1-based row index for API updates
+    // Only include rows where BOTH Area and Car exist
     for(let i = headIdx + 1; i < values.length; i++) {
         const row = values[i];
         const area = String(row[areaIdx] || '').trim();
@@ -376,6 +374,7 @@ function switchPane(targetId){
   const target = document.getElementById(targetId);
   if(target) target.classList.remove('hide');
 
+  // Hide/Show Refresh Bar
   const refreshBar = document.querySelector('.refresh-bar');
   if(refreshBar) refreshBar.style.display = (targetId === 'pane-dashboard2') ? 'flex' : 'none';
 
@@ -430,7 +429,7 @@ async function fetchSheetData(cfg){
 async function doUpdate(cfg, row, col, value, callback){
     await withLoading(async()=>{
         await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({sheet:cfg.sheet, idToken, writes:[{row, col, value}]})});
-        callback();
+        if(callback) await callback();
     });
 }
 
@@ -538,16 +537,25 @@ function buildTabs(){
 }
 async function loadSheetData(key, silent = false){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);
-  if (!silent) document.getElementById('vehList').textContent = '讀取資料中...';
+  
+  // ★★★ FIX: Use standard spinner for ALL load operations (per user request)
+  if (!silent) showLoading();
   
   document.getElementById('content').classList.remove('hide');
 
   try {
       const res = await fetchSheetData(cfg);
       const parsed = parseSheetData(res.values, cfg);
-      if(!parsed) { document.getElementById('vehList').textContent = '無資料 (未偵測到有效資料)'; return; }
-      renderVehicles(parsed);
-  } catch(e) { document.getElementById('vehList').textContent = '載入失敗'; }
+      if(!parsed) { 
+          document.getElementById('vehList').textContent = '無資料 (未偵測到有效資料)'; 
+      } else {
+          renderVehicles(parsed);
+      }
+  } catch(e) { 
+      document.getElementById('vehList').textContent = '載入失敗'; 
+  } finally {
+      if (!silent) hideLoading();
+  }
 }
 function renderVehicles(data) {
   const { cfg, header, rows, areaIdx, carIdx } = data;
@@ -559,7 +567,7 @@ function renderVehicles(data) {
     const row = item.data;
     const area = String(row[areaIdx]||'').trim(); 
     const car = String(row[carIdx]||'').trim(); 
-    const baseRow = item.rowIndex; // Use the real row index stored
+    const baseRow = item.rowIndex; 
     
     const card = document.createElement('div'); card.className = 'veh-card';
     const titleDiv = document.createElement('div');
@@ -660,7 +668,6 @@ function openListModal2(sheetKey, step, type, locValue) {
              const prevDone = !prevStep || (prevCol>=0 && r[prevCol]);
              
              const btnPunch = createBtn('打卡', 'btn btn--primary btn--sm', async () => {
-                 // Use item.rowIndex
                  await doUpdate(data.cfg, item.rowIndex, colIdx+1, getTaipeiHHMMSS(), () => {
                      box.remove(); document.querySelector('.modal-backdrop').remove();
                      buildDashboard2(true);
@@ -680,7 +687,8 @@ function openListModal2(sheetKey, step, type, locValue) {
 }
 
 /* ============ SINGLE PAGE ============ */
-async function loadSingleData(){
+async function loadSingleData(silent=false){
+  if(!silent) showLoading();
   SINGLE_ITEMS = [];
   try {
       const requests = SHEET_CONFIGS.map(cfg => fetchSheetData(cfg));
@@ -689,11 +697,10 @@ async function loadSingleData(){
           const parsed = parseSheetData(res.values, res.cfg);
           if(parsed) {
               parsed.rows.forEach(item => {
-                  // Only already validated rows are here
                   SINGLE_ITEMS.push({ 
                       sheetKey: res.key, cfg: res.cfg, 
                       header: parsed.header, 
-                      row: item.data, // keep row data flat for filter ease
+                      row: item.data, 
                       areaIdx: parsed.areaIdx, carIdx: parsed.carIdx 
                   });
               });
@@ -702,6 +709,7 @@ async function loadSingleData(){
       fillSheetOptions();
       rebuildSelectOptions();
   } catch(e) { console.error(e); }
+  if(!silent) hideLoading();
 }
 function fillSheetOptions(){
   const sel = document.getElementById('selSheet');
@@ -788,8 +796,8 @@ window.onload = function(){
        currentUser = j;
        finishLoginUI();
        buildTabs(); 
-       loadSheetData(currentSheetKey);
-       loadSingleData(); 
+       loadSheetData(currentSheetKey, true); // Silent initial
+       loadSingleData(true); // Silent initial
     }).catch(e=>{ logout(); initGoogleSignIn(); });
   } else { initGoogleSignIn(); }
   document.getElementById('logoutBtn').addEventListener('click', logout);

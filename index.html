@@ -131,7 +131,7 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 /* 三欄式排版 */
 .step-row {
   display: grid;
-  grid-template-columns: 38% 32% 30%;
+  grid-template-columns: 40% 30% 30%; /* 標題:內容:按鈕 */
   align-items: center;
   gap: 4px;
   padding: 6px 0;
@@ -153,7 +153,7 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 .stat-card.alt-group-card .stat-head { color: #c2410c; }
 
 .step-label { font-weight: 600; color: var(--text); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.step-middle { display: flex; justify-content: center; align-items: center; text-align: center; }
+.step-middle { display: flex; justify-content: flex-start; align-items: center; padding-left: 4px; } /* 靠左對齊與車號平行 */
 .btn-group { display: flex; justify-content: flex-end; gap: 4px; }
 
 .step-time{ font-family: monospace; font-weight: 600; color: var(--primary-600); font-size: 1rem; }
@@ -175,18 +175,12 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 .stat-head{ font-weight:700; margin-bottom:8px; }
 .stat-row{ display:flex; gap:8px; justify-content: center; }
 
-/* ★★★ 修正：去除方框背景，只靠數字顏色凸顯 ★★★ */
 .stat-pill { 
-  flex: 1; 
-  padding: 4px; 
-  cursor: pointer; 
-  background: transparent; /* 去背 */
-  border: none; /* 去框 */
+  flex: 1; padding: 4px; cursor: pointer; 
+  background: transparent; border: none; 
   transition: all 0.2s; 
 }
-.stat-pill:hover { 
-  transform: scale(1.1);
-}
+.stat-pill:hover { transform: scale(1.1); }
 
 .stat-num{ font-size: 28px; font-weight: 800; line-height: 1; }
 .stat-num.done{ color:#2563eb; }
@@ -306,7 +300,6 @@ const SHEET_CONFIGS = [
       '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
       '退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台'
     ],
-    // 標示非主要操作的步驟 (第二組 - 橘色)
     secondarySteps: ['退場人員已到齊','人已前往平台']
   },
   { 
@@ -317,7 +310,6 @@ const SHEET_CONFIGS = [
       '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
       '人已前往禪堂平台','車已離開禪堂平台'
     ],
-    // 標示非主要操作的步驟 (第二組 - 橘色)
     secondarySteps: ['人已前往禪堂平台','車已離開禪堂平台']
   },
   { 
@@ -328,7 +320,6 @@ const SHEET_CONFIGS = [
       '已 Call 車排車隊','已排好車隊','車暫停位置',
       '退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','人已前往平台','車已離開遊覽車平台'
     ],
-    // 標示非主要操作的步驟 (第二組 - 橘色)
     secondarySteps: ['退場人員已到齊','人已前往平台']
   },
   { 
@@ -338,7 +329,6 @@ const SHEET_CONFIGS = [
     steps:[
       '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
     ],
-    // 全部都是主要操作 (藍色)
     secondarySteps: []
   }
 ];
@@ -841,9 +831,10 @@ function openListModal2(sheetKey, step, type, locValue) {
              const prevDone = !prevStep || (prevCol>=0 && r[prevCol]);
              
              const btnPunch = createBtn('打卡', 'btn btn--primary btn--sm', async () => {
-                 await doUpdate(data.cfg, item.rowIndex, colIdx+1, getTaipeiHHMMSS(), () => {
+                 // ★★★ FIX: Return promise to wait for update
+                 await doUpdate(data.cfg, item.rowIndex, colIdx+1, getTaipeiHHMMSS(), async () => {
                      box.remove(); document.querySelector('.modal-backdrop').remove();
-                     buildDashboard2(true);
+                     await buildDashboard2(true);
                  });
              });
              
@@ -859,7 +850,6 @@ function openListModal2(sheetKey, step, type, locValue) {
     
     // ★★★ NEW: Add "Add Car" section for Parking Location ★★★
     if (step === '車暫停位置' && type === 'loc' && currentUser?.permission === '全功能') {
-        // 1. Identify previous step
         const stepIdx = data.cfg.steps.indexOf(step);
         const prevStep = stepIdx > 0 ? data.cfg.steps[stepIdx - 1] : null;
         
@@ -867,16 +857,13 @@ function openListModal2(sheetKey, step, type, locValue) {
             const prevColIdx = data.header.indexOf(prevStep);
             const stopColIdx = data.header.indexOf(step);
             
-            // 2. Find candidates
             const candidates = data.rows.filter(item => {
                 const r = item.data;
                 const prevVal = r[prevColIdx];
                 const stopVal = r[stopColIdx];
-                // Logic: Previous completed AND Current empty
                 return (prevVal && prevVal !== '—') && (!stopVal || stopVal === '—');
             });
 
-            // 3. Render UI
             const addSection = document.createElement('div');
             addSection.style.marginTop = '20px';
             addSection.style.paddingTop = '15px';
@@ -905,10 +892,11 @@ function openListModal2(sheetKey, step, type, locValue) {
                 const btnAdd = createBtn('確定', 'btn btn--primary btn--sm', async () => {
                     if(!sel.value) return;
                     const targetRowIndex = parseInt(sel.value);
-                    await doUpdate(data.cfg, targetRowIndex, stopColIdx + 1, locValue, () => {
+                    // ★★★ FIX: Return promise here too
+                    await doUpdate(data.cfg, targetRowIndex, stopColIdx + 1, locValue, async () => {
                         box.remove(); 
                         document.querySelector('.modal-backdrop').remove();
-                        buildDashboard2(true); 
+                        await buildDashboard2(true); 
                     });
                 });
                 
@@ -1035,23 +1023,22 @@ window.onload = function(){
   const saved = localStorage.getItem('ddcc_user_token');
   if (saved) {
     idToken = saved;
-    // ★★★ 修復：有 token 時，先顯示 loading，不顯示 login card ★★★
-    document.body.classList.add('login'); // 保持 login 狀態隱藏 dashboard
-    document.body.classList.add('auto-login'); // 加上標記隱藏 login card
-    showLoading(); // 顯示轉圈圈
+    document.body.classList.add('login'); 
+    document.body.classList.add('auto-login'); 
+    showLoading();
 
     fetch(API_BASE + '?action=verify', { method: 'POST', headers: { 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken }) })
     .then(r=>r.json())
     .then(j=>{
        if(j.error) throw new Error(j.error);
        currentUser = j;
-       finishLoginUI(); // 驗證成功，進入 dashboard
+       finishLoginUI(); 
        buildTabs(); 
        loadSheetData(currentSheetKey, true); 
        loadSingleData(true); 
     })
     .catch(e=>{ 
-       document.body.classList.remove('auto-login'); // 驗證失敗，顯示 login card
+       document.body.classList.remove('auto-login'); 
        logout(); 
        initGoogleSignIn(); 
     })

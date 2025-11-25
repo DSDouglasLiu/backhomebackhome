@@ -390,7 +390,8 @@ function parseSheetData(values, cfg) {
             let completed = 0;
             cfg.steps.forEach(st => {
                 const colIdx = header.indexOf(st);
-                const val = (colIdx !== -1) ? row[colIdx] : '';
+                // ★★★ 修正: 全域檢查 trim 避免空白被視為完成 ★★★
+                const val = (colIdx !== -1) ? String(row[colIdx]||'').trim() : '';
                 if(val && val !== '—') completed++;
             });
 
@@ -428,7 +429,8 @@ function createPill(num, label, type, onClick){
 
 function startClock(){
   const el = document.getElementById('clockDisplay');
-  if(el) setInterval(() => { el.textContent = new Date().toLocaleTimeString('zh-TW', {hour12:false}); }, 1000);
+  // ★★★ 修正：使用 getTaipeiHHMMSS() 統一時區顯示 ★★★
+  if(el) setInterval(() => { el.textContent = getTaipeiHHMMSS(); }, 1000);
 }
 
 function buildRefreshControls(){
@@ -438,7 +440,15 @@ function buildRefreshControls(){
     const btn = createBtn(p.label, 'seg-btn', ()=>{ refreshMs=p.ms; updateRefreshButtonsUI(); if(isDashboardVisible()) startDashboardAutoRefresh(); });
     btn.dataset.ms = p.ms; box.appendChild(btn);
   });
-  box.appendChild(createBtn('立即更新','seg-btn now-btn', ()=>{ buildDashboard2(true); showNotif('已更新',false); }));
+  // ★★★ FIX: 立即更新按鈕增加點擊視覺回饋 ★★★
+  const nowBtn = createBtn('立即更新','seg-btn now-btn', (e)=>{ 
+      const btn = e.target.closest('button') || e.target;
+      btn.classList.add('active');
+      setTimeout(() => btn.classList.remove('active'), 200);
+      buildDashboard2(true); 
+      showNotif('已更新',false); 
+  });
+  box.appendChild(nowBtn);
 }
 function updateRefreshButtonsUI(){
     document.querySelectorAll('#refreshControls .seg-btn').forEach(b => { if(!b.classList.contains('now-btn')) b.classList.toggle('active', parseInt(b.dataset.ms)===refreshMs); });
@@ -616,7 +626,9 @@ function renderStatCard(step, data, container, cfg) {
     let done=0, todo=0;
     data.rows.forEach(item => { 
         const r = item.data;
-        const v = colIdx>=0?r[colIdx]:''; (v&&v!=='—') ? done++ : todo++; 
+        // ★★★ 修正: Dashboard 統計也要 trim，避免數據不一致 ★★★
+        const v = colIdx>=0 ? String(r[colIdx]||'').trim() : ''; 
+        (v && v !== '—') ? done++ : todo++; 
     });
 
     // 判斷是否為第二組 (變色)
@@ -806,7 +818,8 @@ function openListModal2(sheetKey, step, type, locValue) {
         data.rows.forEach(item => { if(String(item.data[c]||'').trim() === locValue) list.push(item); });
     } else {
         data.rows.forEach(item => { 
-            const v = colIdx>=0 ? item.data[colIdx] : ''; 
+            // ★★★ 修正: 彈窗清單過濾也需 trim，避免空白被誤判為完成 (導致在 todo 清單消失) ★★★
+            const v = colIdx>=0 ? String(item.data[colIdx]||'').trim() : ''; 
             const ok = (v && v !== '—' && v !== ''); 
             if((type==='done'&&ok)||(type==='todo'&&!ok)) list.push(item); 
         });

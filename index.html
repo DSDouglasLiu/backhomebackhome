@@ -134,11 +134,11 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 
 .veh-title-main{font-weight:700;font-size:1.25rem;}
 
-/* ★★★ 三欄式排版樣式 (修改處) ★★★ */
+/* ★★★ 三欄式排版系統 (核心修改) ★★★ */
 .step-row {
   display: grid;
-  /* 左(40%) | 中(35%) | 右(25%) */
-  grid-template-columns: 40% 35% 25%;
+  /* 左(標題) | 中(內容) | 右(按鈕) */
+  grid-template-columns: 38% 32% 30%;
   align-items: center;
   gap: 4px;
   padding: 6px 0;
@@ -156,7 +156,7 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
   text-overflow: ellipsis;
 }
 
-/* 中欄：內容置中 (含下拉選單) */
+/* 中欄：內容置中 (時間或下拉) */
 .step-middle {
   display: flex;
   justify-content: center;
@@ -173,10 +173,10 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 
 .step-time{ font-family: monospace; font-weight: 600; color: var(--primary-600); font-size: 1rem; }
 
-/* 下拉選單樣式 */
+/* 下拉選單樣式 - 讓它填滿中間欄位 */
 .step-select {
-  width: 95%;
-  padding: 6px;
+  width: 100%; 
+  padding: 6px 2px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: #fff;

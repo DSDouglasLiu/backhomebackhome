@@ -1020,7 +1020,7 @@ async function loadSheetData(key){
   
 function isCompletedValue(v){ if (v==null) return false; const s=String(v).trim(); return !!s && s!=='—' && s!=='-'; }
 
-/* ====== 打卡頁 renderVehicles ====== */
+/* ====== 打卡頁 renderVehicles (防重整修正版) ====== */
 function renderVehicles(cfg, data) {
   const box = document.getElementById('vehList'); box.innerHTML = '';
   const canWrite = currentUser?.permission === '全功能';
@@ -1035,23 +1035,22 @@ function renderVehicles(cfg, data) {
     const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim(); const baseRow = headerRowIdx+2+idx;
     const {completed,total} = computeCompletion(cfg, header, row);
     const card = document.createElement('div');
-card.className = 'veh-card';
-card.innerHTML =
-  `<div>
-     <div class="veh-title-main">${escapeHtml(area)}</div>
-     <div class="veh-title-sub">${escapeHtml(car)}</div>
-   </div>`;
+    card.className = 'veh-card';
+    card.innerHTML =
+      `<div>
+         <div class="veh-title-main">${escapeHtml(area)}</div>
+         <div class="veh-title-sub">${escapeHtml(car)}</div>
+       </div>`;
 
-    // 讓名片上方標題區可點擊看詳情（採用整體情報樣式）
-const headWrap = card.querySelector(':scope > div:first-child');
-if (headWrap){
-  headWrap.style.cursor = 'pointer';
-  headWrap.setAttribute('title','點我看詳情');
-  headWrap.addEventListener('click', (e)=>{
-    // 用「cfg + header + row」直接呼叫新的 openDetailModal
-    openDetailModal(cfg, row, header);
-  });
-}
+    // 讓名片上方標題區可點擊看詳情
+    const headWrap = card.querySelector(':scope > div:first-child');
+    if (headWrap){
+      headWrap.style.cursor = 'pointer';
+      headWrap.setAttribute('title','點我看詳情');
+      headWrap.addEventListener('click', (e)=>{
+        openDetailModal(cfg, row, header);
+      });
+    }
 
     const stepsBox=document.createElement('div');
 
@@ -1081,13 +1080,23 @@ if (headWrap){
 
       const timeSpan=document.createElement('span'); timeSpan.className='step-time'; timeSpan.textContent=displayVal||'—'; rowEl.appendChild(timeSpan);
       const btnG=document.createElement('div'); btnG.className='btn-group';
-      const btnPunch = document.createElement('button');
-      // ★★★ 新增：明確指定按鈕類型，防止觸發頁面重整 ★★★
-      btnPunch.type = "button"; 
-      btnPunch.className = 'btn btn--primary btn--sm btn-punch';
-      btnPunch.textContent = '打卡';
-      const btnEdit=document.createElement('button'); btnEdit.className='btn btn--success btn--sm btn-edit'; btnEdit.textContent='修改';
-      const btnDel=document.createElement('button'); btnDel.className='btn btn--danger btn--sm btn-del'; btnDel.textContent='刪除';
+      
+      // ★★★ 關鍵修正：明確建立 button 並指定 type="button" ★★★
+      const btnPunch=document.createElement('button'); 
+      btnPunch.type = 'button'; // 防止提交表單
+      btnPunch.className='btn btn--primary btn--sm btn-punch'; 
+      btnPunch.textContent='打卡';
+      
+      const btnEdit=document.createElement('button'); 
+      btnEdit.type = 'button'; // 防止提交表單
+      btnEdit.className='btn btn--success btn--sm btn-edit'; 
+      btnEdit.textContent='修改';
+      
+      const btnDel=document.createElement('button'); 
+      btnDel.type = 'button'; // 防止提交表單
+      btnDel.className='btn btn--danger btn--sm btn-del'; 
+      btnDel.textContent='刪除';
+
       btnG.appendChild(btnPunch); btnG.appendChild(btnEdit); btnG.appendChild(btnDel); rowEl.appendChild(btnG);
 
       if (!canWrite){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; rowEl.classList.add('locked'); }
@@ -1096,9 +1105,20 @@ if (headWrap){
         if (!prevOk && !hasVal){ btnPunch.disabled=btnEdit.disabled=btnDel.disabled=true; }
         else{
           btnPunch.disabled=hasVal; btnEdit.disabled=btnDel.disabled=!hasVal;
-          btnPunch.onclick=()=>onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
-          btnEdit.onclick =()=>onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
-          btnDel.onclick  =()=>onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+          
+          // ★★★ 綁定事件時，加入 e.preventDefault() 與 e.stopPropagation() ★★★
+          btnPunch.onclick = (e) => {
+            if(e) { e.preventDefault(); e.stopPropagation(); }
+            onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+          };
+          btnEdit.onclick = (e) => {
+            if(e) { e.preventDefault(); e.stopPropagation(); }
+            onEditTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl, displayVal);
+          };
+          btnDel.onclick = (e) => {
+            if(e) { e.preventDefault(); e.stopPropagation(); }
+            onDeleteTimeClick(cfg, baseRow, header, st, timeSpan, btnPunch, btnEdit, btnDel, rowEl);
+          };
         }
       }
       stepsBox.appendChild(rowEl);
@@ -1106,55 +1126,53 @@ if (headWrap){
 
     card.appendChild(stepsBox);
 
-    // 備註
+    // 備註區塊
     const memoWrap=document.createElement('div'); memoWrap.style.marginTop='8px';
     const memoRow=document.createElement('div'); memoRow.style.cssText='display:flex;gap:8px;align-items:flex-start;';
     const memoTA=document.createElement('textarea'); memoTA.className='textarea'; memoTA.placeholder='備註'; memoTA.style.flex='1';
     let memoColIdx=header.indexOf('備註'); if (memoColIdx===-1) memoColIdx=header.length-1;
     memoTA.value=(memoColIdx!==-1 && row[memoColIdx]) ? String(row[memoColIdx]):'';
+    
+    // ★★★ 備註按鈕也要修正 ★★★
     const memoBtn = document.createElement('button');
-memoBtn.className = 'btn btn--primary';
-memoBtn.textContent = '儲存';
-memoBtn.disabled = !canWrite;
+    memoBtn.type = 'button'; // 防止提交表單
+    memoBtn.className = 'btn btn--primary';
+    memoBtn.textContent = '儲存';
+    memoBtn.disabled = !canWrite;
 
-memoBtn.onclick = async () => {
-  if (!canWrite) return;
-  if (!currentUser) {
-    alert('請先登入');
-    return;
-  }
+    memoBtn.onclick = async (e) => {
+      if(e) { e.preventDefault(); e.stopPropagation(); } // 防止重整
+      if (!canWrite) return;
+      if (!currentUser) { alert('請先登入'); return; }
 
-  await withLoading(async () => {
-    const body = {
-      sheet:  cfg.sheet,
-      email:  currentUser.email || '',
-      idToken: (typeof idToken !== 'undefined' ? idToken : ''),
-      mode:   'memo', // 後端沒用到也沒關係，純標記這是備註更新
-      writes: [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }]
+      await withLoading(async () => {
+        const body = {
+          sheet:  cfg.sheet,
+          email:  currentUser.email || '',
+          idToken: (typeof idToken !== 'undefined' ? idToken : ''),
+          mode:   'memo',
+          writes: [{ row: baseRow, col: memoColIdx + 1, value: memoTA.value }]
+        };
+
+        const r = await fetch(API_BASE + '?action=update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(body)
+        });
+
+        let j;
+        try { j = await r.json(); } 
+        catch (e) { throw new Error('伺服器回傳格式錯誤'); }
+
+        if (!j.ok) throw new Error(j.error || 'unknown');
+
+        // 確保 sleep 存在
+        if(typeof sleep === 'function') await sleep(250);
+        await reloadSheet();
+      }, '儲存備註…');
+
+      showNotif('備註已儲存', false);
     };
-
-    const r = await fetch(API_BASE + '?action=update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(body)
-    });
-
-    let j;
-    try {
-      j = await r.json();
-    } catch (e) {
-      throw new Error('伺服器回傳格式錯誤（非 JSON），請檢查 Apps Script 部署或權限設定');
-    }
-
-    if (!j.ok) throw new Error(j.error || 'unknown');
-
-    await sleep(250);
-    await reloadSheet();
-  }, '儲存備註…');
-
-  showNotif('備註已儲存', false);
-};
-
     
     memoRow.appendChild(memoTA); memoRow.appendChild(memoBtn); memoWrap.appendChild(memoRow); card.appendChild(memoWrap);
 
@@ -1164,6 +1182,7 @@ memoBtn.onclick = async () => {
   cards.sort((a,b)=> (a.completed!==b.completed ? a.completed-b.completed : a.origOrder-b.origOrder));
   cards.forEach(c=>box.appendChild(c.el));
 }
+  
 function prevDone(cfg, header, row, st){ const idx=cfg.steps.indexOf(st); if (idx===0) return true; const prev=cfg.steps[idx-1]; const col=header.indexOf(prev); if (col===-1) return true; return !!row[col]; }
 async function onStopSelect(cfg,rowNumber,header,st,value,span){
   if (!currentUser) return alert('請先登入'); 

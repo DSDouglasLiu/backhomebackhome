@@ -1714,7 +1714,7 @@ async function buildDashboard2(silent = false){
             </div>`;
           
           card.querySelectorAll('.stat-pill').forEach(pill => {
-            pill.addEventListener('click', () => openListModal2(cfg.key, st, pill.dataset.type));
+            pill.addEventListener('click', () => (cfg.key, st, pill.dataset.type));
           });
           grid.appendChild(card);
         });
@@ -2159,7 +2159,6 @@ function openListModal(sheetKey, step, type, locValue) {
     };
   }
 }
-
 /* ============================= 需求一：強制步驟順序鎖 + 即時更新 ============================= */
 // 全局變數：儲存所有已開啟的未完成清單（用來即時刷新按鈕狀態）
 const activeTodoModals = new Set();
@@ -2247,20 +2246,12 @@ function openListModal2(sheetKey, step, type, locValue) {
       btnPunch.disabled = !canPunch;
       btnPunch.title = canPunch ? '' : `請先完成「${prevStep}」`;
 
-      btnPunch.onclick = async () => {
+      btnPunch.onclick = () => {
         if (!canPunch) return;
-
-        const sheetInfo = ALL_SHEETS[sheetKey];
-        const rowIndex = sheetInfo.rows.findIndex(row =>
-          String(row[1] || '').trim() === area && String(row[2] || '').trim() === car
-        );
-        const realRowNum = sheetInfo.headerIdx + 2 + rowIndex;
-
-        await withLoading(async () => {
-          const minShow = sleep(800);
-          await onQuickPunch(sheetKey, step, realRowNum, area, car, closeList);
-          await minShow;
-        }, '打卡中…');
+        // 修改：直接呼叫 onQuickPunch，不包 withLoading
+        // onQuickPunch 內部會處理 loading 畫面與 2 秒延遲
+        // 第3個參數傳 0 即可，因為 onQuickPunch 內部會重新計算正確的 row
+        onQuickPunch(sheetKey, step, 0, area, car, closeList);
       };
 
       actionsDiv.appendChild(btnPunch);
@@ -2273,7 +2264,6 @@ function openListModal2(sheetKey, step, type, locValue) {
 
   activeTodoModals.add(box);
 }
-
 // 任何資料更新後，呼叫此函式即時刷新所有已開的清單
 async function refreshAllActiveTodoModals() {
   if (activeTodoModals.size === 0) return;
@@ -2299,7 +2289,6 @@ async function refreshAllActiveTodoModals() {
 /*
   refreshAllActiveTodoModals();
 */
-
 /* 執行快速打卡動作 */
 async function onQuickPunch(sheetKey, stepName, dummy, area, car, closeListFn) {
   if (!currentUser || currentUser.permission !== '全功能') {
@@ -2333,8 +2322,10 @@ async function onQuickPunch(sheetKey, stepName, dummy, area, car, closeListFn) {
 
   const nowTime = getTaipeiHHMMSS();
 
+  // 修改：開始顯示 Loading
+  showLoading('打卡中…');
+
   try {
-    // 直接執行，不再包 withLoading（外面已經包了）
     const body = {
       sheet: cfg.sheet,
       idToken: idToken || '',
@@ -2346,11 +2337,17 @@ async function onQuickPunch(sheetKey, stepName, dummy, area, car, closeListFn) {
       }]
     };
 
-    const r = await fetch(API_BASE + '?action=update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(body)
-    });
+    // 修改：使用 Promise.all 強制等待至少 2000ms
+    // fetchPromise 是 API 請求
+    // sleep(2000) 是等待時間
+    const [r] = await Promise.all([
+      fetch(API_BASE + '?action=update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      }),
+      sleep(2000) // 強制等待 2 秒
+    ]);
 
     const text = await r.text();
     let j;
@@ -2362,12 +2359,18 @@ async function onQuickPunch(sheetKey, stepName, dummy, area, car, closeListFn) {
     if (!j.ok) throw new Error(j.error || '更新失敗');
 
     // 成功！
+    
+    // 修改：關閉 Loading
+    hideLoading();
+
     if (closeListFn) closeListFn();
     showPunchSuccessModal(area, car, nowTime, stepName);
     buildDashboard2(true);
     refreshAllActiveTodoModals();
 
   } catch (err) {
+    // 修改：發生錯誤也要關閉 Loading
+    hideLoading();
     showNotif('打卡失敗：' + err.message, true);
   }
 }

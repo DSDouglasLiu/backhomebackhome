@@ -816,7 +816,13 @@ function openListModal2(sheetKey, step, type, locValue) {
     const title = `${sheetKey} - ${step} (${type==='loc'?locValue:(type==='done'?'完成':'未完成')})`;
     box.innerHTML = `<div class="dash-close">✕</div><h3>${title}</h3><div style="max-height:60vh;overflow:auto" id="mList"></div>`;
     
-    box.querySelector('.dash-close').onclick = () => { box.remove(); document.querySelector('.modal-backdrop').remove(); };
+    // FIX: close modal safely
+    box.querySelector('.dash-close').onclick = () => { 
+        box.remove(); 
+        const bg = document.querySelector('.modal-backdrop');
+        if(bg) bg.remove();
+    };
+
     const c = box.querySelector('#mList');
     if(!list.length) c.innerHTML='<div style="text-align:center;opacity:0.5">無資料</div>';
     
@@ -842,10 +848,12 @@ function openListModal2(sheetKey, step, type, locValue) {
              const prevDone = !prevStep || prevVal !== '';
              
              const btnPunch = createBtn('打卡', 'btn btn--primary btn--sm', async () => {
-                 // ★★★ FIX: Return promise to wait for update
+                 // ★★★ FIX: Return promise to wait for update & Safe Remove Backdrop
                  await doUpdate(data.cfg, item.rowIndex, colIdx+1, getTaipeiHHMMSS(), async () => {
-                     box.remove(); document.querySelector('.modal-backdrop').remove();
-                     await buildDashboard2(true);
+                      box.remove(); 
+                      const bg = document.querySelector('.modal-backdrop');
+                      if(bg) bg.remove();
+                      await buildDashboard2(true);
                  });
              });
              
@@ -905,10 +913,11 @@ function openListModal2(sheetKey, step, type, locValue) {
                 const btnAdd = createBtn('確定', 'btn btn--primary btn--sm', async () => {
                     if(!sel.value) return;
                     const targetRowIndex = parseInt(sel.value);
-                    // ★★★ FIX: Return promise here too
+                    // ★★★ FIX: Return promise here too & Safe Remove Backdrop
                     await doUpdate(data.cfg, targetRowIndex, stopColIdx + 1, locValue, async () => {
                         box.remove(); 
-                        document.querySelector('.modal-backdrop').remove();
+                        const bg = document.querySelector('.modal-backdrop');
+                        if(bg) bg.remove();
                         await buildDashboard2(true); 
                     });
                 });
@@ -1017,11 +1026,17 @@ function openDetailModal(cfg, row, header){
     });
     html += `</table>`;
     box.innerHTML = html;
-    box.querySelector('.dash-close').onclick = () => { box.remove(); document.querySelector('.modal-backdrop').remove(); };
+    // FIX: close modal safely
+    box.querySelector('.dash-close').onclick = () => { 
+        box.remove(); 
+        const bg = document.querySelector('.modal-backdrop');
+        if(bg) bg.remove();
+    };
     openModal(box);
 }
 function openModal(el){
     const bg = document.createElement('div'); bg.className='modal-backdrop';
+    // 這裡原本的 onclick 是安全的，因為 bg 是閉包變數，但為了統一邏輯，保留原樣即可
     bg.onclick = () => { el.remove(); bg.remove(); };
     document.body.appendChild(bg); document.body.appendChild(el);
 }

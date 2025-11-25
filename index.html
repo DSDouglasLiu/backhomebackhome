@@ -102,27 +102,21 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 .login-card { background: rgba(255,255,255,0.95); padding: 48px 60px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.8); text-align: center; backdrop-filter: blur(8px); }
 
 /* Cards & Lists */
-/* ★★★ 修改重點：將 .veh-list (打卡頁) 與 .single-list (個別情報) 分開設定 ★★★ */
+.veh-list { 
+  display: grid; 
+  grid-template-columns: 1fr 1fr; /* 強制一列兩個 */
+  gap: 12px; 
+  margin-top: 12px; 
+}
+@media (max-width: 768px) {
+  .veh-list { grid-template-columns: 1fr; }
+}
 
-/* 個別情報維持原本的自適應排列 */
 .single-list { 
   display: grid; 
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
   gap: 12px; 
   margin-top: 12px; 
-}
-
-/* 登錄與修改：強制一列兩個 */
-.veh-list { 
-  display: grid; 
-  grid-template-columns: 1fr 1fr; /* 固定兩欄 */
-  gap: 12px; 
-  margin-top: 12px; 
-}
-
-/* 手機版優化：螢幕太窄時自動變回單欄，以免按鈕擠在一起無法操作 */
-@media (max-width: 768px) {
-  .veh-list { grid-template-columns: 1fr; }
 }
 
 .veh-card, .indiv-card { 
@@ -139,10 +133,56 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 }
 
 .veh-title-main{font-weight:700;font-size:1.25rem;}
-.step-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding: 4px 0; border-bottom: 1px dashed var(--gray-200); }
+
+/* ★★★ 三欄式排版樣式 (修改處) ★★★ */
+.step-row {
+  display: grid;
+  /* 左(40%) | 中(35%) | 右(25%) */
+  grid-template-columns: 40% 35% 25%;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--gray-200);
+}
 .step-row:last-child { border-bottom: none; }
-.step-time{ font-family: monospace; font-weight: 600; color: var(--primary-600); }
-.step-select{min-width:140px;padding:6px;border-radius:8px;border:1px solid var(--border);}
+
+/* 左欄：文字靠左 */
+.step-label { 
+  font-weight: 600; 
+  color: var(--text); 
+  text-align: left;
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis;
+}
+
+/* 中欄：內容置中 (含下拉選單) */
+.step-middle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+/* 右欄：按鈕靠右 */
+.btn-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.step-time{ font-family: monospace; font-weight: 600; color: var(--primary-600); font-size: 1rem; }
+
+/* 下拉選單樣式 */
+.step-select {
+  width: 95%;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 14px;
+  text-align: center;
+}
 
 .btn{ border:0;border-radius:6px;padding:6px 12px; color:#fff;font-weight:500;cursor:pointer; transition:.2s; }
 .btn:hover{ filter: brightness(1.1); }
@@ -151,7 +191,6 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 .btn--danger{background:#ef4444;}
 .btn--secondary{background:#fff;color:var(--primary-600);border:1px solid var(--border);} 
 .btn--sm{ padding: 4px 10px; font-size: 13px; }
-.btn-group{display:flex;gap:6px;}
 
 /* Dashboard Stats */
 .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top: 10px;}
@@ -576,6 +615,7 @@ async function loadSheetData(key, silent = false){
       if (!silent) hideLoading();
   }
 }
+
 function renderVehicles(data) {
   const { cfg, header, rows, areaIdx, carIdx } = data;
   const box = document.getElementById('vehList'); box.innerHTML = '';
@@ -599,8 +639,18 @@ function renderVehicles(data) {
     cfg.steps.forEach(st=>{
         const colIdx = header.indexOf(st);
         const rawVal = (colIdx!==-1) ? String(row[colIdx]||'').trim(): '';
+        
         const rowEl = document.createElement('div'); rowEl.className='step-row';
-        rowEl.innerHTML = `<div class="step-label">${st}</div>`;
+        
+        // ★★★ 1. 左欄：標題 ★★★
+        const labelEl = document.createElement('div');
+        labelEl.className = 'step-label';
+        labelEl.textContent = st;
+        rowEl.appendChild(labelEl);
+        
+        // ★★★ 2. 中欄：內容 ★★★
+        const middleEl = document.createElement('div');
+        middleEl.className = 'step-middle';
         
         if (st==='車暫停位置'){
             const sel=document.createElement('select'); sel.className='step-select';
@@ -608,33 +658,38 @@ function renderVehicles(data) {
             if(rawVal) sel.value = rawVal;
             sel.disabled = !canWrite;
             if(canWrite) sel.addEventListener('change', () => doUpdate(cfg, baseRow, colIdx+1, sel.value, () => loadSheetData(cfg.key, true)));
-            rowEl.appendChild(sel);
+            middleEl.appendChild(sel);
         } else {
             const timeSpan=document.createElement('span'); timeSpan.className='step-time'; timeSpan.textContent=rawVal?formatSheetTime(rawVal):'—';
-            rowEl.appendChild(timeSpan);
-            const btnG=document.createElement('div'); btnG.className='btn-group';
-            if(canWrite){
-                if(!rawVal) {
-                    const stepIdx = cfg.steps.indexOf(st);
-                    const prevStep = stepIdx>0 ? cfg.steps[stepIdx-1] : null;
-                    const prevCol = prevStep ? header.indexOf(prevStep) : -1;
-                    const prevDone = !prevStep || (prevCol>=0 && row[prevCol]);
-                    
-                    const btn = createBtn('打卡','btn btn--primary btn--sm', ()=>doUpdate(cfg, baseRow, colIdx+1, getTaipeiHHMMSS(), ()=>loadSheetData(cfg.key, true)));
-                    if(!prevDone) { btn.disabled=true; btn.style.opacity=0.5; btn.title='前一步驟未完成'; }
-                    btnG.appendChild(btn);
-                } else {
-                    const btnEdit=createBtn('修改','btn btn--success btn--sm', ()=>{
-                        const nv=prompt('輸入時間',rawVal); if(nv) doUpdate(cfg, baseRow, colIdx+1, nv, ()=>loadSheetData(cfg.key, true));
-                    });
-                    const btnDel=createBtn('刪除','btn btn--danger btn--sm', ()=>{
-                        if(confirm('刪除?')) doUpdate(cfg, baseRow, colIdx+1, '', ()=>loadSheetData(cfg.key, true));
-                    });
-                    btnG.appendChild(btnEdit); btnG.appendChild(btnDel);
-                }
-            }
-            rowEl.appendChild(btnG);
+            middleEl.appendChild(timeSpan);
         }
+        rowEl.appendChild(middleEl);
+
+        // ★★★ 3. 右欄：按鈕 ★★★
+        const btnG = document.createElement('div'); btnG.className='btn-group';
+        
+        if (st !== '車暫停位置' && canWrite) { // 車暫停位置不需要右欄按鈕 (因為下拉就是操作)
+             if(!rawVal) {
+                const stepIdx = cfg.steps.indexOf(st);
+                const prevStep = stepIdx>0 ? cfg.steps[stepIdx-1] : null;
+                const prevCol = prevStep ? header.indexOf(prevStep) : -1;
+                const prevDone = !prevStep || (prevCol>=0 && row[prevCol]);
+                
+                const btn = createBtn('打卡','btn btn--primary btn--sm', ()=>doUpdate(cfg, baseRow, colIdx+1, getTaipeiHHMMSS(), ()=>loadSheetData(cfg.key, true)));
+                if(!prevDone) { btn.disabled=true; btn.style.opacity=0.5; btn.title='前一步驟未完成'; }
+                btnG.appendChild(btn);
+            } else {
+                const btnEdit=createBtn('修改','btn btn--success btn--sm', ()=>{
+                    const nv=prompt('輸入時間',rawVal); if(nv) doUpdate(cfg, baseRow, colIdx+1, nv, ()=>loadSheetData(cfg.key, true));
+                });
+                const btnDel=createBtn('刪除','btn btn--danger btn--sm', ()=>{
+                    if(confirm('刪除?')) doUpdate(cfg, baseRow, colIdx+1, '', ()=>loadSheetData(cfg.key, true));
+                });
+                btnG.appendChild(btnEdit); btnG.appendChild(btnDel);
+            }
+        }
+        rowEl.appendChild(btnG);
+
         stepsBox.appendChild(rowEl);
     });
     card.appendChild(stepsBox);

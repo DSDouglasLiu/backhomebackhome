@@ -548,6 +548,14 @@ const SHEET_CONFIGS = [
   ]}
 ];
 
+/* === 新增：定義各區塊的外框顏色 (對應上方按鈕) === */
+const SECTION_BORDER_COLORS = {
+  '地區專車退場（遊覽車平台）': '#0ea5e9', // 天藍
+  '地區專車退場（禪堂平台）': '#8b5cf6', // 紫
+  '水陸專車退場': '#f59e0b',            // 橘黃
+  '288法青退場': '#10b981'             // 綠
+};
+
 /* ===== 新增：時鐘 + 自動更新頻率設定 ===== */
 const REFRESH_PRESETS = [
   { label:'5分',  ms: 5*60*1000 },
@@ -568,6 +576,9 @@ let currentSheetKey = SHEET_CONFIGS[0].key;
 let sheetData = []; // 打卡頁使用
 const TOKEN_STORAGE_KEY = 'ddcc_user_token';
 let idToken = null;
+
+// 全局變數：儲存所有已開啟的未完成清單（用來即時刷新按鈕狀態）
+const activeTodoModals = new Set();
 
 /* ---------------- 初始登入與頁籤 ---------------- */
 window.onload = function(){
@@ -603,8 +614,6 @@ window.onload = function(){
 
   document.getElementById('logoutBtn').addEventListener('click', logout);
 };
-
-
 
 /* ===== 時鐘（時區 +8、hh:mm:ss） ===== */
 function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
@@ -868,7 +877,6 @@ function escapeHtml(str){
     .replace(/'/g,'&#39;');
 }
 
-
 /* ---------------- 工具 ---------------- */
 function formatSheetTime(val){
   if (!val) return '';
@@ -883,22 +891,30 @@ function formatSheetTime(val){
 const pad2 = n => String(n).padStart(2,'0');
 const splitHMS = v => { const s=String(v||'').trim(); const m=s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/); return m?[pad2(m[1]),m[2],m[3]?m[3]:'00']:['','','']; };
 const isValidHMS = (h,m,s) => (/^\d{2}$/.test(h)&&/^\d{2}$/.test(m)&&/^\d{2}$/.test(s) && +h<=23 && +m<=59 && +s<=59);
-const sleep = ms=>new Promise(r=>setTimeout(r,ms));
+
+// ★★★ 確保 sleep 函式被定義 ★★★
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 function showLoading(msg='處理中…'){ const el=document.getElementById('loading'); if(!el) return; const t=el.querySelector('.loading-text'); if(t) t.textContent=msg; el.classList.add('show'); document.body.classList.add('loading-open'); }
 function hideLoading(){ const el=document.getElementById('loading'); if(!el) return; el.classList.remove('show'); document.body.classList.remove('loading-open'); }
 async function withLoading(fn,msg='處理中…'){ showLoading(msg); try{ return await fn(); } finally{ hideLoading(); } }
 function showNotif(msg,isErr){ const box=document.getElementById('notif'); box.textContent=msg; box.style.background=isErr?'rgba(248,113,113,.9)':'rgba(15,23,42,.85)'; box.classList.add('show'); setTimeout(()=>box.classList.remove('show'), 2500); }
+
 function enterLoginView(){
   updateRefreshControlsVisibility();
   // 標記為登入畫面
   document.body.classList.add('login');
 
-  // 停止任何自動刷新，並清空儀表板
+  // 停止任何自動刷新
   stopDashboardAutoRefresh?.();
+  
+  // ★★★ 修正：確保清空 dashboard 內容，避免殘留 ★★★
   try { document.getElementById('dashboard').innerHTML = ''; } catch {}
+  try { document.getElementById('dashboard2').innerHTML = ''; } catch {}
+  try { document.getElementById('singleResults').innerHTML = ''; } catch {}
 
   // 關掉所有工作頁
-  ['pane-punch','pane-dashboard','pane-single'].forEach(id=>{
+  ['pane-punch','pane-dashboard','pane-single','pane-dashboard2'].forEach(id=>{
     const el = document.getElementById(id);
     if (el) el.classList.add('hide');
   });
@@ -916,7 +932,6 @@ function enterLoginView(){
   document.querySelectorAll('#mainTabs .main-tab')
     .forEach(b => { b.tabIndex = -1; b.setAttribute('aria-disabled','true'); });
 }
-
 
 /* Modal：覆蓋頁 */
 function closeAllModals(){ document.querySelectorAll('.modal, .modal-backdrop').forEach(el=>{ try{el.remove()}catch{} }); document.body.classList.remove('modal-open'); }
@@ -1569,6 +1584,7 @@ results.forEach(({ cfg, header, rows }) => {
         const locTitle = document.createElement('div');
         locTitle.className = 'dash-title';
         locTitle.style.marginTop = '12px';
+        locTitle.style.marginBottom = '6px';
         locTitle.textContent = '停車位置';
         sec.appendChild(locTitle);
 
@@ -1650,6 +1666,13 @@ async function buildDashboard2(silent = false){
       // 建立外框
       const sec = document.createElement('section'); 
       sec.className = 'dash-section card';
+
+      // ★★★ 新增：依據表單名稱設定外框顏色 ★★★
+      const borderColor = SECTION_BORDER_COLORS[cfg.key];
+      if (borderColor) {
+        // 設定邊框顏色，並稍微加粗 (2px) 讓顏色更明顯
+        sec.style.border = `2px solid ${borderColor}`;
+      }
       
       // 標題
       const title = document.createElement('div'); 
@@ -1714,7 +1737,7 @@ async function buildDashboard2(silent = false){
             </div>`;
           
           card.querySelectorAll('.stat-pill').forEach(pill => {
-            pill.addEventListener('click', () => (cfg.key, st, pill.dataset.type));
+            pill.addEventListener('click', () => openListModal(cfg.key, st, pill.dataset.type));
           });
           grid.appendChild(card);
         });
@@ -2159,110 +2182,122 @@ function openListModal(sheetKey, step, type, locValue) {
     };
   }
 }
-/* ============================= 需求一：強制步驟順序鎖 + 即時更新 ============================= */
-// 全局變數：儲存所有已開啟的未完成清單（用來即時刷新按鈕狀態）
-const activeTodoModals = new Set();
 
-// 強制步驟順序鎖 + 解決雙滾動條 + 打卡 loading
-// ============================= 最終完美版 openListModal2（保證有資料 + 單滾動條 + loading）=============================
+// ============================= 修復版 openListModal2 =============================
 function openListModal2(sheetKey, step, type, locValue) {
-  const { cfg, header, rows } = ALL_SHEETS[sheetKey];
-  const list = [];
+  try {
+    // 1. 檢查資料源
+    if (!ALL_SHEETS[sheetKey]) {
+      console.error('找不到 sheetKey:', sheetKey);
+      alert('發生錯誤：找不到該表格資料 (' + sheetKey + ')，請重新整理網頁。');
+      return;
+    }
+    const { cfg, header, rows } = ALL_SHEETS[sheetKey];
+    const list = [];
 
-  if (type === 'loc') {
-    const c = header.indexOf('車暫停位置');
-    rows.forEach(r => {
-      if (c >= 0 && String(r[c] || '').trim() === locValue) list.push(r);
-    });
-  } else {
-    const c = header.indexOf(step);
-    rows.forEach(r => {
-      const v = c >= 0 ? r[c] : '';
-      if ((type === 'done' && isCompletedValue(v)) || (type === 'todo' && !isCompletedValue(v))) list.push(r);
-    });
-  }
-
-  const box = document.createElement('div');
-  box.className = 'modal';
-  box.style.maxHeight = '90vh';
-  box.style.overflow = 'hidden';
-
-  const titleText = (type === 'loc')
-    ? `${sheetKey}：${step}＝${locValue}`
-    : `${sheetKey}：${step}（${type === 'done' ? '完成' : '未完成'}）`;
-
-  box.innerHTML = `
-    <div class="dash-close">✕</div>
-    <h3 style="font-size:18px;margin:0 0 8px;">${escapeHtml(titleText)}</h3>
-    <div style="max-height:calc(100vh - 200px); overflow-y:auto; padding-right:8px; margin-top:8px;" id="modalListContent">
-      ${list.length ? '' : '<div style="opacity:.7;text-align:center;padding:30px 0;">目前沒有資料</div>'}
-    </div>`;
-
-  const closeList = openModal(box);
-  box.querySelector('.dash-close').onclick = () => {
-    activeTodoModals.delete(box);
-    closeList();
-  };
-
-  const scroller = box.querySelector('#modalListContent');
-  const steps = cfg.steps;
-
-  // 關鍵：這裡一定要有！渲染每一台車
-  list.forEach(r => {
-    const area = String(r[1] || '').trim();
-    const car = String(r[2] || '').trim();
-    const latest = getLatestStatus(cfg, header, r);
-
-    const rowDiv = document.createElement('div');
-    rowDiv.className = 'list-item';
-
-    const infoDiv = document.createElement('div');
-    infoDiv.className = 'list-left';
-    infoDiv.innerHTML = `
-      <div class="list-title">${escapeHtml(area)}　<span style="font-weight:900">${escapeHtml(car)}</span></div>
-      <div class="list-sub">最新狀態：${escapeHtml(latest)}</div>`;
-
-    const actionsDiv = document.createElement('div');
-    actionsDiv.style.display = 'flex';
-    actionsDiv.style.gap = '8px';
-
-    // 詳細資料按鈕
-    const btnDetail = document.createElement('button');
-    btnDetail.className = 'btn btn--secondary btn--sm';
-    btnDetail.textContent = '詳細資料';
-    btnDetail.onclick = () => openDetailModal(sheetKey, r);
-    actionsDiv.appendChild(btnDetail);
-
-    // 快速打卡（未完成 + 不是車暫停位置）
-    if (type === 'todo' && step !== '車暫停位置' && currentUser?.permission === '全功能') {
-      const stepIndex = steps.indexOf(step);
-      const prevStep = stepIndex > 0 ? steps[stepIndex - 1] : null;
-      const prevCol = prevStep ? header.indexOf(prevStep) : -1;
-      const canPunch = !prevStep || (prevCol >= 0 && isCompletedValue(r[prevCol]));
-
-      const btnPunch = document.createElement('button');
-      btnPunch.className = `btn ${canPunch ? 'btn--primary' : 'btn--secondary'} btn--sm`;
-      btnPunch.textContent = '打卡';
-      btnPunch.disabled = !canPunch;
-      btnPunch.title = canPunch ? '' : `請先完成「${prevStep}」`;
-
-      btnPunch.onclick = () => {
-        if (!canPunch) return;
-        // 修改：直接呼叫 onQuickPunch，不包 withLoading
-        // onQuickPunch 內部會處理 loading 畫面與 2 秒延遲
-        // 第3個參數傳 0 即可，因為 onQuickPunch 內部會重新計算正確的 row
-        onQuickPunch(sheetKey, step, 0, area, car, closeList);
-      };
-
-      actionsDiv.appendChild(btnPunch);
+    // 2. 篩選資料
+    if (type === 'loc') {
+      const c = header.indexOf('車暫停位置');
+      rows.forEach(r => {
+        if (c >= 0 && String(r[c] || '').trim() === locValue) list.push(r);
+      });
+    } else {
+      const c = header.indexOf(step);
+      rows.forEach(r => {
+        const v = c >= 0 ? r[c] : '';
+        if ((type === 'done' && isCompletedValue(v)) || (type === 'todo' && !isCompletedValue(v))) list.push(r);
+      });
     }
 
-    rowDiv.appendChild(infoDiv);
-    rowDiv.appendChild(actionsDiv);
-    scroller.appendChild(rowDiv);
-  });
+    // 3. 建立視窗 DOM
+    const box = document.createElement('div');
+    box.className = 'modal';
+    box.style.maxHeight = '90vh';
+    box.style.overflow = 'hidden';
 
-  activeTodoModals.add(box);
+    const titleText = (type === 'loc')
+      ? `${sheetKey}：${step}＝${locValue}`
+      : `${sheetKey}：${step}（${type === 'done' ? '完成' : '未完成'}）`;
+
+    box.innerHTML = `
+      <div class="dash-close">✕</div>
+      <h3 style="font-size:18px;margin:0 0 8px;">${escapeHtml(titleText)}</h3>
+      <div style="max-height:calc(100vh - 200px); overflow-y:auto; padding-right:8px; margin-top:8px;" id="modalListContent">
+        ${list.length ? '' : '<div style="opacity:.7;text-align:center;padding:30px 0;">目前沒有資料</div>'}
+      </div>`;
+
+    // 4. 開啟視窗
+    const closeList = openModal(box);
+    box.querySelector('.dash-close').onclick = () => {
+      // 確保變數存在才刪除
+      if (typeof activeTodoModals !== 'undefined') activeTodoModals.delete(box);
+      closeList();
+    };
+
+    const scroller = box.querySelector('#modalListContent');
+    const steps = cfg.steps;
+
+    // 5. 渲染列表
+    list.forEach(r => {
+      const area = String(r[1] || '').trim();
+      const car = String(r[2] || '').trim();
+      const latest = getLatestStatus(cfg, header, r);
+
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'list-item';
+
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'list-left';
+      infoDiv.innerHTML = `
+        <div class="list-title">${escapeHtml(area)}　<span style="font-weight:900">${escapeHtml(car)}</span></div>
+        <div class="list-sub">最新狀態：${escapeHtml(latest)}</div>`;
+
+      const actionsDiv = document.createElement('div');
+      actionsDiv.style.display = 'flex';
+      actionsDiv.style.gap = '8px';
+
+      const btnDetail = document.createElement('button');
+      btnDetail.className = 'btn btn--secondary btn--sm';
+      btnDetail.textContent = '詳細資料';
+      btnDetail.onclick = () => openDetailModal(sheetKey, r);
+      actionsDiv.appendChild(btnDetail);
+
+      if (type === 'todo' && step !== '車暫停位置' && currentUser?.permission === '全功能') {
+        const stepIndex = steps.indexOf(step);
+        const prevStep = stepIndex > 0 ? steps[stepIndex - 1] : null;
+        const prevCol = prevStep ? header.indexOf(prevStep) : -1;
+        const canPunch = !prevStep || (prevCol >= 0 && isCompletedValue(r[prevCol]));
+
+        const btnPunch = document.createElement('button');
+        btnPunch.className = `btn ${canPunch ? 'btn--primary' : 'btn--secondary'} btn--sm`;
+        btnPunch.textContent = '打卡';
+        btnPunch.disabled = !canPunch;
+        btnPunch.title = canPunch ? '' : `請先完成「${prevStep}」`;
+
+        btnPunch.onclick = () => {
+          if (!canPunch) return;
+          // 呼叫 onQuickPunch
+          if (typeof onQuickPunch === 'function') {
+            onQuickPunch(sheetKey, step, 0, area, car, closeList);
+          } else {
+            alert('錯誤：找不到 onQuickPunch 函式');
+          }
+        };
+        actionsDiv.appendChild(btnPunch);
+      }
+
+      rowDiv.appendChild(infoDiv);
+      rowDiv.appendChild(actionsDiv);
+      scroller.appendChild(rowDiv);
+    });
+
+    // 6. 註冊到即時更新清單
+    if (typeof activeTodoModals !== 'undefined') activeTodoModals.add(box);
+
+  } catch (err) {
+    console.error(err);
+    alert('開啟列表時發生錯誤：' + err.message);
+  }
 }
 // 任何資料更新後，呼叫此函式即時刷新所有已開的清單
 async function refreshAllActiveTodoModals() {
@@ -2278,7 +2313,12 @@ async function refreshAllActiveTodoModals() {
         const match = title.match(/：(.+?)[（＝]/);
         if (match) {
           const step = match[1].split('（')[0];
-          openListModal2(title.split('：')[0], step, title.includes('未完成') ? 'todo' : 'done');
+          const type = title.includes('未完成') ? 'todo' : (title.includes('＝') ? 'loc' : 'done');
+          // 如果是 loc，取 locValue
+          let locVal = '';
+          if (type==='loc') locVal = title.split('＝')[1];
+
+          openListModal2(title.split('：')[0], step, type, locVal);
         }
       }, 300);
     }
@@ -2289,30 +2329,29 @@ async function refreshAllActiveTodoModals() {
 /*
   refreshAllActiveTodoModals();
 */
-/* 執行快速打卡動作 */
+/* 執行快速打卡動作 (修復版) */
 async function onQuickPunch(sheetKey, stepName, dummy, area, car, closeListFn) {
+  // 1. 基礎檢查
   if (!currentUser || currentUser.permission !== '全功能') {
     showNotif('權限不足', true);
     return;
   }
-
   const cfg = SHEET_CONFIGS.find(s => s.key === sheetKey);
   const sheetInfo = ALL_SHEETS[sheetKey];
   if (!sheetInfo) {
     showNotif('資料尚未載入', true);
     return;
   }
-
+  
+  // 2. 找尋車輛位置
   const rowIndexInArray = sheetInfo.rows.findIndex(r =>
     String(r[1] || '').trim() === area.trim() &&
     String(r[2] || '').trim() === car.trim()
   );
-
   if (rowIndexInArray === -1) {
     showNotif('找不到這台車', true);
     return;
   }
-
   const realRowNum = sheetInfo.headerIdx + 2 + rowIndexInArray;
   const colIdx = sheetInfo.header.indexOf(stepName);
   if (colIdx === -1) {
@@ -2322,8 +2361,8 @@ async function onQuickPunch(sheetKey, stepName, dummy, area, car, closeListFn) {
 
   const nowTime = getTaipeiHHMMSS();
 
-  // 修改：開始顯示 Loading
-  showLoading('打卡中…');
+  // 3. 顯示 Loading
+  if (typeof showLoading === 'function') showLoading('打卡中…');
 
   try {
     const body = {
@@ -2337,40 +2376,41 @@ async function onQuickPunch(sheetKey, stepName, dummy, area, car, closeListFn) {
       }]
     };
 
-    // 修改：使用 Promise.all 強制等待至少 2000ms
-    // fetchPromise 是 API 請求
-    // sleep(2000) 是等待時間
+    // 4. 執行 API + 2秒等待
     const [r] = await Promise.all([
       fetch(API_BASE + '?action=update', {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(body)
       }),
-      sleep(2000) // 強制等待 2 秒
+      // 確保 sleep 函式存在
+      sleep(2000)
     ]);
 
     const text = await r.text();
     let j;
     try { j = JSON.parse(text); } catch (e) {
-      console.error('後端回傳非 JSON：', text);
-      throw new Error('伺服器錯誤');
+      throw new Error('伺服器回傳格式錯誤');
     }
-
     if (!j.ok) throw new Error(j.error || '更新失敗');
 
-    // 成功！
-    
-    // 修改：關閉 Loading
-    hideLoading();
+    // 5. 成功後處理
+    if (typeof hideLoading === 'function') hideLoading();
 
     if (closeListFn) closeListFn();
-    showPunchSuccessModal(area, car, nowTime, stepName);
+    
+    // 確保 showPunchSuccessModal 存在
+    if (typeof showPunchSuccessModal === 'function') {
+      showPunchSuccessModal(area, car, nowTime, stepName);
+    } else {
+      alert('打卡成功！');
+    }
+    
     buildDashboard2(true);
     refreshAllActiveTodoModals();
 
   } catch (err) {
-    // 修改：發生錯誤也要關閉 Loading
-    hideLoading();
+    if (typeof hideLoading === 'function') hideLoading();
     showNotif('打卡失敗：' + err.message, true);
   }
 }
@@ -2459,56 +2499,6 @@ function openDetailModal(sheetOrKey, row, headerOverride){
   box.innerHTML = html;
   const close = openModal(box);
   box.querySelector('.dash-close').onclick = close;
-}
-
-
-
-/* ====== 其餘舊有的「確認/修改時間」小視窗 ====== */
-function openConfirmDialog(msg, onOK){
-  const box = document.createElement('div');
-  box.className = 'modal';
-  box.innerHTML = `
-    <h3>刪除時間</h3>
-    <div class="modal-msg" style="font-size:15px;line-height:1.6;margin:4px 0 8px;">${msg}</div>
-    <div class="actions">
-      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
-      <button class="btn btn-del">確定</button>
-    </div>`;
-  const close = openModal(box);
-  const [btnCancel, btnOK] = box.querySelectorAll('button');
-  btnCancel.onclick = close;
-  btnOK.onclick = ()=>{ try{ onOK && onOK(); } finally{ close(); } };
-}
-function openEditTimeDialog(initialHHMMSS, onOK){
-  const [h0,m0,s0] = splitHMS(initialHHMMSS);
-  const box = document.createElement('div');
-  box.className = 'modal';
-  box.innerHTML = `
-    <h3>修改時間</h3>
-    <div class="time-edit">
-      <input id="hh" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${h0}" aria-label="小時">
-      <span class="colon">:</span>
-      <input id="mm" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${m0}" aria-label="分鐘">
-      <span class="colon">:</span>
-      <input id="ss" class="time-input" type="text" inputmode="numeric" maxlength="2" value="${s0}" aria-label="秒">
-    </div>
-    <div class="hint">請輸入 2 位數！下午兩點請輸入 14。</div>
-    <div class="actions">
-      <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
-      <button class="btn btn-edit">確定</button>
-    </div>`;
-  const close = openModal(box);
-  const hh = box.querySelector('#hh'), mm = box.querySelector('#mm'), ss = box.querySelector('#ss');
-  const [btnCancel, btnOK] = box.querySelectorAll('button');
-  setTimeout(()=>{ try{ hh.focus({ preventScroll:true }); }catch{} }, 80);
-
-  [hh,mm,ss].forEach(inp=>inp.addEventListener('input', ()=>{ inp.value = inp.value.replace(/\D/g,'').slice(0,2); }));
-  btnCancel.onclick = close;
-  btnOK.onclick = ()=>{
-    const H = pad2(hh.value||''), M = pad2(mm.value||''), S = pad2(ss.value||'');
-    if (!isValidHMS(H,M,S)){ showNotif('格式需為 HH(00–23) / MM(00–59) / SS(00–59)', true); return; }
-    try{ onOK(`${H}:${M}:${S}`); } finally{ close(); }
-  };
 }
 
 /* ================= 個別情報 ================= */

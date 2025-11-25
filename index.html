@@ -894,16 +894,17 @@ function openModal(element){
 }
 
 /* ---------------- 打卡頁：載入資料 & 渲染 ---------------- */
-async function loadSheetData(key){
+async function loadSheetData(key, silent = false){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);
-  document.getElementById('vehList').textContent = '讀取資料中';
-
+  if (!silent) {                                   // ← 這行是唯一新增判斷
+    document.getElementById('vehList').textContent = '讀取資料中';
+  }
   const r = await fetch(
     API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
   );
   const j = await r.json();
   if (j.error){
-    document.getElementById('vehList').textContent = '❌ ' + j.error;
+    document.getElementById('vehList').textContent = '❌' + j.error;
     return;
   }
   sheetData = j.values || [];
@@ -1038,7 +1039,7 @@ memoBtn.onclick = async () => {
     if (!j.ok) throw new Error(j.error || 'unknown');
 
     await sleep(250);
-    await reloadSheet();
+    await reloadSheet(true);
   }, '儲存備註…');
 
   showNotif('備註已儲存', false);
@@ -1079,7 +1080,7 @@ async function onStopSelect(cfg,rowNumber,header,st,value,span){
     if(!j.ok) throw new Error(j.error||'unknown'); 
     
     await sleep(200); 
-    await reloadSheet();
+    await reloadSheet(true);
   },'更新中…'); 
   
   span.textContent=value||''; 
@@ -1149,7 +1150,7 @@ async function onPunchClick(cfg, rowNumber, header, st, timeSpan, btnPunch, btnE
 
       // 稍微等一下，確保後端寫入完成再重載
       await sleep(200);
-      await reloadSheet();
+      await reloadSheet(true);
     }, '打卡中…');
 
     // ✅ 後端成功更新後，才更新前端畫面
@@ -1202,7 +1203,7 @@ async function onEditTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEdit
 
         if(!j.ok) throw new Error(j.error||'更新失敗');
         await sleep(200);
-        await reloadSheet();
+        await reloadSheet(true);
       }, '儲存中…');
 
       const wasEmpty = !timeSpan.textContent || timeSpan.textContent.trim()==='—';
@@ -1255,7 +1256,7 @@ async function onDeleteTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEd
 
         if(!j.ok) throw new Error(j.error||'更新失敗');
         await sleep(200);
-        await reloadSheet();
+        await reloadSheet(true);
       }, '刪除中…');
 
       timeSpan.textContent = '';
@@ -1271,8 +1272,9 @@ async function onDeleteTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEd
   });
 }
 
-  
-function reloadSheet(){ loadSheetData(currentSheetKey); }
+function reloadSheet(silent = false){               // ← 加上參數 + 預設值
+  loadSheetData(currentSheetKey, silent);           // ← 傳下去
+}  
 function unlockNext(rowEl){
   const nextRow=rowEl?.nextElementSibling; if(!nextRow) return;
   const sel=nextRow.querySelector('.step-select'); const timeSpan=nextRow.querySelector('.step-time');

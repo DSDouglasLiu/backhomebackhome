@@ -1081,7 +1081,11 @@ if (headWrap){
 
       const timeSpan=document.createElement('span'); timeSpan.className='step-time'; timeSpan.textContent=displayVal||'—'; rowEl.appendChild(timeSpan);
       const btnG=document.createElement('div'); btnG.className='btn-group';
-      const btnPunch=document.createElement('button'); btnPunch.className='btn btn--primary btn--sm btn-punch'; btnPunch.textContent='打卡';
+      const btnPunch = document.createElement('button');
+      // ★★★ 新增：明確指定按鈕類型，防止觸發頁面重整 ★★★
+      btnPunch.type = "button"; 
+      btnPunch.className = 'btn btn--primary btn--sm btn-punch';
+      btnPunch.textContent = '打卡';
       const btnEdit=document.createElement('button'); btnEdit.className='btn btn--success btn--sm btn-edit'; btnEdit.textContent='修改';
       const btnDel=document.createElement('button'); btnDel.className='btn btn--danger btn--sm btn-del'; btnDel.textContent='刪除';
       btnG.appendChild(btnPunch); btnG.appendChild(btnEdit); btnG.appendChild(btnDel); rowEl.appendChild(btnG);

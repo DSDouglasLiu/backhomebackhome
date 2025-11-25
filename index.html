@@ -408,6 +408,8 @@ let dashTimer = null;
 let ALL_SHEETS = {};
 let SINGLE_ITEMS = [];
 let refreshMs = 120000;
+// ★★★ NEW: 快取時間戳記 ★★★
+let lastFetchTime = 0;
 
 /* ============ HELPER FUNCTIONS ============ */
 function showLoading(){ document.getElementById('loading').classList.add('show'); }
@@ -490,6 +492,7 @@ function createPill(num, label, type, onClick){
 
 function startClock(){
   const el = document.getElementById('clockDisplay');
+  // ★★★ 修正：使用 getTaipeiHHMMSS() 統一時區顯示 ★★★
   if(el) setInterval(() => { el.textContent = getTaipeiHHMMSS(); }, 1000);
 }
 
@@ -500,11 +503,12 @@ function buildRefreshControls(){
     const btn = createBtn(p.label, 'seg-btn', ()=>{ refreshMs=p.ms; updateRefreshButtonsUI(); if(isDashboardVisible()) startDashboardAutoRefresh(); });
     btn.dataset.ms = p.ms; box.appendChild(btn);
   });
+  // ★★★ FIX: 立即更新按鈕增加點擊視覺回饋，並強制更新(force=true) ★★★
   const nowBtn = createBtn('立即更新','seg-btn now-btn', (e)=>{ 
       const btn = e.target.closest('button') || e.target;
       btn.classList.add('active');
       setTimeout(() => btn.classList.remove('active'), 200);
-      buildDashboard2(true); 
+      buildDashboard2(true, true); // Force Refresh
       showNotif('已更新',false); 
   });
   box.appendChild(nowBtn);
@@ -529,7 +533,7 @@ function switchPane(targetId){
 
   if(targetId === 'pane-dashboard2'){
       if(!document.getElementById('dashboardTabs2').hasChildNodes()) buildDashboardTabs2();
-      buildDashboard2(false);
+      buildDashboard2(false); // force=false by default, so it uses cache
       startDashboardAutoRefresh();
   } 
   else if (targetId === 'pane-punch') {
@@ -597,26 +601,37 @@ function onDashTabClick(btn, key) {
     currentDashFilter2 = key;
     document.getElementById('dashboardTabs2').querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    buildDashboard2(false);
+    buildDashboard2(false); // force=false, allows cache
 }
-async function buildDashboard2(silent){
+// ★★★ NEW: 增加 force 參數以支援快取邏輯 ★★★
+async function buildDashboard2(silent, force = false){
+    // 快取檢查：如果不強制更新，且距離上次小於4秒，且已有資料
+    if(!force && (Date.now() - lastFetchTime < 4000) && Object.keys(ALL_SHEETS).length > 0) {
+        console.log('Using Cache');
+        renderDashboardUI();
+        if(!silent) hideLoading();
+        return;
+    }
+
     if(!silent) showLoading();
     const dash = document.getElementById('dashboard2');
     try {
         const requests = SHEET_CONFIGS.map(cfg => fetchSheetData(cfg));
         const results = await Promise.all(requests);
-        ALL_SHEETS = {};
+        ALL_SHEETS = {}; // Clear AFTER deciding to fetch
         results.forEach(res => {
             const parsed = parseSheetData(res.values, res.cfg);
             if(parsed) ALL_SHEETS[res.key] = parsed;
         });
         dash.innerHTML = '';
         renderDashboardUI();
+        lastFetchTime = Date.now(); // Update timestamp
     } catch(e) { console.error(e); }
     if(!silent) hideLoading();
 }
 function renderDashboardUI(){
     const container = document.getElementById('dashboard2');
+    container.innerHTML = ''; // Ensure clean slate
     SHEET_CONFIGS.forEach(cfg => {
         if(currentDashFilter2 !== 'ALL' && currentDashFilter2 !== cfg.key) return;
         const data = ALL_SHEETS[cfg.key];
@@ -685,6 +700,7 @@ function renderStatCard(step, data, container, cfg) {
     let done=0, todo=0;
     data.rows.forEach(item => { 
         const r = item.data;
+        // ★★★ 修正: Dashboard 統計也要 trim，避免數據不一致 ★★★
         const v = colIdx>=0 ? String(r[colIdx]||'').trim() : ''; 
         (v && v !== '—') ? done++ : todo++; 
     });

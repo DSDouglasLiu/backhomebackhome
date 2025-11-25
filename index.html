@@ -896,7 +896,7 @@ function openModal(element){
 /* ---------------- 打卡頁：載入資料 & 渲染 ---------------- */
 async function loadSheetData(key){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);
-  document.getElementById('vehList').textContent = '讀取中...';
+  document.getElementById('vehList').textContent = '讀取資料中';
 
   const r = await fetch(
     API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
@@ -1229,7 +1229,7 @@ async function onDeleteTimeClick(cfg,rowNumber,header,st,timeSpan,btnPunch,btnEd
   const colIdx = header.indexOf(st);
   if (colIdx===-1) return alert('此欄位不存在：'+st);
 
-  openConfirmDialog('確定要刪除時間資料嗎？', async ()=>{
+  openConfirmDialog('確定要刪除打卡時間？', async ()=>{
     try {
       await withLoading(async()=>{
         const body = {
@@ -1510,7 +1510,7 @@ results.forEach(({ cfg, header, rows }) => {
   };
 
   if (silent) { await work(); }
-  else { await withLoading(work, '整理整體情報…'); }
+  else { await withLoading(work, '讀取資料中'); }
 }
 
 async function buildDashboard2(silent = false){
@@ -1683,7 +1683,7 @@ async function buildDashboard2(silent = false){
   };
 
   if (silent) { await work(); }
-  else { await withLoading(work, '整理整體情報 II…'); }
+  else { await withLoading(work, '讀取資料中'); }
 }
 
 /* =================== 個別情報：下拉/過濾/鎖定 =================== */
@@ -2373,7 +2373,7 @@ function openConfirmDialog(msg, onOK){
   const box = document.createElement('div');
   box.className = 'modal';
   box.innerHTML = `
-    <h3>確認刪除</h3>
+    <h3>刪除時間</h3>
     <div class="modal-msg" style="font-size:15px;line-height:1.6;margin:4px 0 8px;">${msg}</div>
     <div class="actions">
       <button class="btn" style="background:#e5e7eb;color:#111827;">取消</button>
@@ -2679,7 +2679,7 @@ function initSinglePage(){
   });
 
   // 載入四張表資料
-  withLoading(loadSingleData, '讀取資料…');
+  withLoading(loadSingleData, '讀取資料中');
 }
 
 /* 讀四張表，整理為可篩選的 items */

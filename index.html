@@ -142,26 +142,72 @@ body.modal-open{ overflow:hidden; touch-action:none; }
 @media (prefers-reduced-motion: reduce){ .spinner{ animation: none; border-top-color:#cbd5e1; } }
 body.loading-open{ overflow:hidden; touch-action:none; overscroll-behavior: contain; }
 @supports (height: 100dvh){ .modal-backdrop{ height: 100dvh; } }
+/* ================== 登入畫面優化：置中白框卡片 ================== */
 
-/* ===== 登入畫面（不再覆蓋 .wrap > div:first-child） ===== */
-body.login{ height: 100dvh; overflow: hidden; }
-body.login .wrap{ height: 100%; display: grid; place-items: center; }
-body.login #tabs, body.login #content, body.login #userInfo{ display: none !important; }
-body.login #signin{ display:block; }
-body.login .topbar-grid{
-  display:grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto;
-  gap: 12px;
-  align-items:center;
-  justify-items:center;     /* 讓登入按鈕置中 */
-  text-align:center;
+/* 1. 設定登入頁背景與置中佈局 */
+body.login {
+  height: 100dvh;
+  overflow: hidden;
+  background: #f1f5f9; /* 淺灰背景，突顯白框 */
 }
-body.login .left-title h1{
-  font-size: clamp(36px, 8vw, 64px);
-  line-height: 1.15;
+
+body.login .wrap {
+  height: 100%;
+  display: grid;
+  place-items: center; /* 上下左右完全置中 */
+  max-width: 100%;     /* 解除原本 wrap 的寬度限制 */
+  padding: 0;
+}
+
+/* 2. 將上方標題列 (.topbar-grid) 變身為「登入卡片」 */
+body.login .topbar-grid {
+  /* 強制改為 Flex 直向排列 */
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px; /* 標題與按鈕的距離 */
+
+  /* 白框卡片樣式 */
+  background: #ffffff;
+  padding: 60px 80px;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* 漂亮的浮起陰影 */
+  border: 1px solid #e2e8f0;
+  
+  /* 寬度控制 */
+  width: auto;
+  min-width: 320px;
+  max-width: 90vw;
+}
+
+/* 3. 調整登入標題樣式 */
+body.login .left-title h1 {
+  font-size: 42px;
+  font-weight: 900;
+  color: #0f172a;
   margin: 0;
+  text-align: center;
+  letter-spacing: 2px;
 }
+
+/* 4. 放大 Google 登入按鈕 */
+body.login #signin {
+  transform: scale(1.1);
+  display: block !important;
+}
+
+/* 5. 隱藏登入模式下不需要的元素 */
+body.login .left-tabs,
+body.login .right-refresh,
+body.login #userInfo,
+body.login #tabs,
+body.login #content,
+body.login .tab-pane,
+body.login #mainTabs {
+  display: none !important;
+}
+
 #logoutBtn { white-space: nowrap; }
 #logoutBtn:hover { background:rgba(239,68,68,.1) !important; }  
 

@@ -48,20 +48,15 @@ h1{margin:0;font-size:28px;font-weight:700;color:var(--text-strong);}
 /* =========== UI Components =========== */
 .tab-container-styled {
   background: #fff; border: 1px solid var(--border); border-radius: var(--radius-pill);
-  padding: 8px 10px; /* 稍微加大容器內距 */
-  display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 8px 10px; display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 body.dark .tab-container-styled { background: rgba(30, 41, 59, 0.8); }
 
-/* ★★★ 按鈕字體放大修正 ★★★ */
 .btn-tab {
   background: #fff; color: var(--gray-500);
   border: 1px solid transparent; border-radius: var(--radius-pill);
-  padding: 8px 20px;    /* 加大內距 */
-  font-size: 1.25rem;   /* 放大字體 (約20px) */
-  font-weight: 800;     /* 加粗 */
-  cursor: pointer;
+  padding: 8px 20px; font-size: 1.25rem; font-weight: 800; cursor: pointer;
   transition: all 0.2s ease; white-space: nowrap;
 }
 .btn-tab:hover { background: var(--gray-50); color: var(--primary-600); }
@@ -71,10 +66,7 @@ body.dark .tab-container-styled { background: rgba(30, 41, 59, 0.8); }
 .main-tab {
   background: #fff; color: var(--primary-600);
   border: 1px solid var(--primary-600); border-radius: var(--radius-pill);
-  padding: 8px 22px;    /* 加大內距 */
-  font-size: 1.25rem;   /* 放大字體 */
-  font-weight: 800;     /* 加粗 */
-  cursor: pointer;
+  padding: 8px 22px; font-size: 1.25rem; font-weight: 800; cursor: pointer;
 }
 .main-tab.active { background: var(--primary-600); color: #fff; box-shadow: 0 4px 6px rgba(31, 111, 229, 0.25); }
 
@@ -183,6 +175,7 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 .stat-head{ font-weight:700; margin-bottom:8px; }
 .stat-row{ display:flex; gap:8px; justify-content: center; }
 
+/* ★★★ 修正：去除方框背景，只靠數字顏色凸顯 ★★★ */
 .stat-pill { 
   flex: 1; 
   padding: 4px; 
@@ -637,6 +630,7 @@ function renderStatCard(step, data, container, cfg) {
     const card = document.createElement('div'); 
     card.className = isSecondary ? 'stat-card alt-group-card' : 'stat-card';
     
+    // ★★★ 修改：方框去背 ★★★
     card.innerHTML = `<div class="stat-head">${step}</div><div class="stat-row"></div>`;
     const row = card.querySelector('.stat-row');
     row.appendChild(createPill(done, '完成', 'done', () => openListModal2(cfg.key, step, 'done')));
@@ -708,18 +702,21 @@ function renderVehicles(data) {
     
     const areaEl = document.createElement('div');
     areaEl.className = 'step-label';
-    areaEl.style.fontSize = '1.3rem'; 
+    areaEl.style.fontSize = '1.25rem'; 
     areaEl.style.fontWeight = '800';
     areaEl.style.color = 'var(--text-strong)';
     areaEl.textContent = area;
     
     const carEl = document.createElement('div');
-    carEl.className = 'step-middle';
-    carEl.style.fontSize = '1.3rem'; 
+    // ★★★ 車號在中間欄位 ★★★
+    carEl.className = 'step-middle'; 
+    carEl.style.fontSize = '1.25rem'; 
     carEl.style.fontWeight = '800';
+    carEl.style.justifyContent = 'flex-start'; // 靠左對齊 (平行)
+    carEl.style.color = 'var(--text-strong)';
     carEl.textContent = car;
     
-    const rightEl = document.createElement('div');
+    const rightEl = document.createElement('div'); // 佔位用
     
     headerRow.appendChild(areaEl);
     headerRow.appendChild(carEl);

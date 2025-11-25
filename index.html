@@ -28,10 +28,10 @@
 }
 
 body.dark{
-  --surface: rgba(15,23,42,.75);
-  --page-bg: radial-gradient(circle at 10% 20%,#081528 0%,#020617 90%);
-  --text-strong:#e5eaf3; --text:#e2e8f0; --text-muted:#93a3b5;
-  --border: rgba(148,163,184,0.25);
+  --surface: rgba(30, 41, 59, 0.7); /* Slightly lighter than page-bg for cards */
+  --page-bg: radial-gradient(circle at 10% 20%,#0f172a 0%,#020617 90%);
+  --text-strong:#f1f5f9; --text:#cbd5e1; --text-muted:#64748b;
+  --border: rgba(148,163,184,0.2);
 }
 
 /* =========== Base =========== */
@@ -51,7 +51,7 @@ h1{margin:0;font-size:28px;font-weight:700;color:var(--text-strong);}
   padding: 8px 10px; display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-body.dark .tab-container-styled { background: rgba(30, 41, 59, 0.8); }
+body.dark .tab-container-styled { background: rgba(15, 23, 42, 0.6); }
 
 .btn-tab {
   background: #fff; color: var(--gray-500);
@@ -210,6 +210,65 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 .detail-table th, .detail-table td{ border:1px solid var(--border); padding:8px 10px; text-align:center; }
 .detail-table th{ background:var(--primary-600); color:#fff; }
 .single-line { text-align: center; margin-bottom: 6px; }
+
+/* =========== Dark Mode Overrides =========== */
+body.dark .veh-card, 
+body.dark .indiv-card,
+body.dark .stat-card,
+body.dark .loc-pill {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+body.dark .login-card {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: var(--border);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+body.dark .login-card h1 { color: #60a5fa; }
+body.dark .login-card p { color: #94a3b8; }
+
+body.dark .step-row { border-bottom-color: var(--border); }
+
+/* Orange/Alt Group in Dark Mode */
+body.dark .step-row.alt-group {
+  background-color: rgba(124, 45, 18, 0.2);
+  border-bottom-color: rgba(234, 88, 12, 0.3);
+  border-left-color: #ea580c;
+}
+body.dark .stat-card.alt-group-card {
+  background-color: rgba(124, 45, 18, 0.2);
+  border-color: #ea580c;
+}
+body.dark .stat-card.alt-group-card .stat-head { color: #fb923c; }
+
+/* Inputs & Controls */
+body.dark .step-select {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+body.dark .step-select option { background: #0f172a; }
+
+body.dark .seg-group { background: rgba(15, 23, 42, 0.6); border-color: var(--border); }
+body.dark .seg-btn { color: var(--text-muted); }
+body.dark .seg-btn.active { background: var(--surface); color: #60a5fa; box-shadow: none; border: 1px solid var(--border); }
+body.dark .seg-btn:hover { color: var(--text-strong); }
+
+/* Tabs */
+body.dark .main-tab { color: var(--text-muted); border-color: var(--border); background: transparent; }
+body.dark .main-tab.active { color: #fff; border-color: var(--primary-600); background: var(--primary-600); }
+
+body.dark .btn-tab.colored-btn { background: transparent; border-color: var(--border); color: var(--text-muted); }
+body.dark .btn-tab.colored-btn.active { background: var(--theme-color); border-color: var(--theme-color); color: #fff; }
+
+/* Modal */
+body.dark .modal { background: #1e293b; border: 1px solid var(--border); color: var(--text-strong); }
+body.dark .list-item { border-bottom-color: var(--border); }
+
+/* Table */
+body.dark .detail-table th { background: #1e3a8a; border-color: var(--border); }
+body.dark .detail-table td { border-color: var(--border); }
 </style>
 </head>
 <body class="login">
@@ -383,6 +442,7 @@ function parseSheetData(values, cfg) {
     
     for(let i = headIdx + 1; i < values.length; i++) {
         const row = values[i];
+        // ★★★ 修正: 在 Parse 階段就處理 area/car，減少重複操作 ★★★
         const area = String(row[areaIdx] || '').trim();
         const car = String(row[carIdx] || '').trim();
         
@@ -390,7 +450,6 @@ function parseSheetData(values, cfg) {
             let completed = 0;
             cfg.steps.forEach(st => {
                 const colIdx = header.indexOf(st);
-                // ★★★ 修正: 全域檢查 trim 避免空白被視為完成 ★★★
                 const val = (colIdx !== -1) ? String(row[colIdx]||'').trim() : '';
                 if(val && val !== '—') completed++;
             });
@@ -400,6 +459,8 @@ function parseSheetData(values, cfg) {
                 rowIndex: i + 1, 
                 areaIdx,
                 carIdx,
+                area, // New: 預存區域
+                car,  // New: 預存車號
                 completed 
             });
         }
@@ -429,7 +490,6 @@ function createPill(num, label, type, onClick){
 
 function startClock(){
   const el = document.getElementById('clockDisplay');
-  // ★★★ 修正：使用 getTaipeiHHMMSS() 統一時區顯示 ★★★
   if(el) setInterval(() => { el.textContent = getTaipeiHHMMSS(); }, 1000);
 }
 
@@ -440,7 +500,6 @@ function buildRefreshControls(){
     const btn = createBtn(p.label, 'seg-btn', ()=>{ refreshMs=p.ms; updateRefreshButtonsUI(); if(isDashboardVisible()) startDashboardAutoRefresh(); });
     btn.dataset.ms = p.ms; box.appendChild(btn);
   });
-  // ★★★ FIX: 立即更新按鈕增加點擊視覺回饋 ★★★
   const nowBtn = createBtn('立即更新','seg-btn now-btn', (e)=>{ 
       const btn = e.target.closest('button') || e.target;
       btn.classList.add('active');
@@ -626,7 +685,6 @@ function renderStatCard(step, data, container, cfg) {
     let done=0, todo=0;
     data.rows.forEach(item => { 
         const r = item.data;
-        // ★★★ 修正: Dashboard 統計也要 trim，避免數據不一致 ★★★
         const v = colIdx>=0 ? String(r[colIdx]||'').trim() : ''; 
         (v && v !== '—') ? done++ : todo++; 
     });
@@ -680,12 +738,11 @@ async function loadSheetData(key, silent = false){
 }
 
 function renderVehicles(data) {
-  const { cfg, header, rows, areaIdx, carIdx } = data;
+  const { cfg, header, rows } = data; // areaIdx, carIdx 不再需要
   const box = document.getElementById('vehList'); box.innerHTML = '';
   if (!rows.length){ box.textContent='(目前沒有資料)'; return; }
   const canWrite = currentUser?.permission === '全功能';
 
-  // ★★★ 排序邏輯：完成度高 (completed) 的排後面，其餘照原順序 (rowIndex) ★★★
   rows.sort((a, b) => {
       if(a.completed !== b.completed) return a.completed - b.completed;
       return a.rowIndex - b.rowIndex;
@@ -693,8 +750,8 @@ function renderVehicles(data) {
 
   rows.forEach((item) => {
     const row = item.data;
-    const area = String(row[areaIdx]||'').trim(); 
-    const car = String(row[carIdx]||'').trim(); 
+    // ★★★ 修正：直接讀取預存變數 ★★★
+    const { area, car } = item;
     const baseRow = item.rowIndex; 
     
     const card = document.createElement('div'); card.className = 'veh-card';
@@ -715,7 +772,6 @@ function renderVehicles(data) {
     areaEl.textContent = area;
     
     const carEl = document.createElement('div');
-    // ★★★ 車號在中間欄位 ★★★
     carEl.className = 'step-middle'; 
     carEl.style.fontSize = '1.25rem'; 
     carEl.style.fontWeight = '800';
@@ -729,7 +785,8 @@ function renderVehicles(data) {
     headerRow.appendChild(carEl);
     headerRow.appendChild(rightEl);
     headerRow.style.cursor = 'pointer';
-    headerRow.addEventListener('click', () => openDetailModal(cfg, row, header));
+    // ★★★ 修正：傳入預存變數給 Modal ★★★
+    headerRow.addEventListener('click', () => openDetailModal(cfg, row, header, area, car));
     
     card.appendChild(headerRow);
 
@@ -738,20 +795,15 @@ function renderVehicles(data) {
         const colIdx = header.indexOf(st);
         const rawVal = (colIdx!==-1) ? String(row[colIdx]||'').trim(): '';
         
-        // 判斷是否為第二組 (變色)
         const isSecondary = cfg.secondarySteps.includes(st);
-
         const rowEl = document.createElement('div'); 
-        // 如果是非主要操作，加上特殊樣式 (例如左側標線)
         rowEl.className = isSecondary ? 'step-row alt-group' : 'step-row';
         
-        // 1. 左欄
         const labelEl = document.createElement('div');
         labelEl.className = 'step-label';
         labelEl.textContent = st;
         rowEl.appendChild(labelEl);
         
-        // 2. 中欄
         const middleEl = document.createElement('div');
         middleEl.className = 'step-middle';
         
@@ -768,7 +820,6 @@ function renderVehicles(data) {
         }
         rowEl.appendChild(middleEl);
 
-        // 3. 右欄
         const btnG = document.createElement('div'); btnG.className='btn-group';
         
         if (st !== '車暫停位置' && canWrite) { 
@@ -777,11 +828,9 @@ function renderVehicles(data) {
                 const prevStep = stepIdx>0 ? cfg.steps[stepIdx-1] : null;
                 const prevCol = prevStep ? header.indexOf(prevStep) : -1;
                 
-                // ★★★ 修正：使用 trim() 並檢查非空字串，避免空白字元造成誤判 ★★★
                 const prevVal = prevCol >= 0 ? String(row[prevCol] || '').trim() : '';
                 const prevDone = !prevStep || prevVal !== '';
 
-                // ★ 根據是否為第二組，決定按鈕顏色
                 const btnClass = isSecondary ? 'btn btn--warning btn--sm' : 'btn btn--primary btn--sm';
                 const btn = createBtn('打卡', btnClass, ()=>doUpdate(cfg, baseRow, colIdx+1, getTaipeiHHMMSS(), ()=>loadSheetData(cfg.key, true)));
                 
@@ -818,7 +867,6 @@ function openListModal2(sheetKey, step, type, locValue) {
         data.rows.forEach(item => { if(String(item.data[c]||'').trim() === locValue) list.push(item); });
     } else {
         data.rows.forEach(item => { 
-            // ★★★ 修正: 彈窗清單過濾也需 trim，避免空白被誤判為完成 (導致在 todo 清單消失) ★★★
             const v = colIdx>=0 ? String(item.data[colIdx]||'').trim() : ''; 
             const ok = (v && v !== '—' && v !== ''); 
             if((type==='done'&&ok)||(type==='todo'&&!ok)) list.push(item); 
@@ -829,7 +877,6 @@ function openListModal2(sheetKey, step, type, locValue) {
     const title = `${sheetKey} - ${step} (${type==='loc'?locValue:(type==='done'?'完成':'未完成')})`;
     box.innerHTML = `<div class="dash-close">✕</div><h3>${title}</h3><div style="max-height:60vh;overflow:auto" id="mList"></div>`;
     
-    // FIX: close modal safely
     box.querySelector('.dash-close').onclick = () => { 
         box.remove(); 
         const bg = document.querySelector('.modal-backdrop');
@@ -843,8 +890,8 @@ function openListModal2(sheetKey, step, type, locValue) {
 
     list.forEach(item => {
         const r = item.data;
-        const area = r[data.areaIdx];
-        const car = r[data.carIdx];
+        // ★★★ 修正：使用預存變數 ★★★
+        const { area, car } = item;
         const d = document.createElement('div'); d.className='list-item';
         d.innerHTML = `<div class="list-left"><div class="list-title">${area} ${car}</div></div>`;
         
@@ -856,12 +903,10 @@ function openListModal2(sheetKey, step, type, locValue) {
              const prevStep = stepIdx>0 ? data.cfg.steps[stepIdx-1] : null;
              const prevCol = prevStep ? data.header.indexOf(prevStep) : -1;
              
-             // ★★★ 修正：彈窗內的打卡按鈕也應用相同的嚴格檢查 ★★★
              const prevVal = prevCol >= 0 ? String(r[prevCol] || '').trim() : '';
              const prevDone = !prevStep || prevVal !== '';
              
              const btnPunch = createBtn('打卡', 'btn btn--primary btn--sm', async () => {
-                 // ★★★ FIX: Return promise to wait for update & Safe Remove Backdrop
                  await doUpdate(data.cfg, item.rowIndex, colIdx+1, getTaipeiHHMMSS(), async () => {
                       box.remove(); 
                       const bg = document.querySelector('.modal-backdrop');
@@ -874,13 +919,12 @@ function openListModal2(sheetKey, step, type, locValue) {
              btnGroup.appendChild(btnPunch);
         }
 
-        const bDetail = createBtn('詳細', 'btn btn--secondary btn--sm', ()=>openDetailModal(data.cfg, r, data.header));
+        const bDetail = createBtn('詳細', 'btn btn--secondary btn--sm', ()=>openDetailModal(data.cfg, r, data.header, area, car));
         btnGroup.appendChild(bDetail);
         d.appendChild(btnGroup);
         c.appendChild(d);
     });
     
-    // ★★★ NEW: Add "Add Car" section for Parking Location ★★★
     if (step === '車暫停位置' && type === 'loc' && currentUser?.permission === '全功能') {
         const stepIdx = data.cfg.steps.indexOf(step);
         const prevStep = stepIdx > 0 ? data.cfg.steps[stepIdx - 1] : null;
@@ -891,10 +935,8 @@ function openListModal2(sheetKey, step, type, locValue) {
             
             const candidates = data.rows.filter(item => {
                 const r = item.data;
-                // ★★★ 修正：候選名單過濾也要 trim ★★★
                 const prevVal = String(r[prevColIdx] || '').trim();
                 const stopVal = String(r[stopColIdx] || '').trim();
-                // 規則：前一步已完成 (非空) 且 當前未設定 (空或—)
                 return (prevVal !== '' && prevVal !== '—') && (stopVal === '' || stopVal === '—');
             });
 
@@ -915,18 +957,16 @@ function openListModal2(sheetKey, step, type, locValue) {
                 sel.innerHTML = '<option value="">請選擇車輛...</option>';
                 
                 candidates.forEach(c => {
-                    const area = c.data[data.areaIdx];
-                    const car = c.data[data.carIdx];
+                    // ★★★ 修正：使用預存變數 ★★★
                     const opt = document.createElement('option');
                     opt.value = c.rowIndex; 
-                    opt.textContent = `${area} ${car}`;
+                    opt.textContent = `${c.area} ${c.car}`;
                     sel.appendChild(opt);
                 });
                 
                 const btnAdd = createBtn('確定', 'btn btn--primary btn--sm', async () => {
                     if(!sel.value) return;
                     const targetRowIndex = parseInt(sel.value);
-                    // ★★★ FIX: Return promise here too & Safe Remove Backdrop
                     await doUpdate(data.cfg, targetRowIndex, stopColIdx + 1, locValue, async () => {
                         box.remove(); 
                         const bg = document.querySelector('.modal-backdrop');
@@ -967,6 +1007,9 @@ async function loadSingleData(silent=false){
                       sheetKey: res.key, cfg: res.cfg, 
                       header: parsed.header, 
                       row: item.data, 
+                      // ★★★ 修正：轉存預存變數 ★★★
+                      area: item.area, 
+                      car: item.car,
                       areaIdx: parsed.areaIdx, carIdx: parsed.carIdx 
                   });
               });
@@ -985,9 +1028,10 @@ function rebuildSelectOptions(){
   const sheetVal = document.getElementById('selSheet').value;
   const areaVal = document.getElementById('selArea').value;
   const carVal = document.getElementById('selCar').value;
-  const filtered = SINGLE_ITEMS.filter(it => (!sheetVal || it.sheetKey === sheetVal) && (!areaVal || it.row[it.areaIdx] === areaVal) && (!carVal || it.row[it.carIdx] === carVal));
-  const areas = [...new Set(filtered.map(it => it.row[it.areaIdx]))].sort();
-  const cars = [...new Set(filtered.map(it => it.row[it.carIdx]))].sort();
+  // ★★★ 修正：使用預存變數篩選 ★★★
+  const filtered = SINGLE_ITEMS.filter(it => (!sheetVal || it.sheetKey === sheetVal) && (!areaVal || it.area === areaVal) && (!carVal || it.car === carVal));
+  const areas = [...new Set(filtered.map(it => it.area))].sort();
+  const cars = [...new Set(filtered.map(it => it.car))].sort();
   updateSelect('selArea', areas, '— 全部 區域車次編號 —', areaVal);
   updateSelect('selCar', cars, '— 全部 車號 —', carVal);
 }
@@ -1000,7 +1044,8 @@ function onSingleQuery(){
   const sheetVal = document.getElementById('selSheet').value;
   const areaVal = document.getElementById('selArea').value;
   const carVal = document.getElementById('selCar').value;
-  const filtered = SINGLE_ITEMS.filter(it => (!sheetVal || it.sheetKey === sheetVal) && (!areaVal || it.row[it.areaIdx] === areaVal) && (!carVal || it.row[it.carIdx] === carVal));
+  // ★★★ 修正：使用預存變數篩選 ★★★
+  const filtered = SINGLE_ITEMS.filter(it => (!sheetVal || it.sheetKey === sheetVal) && (!areaVal || it.area === areaVal) && (!carVal || it.car === carVal));
   const box = document.getElementById('singleResults'); box.innerHTML = '';
   if(filtered.length === 0) { box.innerHTML = '<div style="text-align:center;opacity:0.6;grid-column:1/-1">無符合資料</div>'; return; }
   filtered.forEach(it => {
@@ -1010,8 +1055,9 @@ function onSingleQuery(){
           const idx = it.header.indexOf(it.cfg.steps[i]);
           if(it.row[idx] && it.row[idx] !== '—') { status = (it.cfg.steps[i] === '車暫停位置') ? `位置：${it.row[idx]}` : it.cfg.steps[i]; break; }
       }
-      card.innerHTML = `<div class="single-line" style="color:var(--primary-600)">${it.sheetKey}</div><div class="single-line" style="font-size:1.2rem;font-weight:800">${it.row[it.areaIdx]}</div><div class="single-line">${it.row[it.carIdx]}</div><div class="single-line" style="color:var(--text-muted)">${status}</div>`;
-      card.addEventListener('click', () => openDetailModal(it.cfg, it.row, it.header));
+      // ★★★ 修正：顯示使用預存變數 ★★★
+      card.innerHTML = `<div class="single-line" style="color:var(--primary-600)">${it.sheetKey}</div><div class="single-line" style="font-size:1.2rem;font-weight:800">${it.area}</div><div class="single-line">${it.car}</div><div class="single-line" style="color:var(--text-muted)">${status}</div>`;
+      card.addEventListener('click', () => openDetailModal(it.cfg, it.row, it.header, it.area, it.car));
       box.appendChild(card);
   });
 }
@@ -1022,15 +1068,20 @@ function onSingleReset(){
 }
 
 /* ============ MODAL DETAIL ============ */
-function openDetailModal(cfg, row, header){
+// ★★★ 修正：接收預存變數，不再重複計算 Index ★★★
+function openDetailModal(cfg, row, header, area, car){
     const box = document.createElement('div'); box.className = 'modal';
     
-    let areaIdx = header.findIndex(c => c.includes('區域'));
-    if(areaIdx<0) areaIdx = header.findIndex(c => c.includes('編號'));
-    let carIdx = header.findIndex(c => c.includes('車號'));
-    
-    const area = row[areaIdx>=0?areaIdx:1] || '';
-    const car = row[carIdx>=0?carIdx:2] || '';
+    // Fallback safety (in case called without area/car)
+    if (!area) {
+       let areaIdx = header.findIndex(c => c.includes('區域'));
+       if(areaIdx<0) areaIdx = header.findIndex(c => c.includes('編號'));
+       area = row[areaIdx>=0?areaIdx:1] || '';
+    }
+    if (!car) {
+       let carIdx = header.findIndex(c => c.includes('車號'));
+       car = row[carIdx>=0?carIdx:2] || '';
+    }
 
     let html = `<div class="dash-close">✕</div><h3>${area} ${car}</h3><table class="detail-table">`;
     cfg.steps.forEach(st => {

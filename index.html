@@ -102,7 +102,28 @@ body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: n
 .login-card { background: rgba(255,255,255,0.95); padding: 48px 60px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.8); text-align: center; backdrop-filter: blur(8px); }
 
 /* Cards & Lists */
-.veh-list, .single-list { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:12px; margin-top:12px; }
+/* ★★★ 修改重點：將 .veh-list (打卡頁) 與 .single-list (個別情報) 分開設定 ★★★ */
+
+/* 個別情報維持原本的自適應排列 */
+.single-list { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+  gap: 12px; 
+  margin-top: 12px; 
+}
+
+/* 登錄與修改：強制一列兩個 */
+.veh-list { 
+  display: grid; 
+  grid-template-columns: 1fr 1fr; /* 固定兩欄 */
+  gap: 12px; 
+  margin-top: 12px; 
+}
+
+/* 手機版優化：螢幕太窄時自動變回單欄，以免按鈕擠在一起無法操作 */
+@media (max-width: 768px) {
+  .veh-list { grid-template-columns: 1fr; }
+}
 
 .veh-card, .indiv-card { 
   background:#fff; border-radius:12px; border:1px solid var(--border); padding:16px; 
@@ -537,8 +558,6 @@ function buildTabs(){
 }
 async function loadSheetData(key, silent = false){
   const cfg = SHEET_CONFIGS.find(s=>s.key===key);
-  
-  // ★★★ FIX: Use standard spinner for ALL load operations (per user request)
   if (!silent) showLoading();
   
   document.getElementById('content').classList.remove('hide');

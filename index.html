@@ -9,14 +9,14 @@
 <style>
 /* =========== Design Tokens =========== */
 :root{
-  --radius-md:10px; --radius-lg:12px; --radius-pill: 50px; /* 增加 Pill 圓角 */
+  --radius-md:10px; --radius-lg:12px; --radius-pill: 50px;
 
   /* 基礎色 */
   --primary-600:#1f6fe5;
   --gray-50:#f8fafc;  --gray-100:#f1f5f9; --gray-200:#e5e7eb;
   --gray-500:#64748b; --gray-800:#1f2937; --gray-900:#0f172a;
 
-  --surface: rgba(255,255,255,.9); /* 讓背景稍微不透明一點，更有質感 */
+  --surface: rgba(255,255,255,.9);
   --page-bg: linear-gradient(135deg,#eef2f3,#dfe9f3);
   --text-strong: var(--gray-900);
   --text: var(--gray-800);
@@ -47,31 +47,30 @@ body{
   background:var(--page-bg); color:var(--text);
   font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;
 }
-.wrap{max-width:1200px; margin:0 auto; padding:16px 16px 48px;} /* 加寬一點讓按鈕好排 */
+.wrap{max-width:1200px; margin:0 auto; padding:16px 16px 48px;}
 h1{margin:0;font-size:var(--fz-display);line-height:var(--lh-display);font-weight:var(--fw-display);color:var(--text-strong);}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:16px;margin:12px 0;}
 .hide{ display:none !important; }
 
-/* =========== 按鈕容器樣式 (新) =========== */
-/* 這是包裹那一排 Button 的白色長條容器 */
+/* =========== 按鈕容器樣式 =========== */
 .tab-container-styled {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: var(--radius-pill); /* 像圖片一樣的圓角長條 */
+  border-radius: var(--radius-pill);
   padding: 6px 8px;
   display: inline-flex;
   gap: 8px;
   align-items: center;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  flex-wrap: wrap; /* 手機版自動折行 */
+  flex-wrap: wrap;
 }
 body.dark .tab-container-styled { background: rgba(30, 41, 59, 0.8); }
 
-/* =========== 通用 Tab 按鈕樣式 (新) =========== */
+/* =========== 通用 Tab 按鈕 =========== */
 .btn-tab {
   background: #fff;
   color: var(--gray-500);
-  border: 1px solid transparent; /* 預設無邊框，或淺灰 */
+  border: 1px solid transparent;
   border-radius: var(--radius-pill);
   padding: 6px 16px;
   font-size: 14px;
@@ -84,12 +83,8 @@ body.dark .tab-container-styled { background: rgba(30, 41, 59, 0.8); }
 }
 body.dark .btn-tab { background: transparent; color: var(--gray-300); }
 
-.btn-tab:hover {
-  background: var(--gray-50);
-  color: var(--primary-600);
-}
+.btn-tab:hover { background: var(--gray-50); color: var(--primary-600); }
 
-/* 預設選中樣式 (藍色) */
 .btn-tab.active {
   background: var(--primary-600);
   color: #fff;
@@ -97,7 +92,7 @@ body.dark .btn-tab { background: transparent; color: var(--gray-300); }
   box-shadow: 0 2px 4px rgba(31, 111, 229, 0.3);
 }
 
-/* 上方 Main Tabs 的外框樣式 (藍框白底) */
+/* 上方 Main Tabs */
 .main-tab {
   background: #fff;
   color: var(--primary-600);
@@ -118,14 +113,12 @@ body.dark .btn-tab { background: transparent; color: var(--gray-300); }
   box-shadow: 0 4px 6px rgba(31, 111, 229, 0.25);
 }
 
-/* =========== 多彩按鈕定義 (針對下方分類) =========== */
-/* 定義顏色變數 */
-.theme-teal   { --theme-color: #059669; } /* 綠色 */
-.theme-orange { --theme-color: #d97706; } /* 橘色 */
-.theme-purple { --theme-color: #7c3aed; } /* 紫色 */
-.theme-pink   { --theme-color: #db2777; } /* 桃紅 */
+/* =========== 多彩按鈕定義 =========== */
+.theme-teal   { --theme-color: #059669; }
+.theme-orange { --theme-color: #d97706; }
+.theme-purple { --theme-color: #7c3aed; }
+.theme-pink   { --theme-color: #db2777; }
 
-/* 多彩按鈕的通用行為：未選中時是白底+有色邊框+有色文字 */
 .btn-tab.colored-btn {
   color: var(--theme-color);
   border: 1px solid var(--theme-color);
@@ -133,19 +126,16 @@ body.dark .btn-tab { background: transparent; color: var(--gray-300); }
 }
 body.dark .btn-tab.colored-btn { background: transparent; }
 
-/* 多彩按鈕：Hover */
 .btn-tab.colored-btn:hover {
   background: color-mix(in srgb, var(--theme-color), white 90%);
 }
 
-/* 多彩按鈕：Active (變成實心) */
 .btn-tab.colored-btn.active {
   background: var(--theme-color);
   color: #fff;
   border-color: var(--theme-color);
   box-shadow: 0 4px 6px color-mix(in srgb, var(--theme-color), transparent 60%);
 }
-
 
 /* ======= Refresh Bar & Controls ======= */
 .refresh-bar{ display:flex; gap:12px; align-items:center; justify-content:flex-end; }
@@ -163,13 +153,10 @@ body.dark .seg-group { background: rgba(0,0,0,0.2); }
 .seg-btn.active{ background: #fff; color:var(--primary-600); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 body.dark .seg-btn.active{ background: var(--gray-800); color: #fff; }
 
-/* 立即更新按鈕特別樣式 */
 .seg-btn.now-btn { color: var(--primary-600); border: 1px solid var(--primary-600); margin-left: 4px; }
 .seg-btn.now-btn:hover { background: var(--primary-600); color: #fff; }
 
-
 /* =========== Layout Grids =========== */
-/* 頂部佈局：標題左，登入右；下一行 Tab 左，時間右 */
 .topbar-grid {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -180,19 +167,49 @@ body.dark .seg-btn.active{ background: var(--gray-800); color: #fff; }
 }
 .topbar-grid .left-title { grid-area: 1 / 1 / 2 / 2; }
 .topbar-grid .right-user  { grid-area: 1 / 2 / 2 / 3; justify-self: end; display:flex; align-items:center; gap:12px; }
-.topbar-grid .left-tabs   { grid-area: 2 / 1 / 3 / 3; } /* Tab 佔滿整行 */
+.topbar-grid .left-tabs   { grid-area: 2 / 1 / 3 / 3; }
 .topbar-grid .right-clock { grid-area: 1 / 2 / 2 / 3; justify-self: end; display:flex; align-items:center; gap:16px; } 
 
-/* 讓時間顯示在標題右側 (視窗夠寬時) */
 @media (min-width: 768px) {
     .topbar-grid {
         grid-template-columns: auto 1fr auto;
         grid-template-rows: auto auto;
     }
     .topbar-grid .left-title { grid-area: 1 / 1 / 2 / 2; }
-    .topbar-grid .right-clock { grid-area: 1 / 2 / 2 / 3; } /* 時間放第一行右邊 */
-    .topbar-grid .right-user { grid-area: 1 / 3 / 2 / 4; }  /* 使用者放更右邊 */
-    .topbar-grid .left-tabs { grid-area: 2 / 1 / 3 / 4; display: flex; justify-content: space-between; align-items: center; } /* Tabs 放第二行 */
+    .topbar-grid .right-clock { grid-area: 1 / 2 / 2 / 3; }
+    .topbar-grid .right-user { grid-area: 1 / 3 / 2 / 4; }
+    .topbar-grid .left-tabs { grid-area: 2 / 1 / 3 / 4; display: flex; justify-content: space-between; align-items: center; }
+}
+
+/* =========== Login View (修正版) =========== */
+/* 1. 登入模式下：顯示置中登入卡片 */
+body.login #login-center {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh; /* 讓它垂直置中 */
+}
+
+/* 2. 登入卡片樣式 */
+.login-card {
+  background: rgba(255,255,255,0.9);
+  padding: 40px 60px;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  border: 1px solid #e2e8f0;
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+
+/* 3. 登入模式下：隱藏原本的導覽列、內容區、通知 */
+body.login .topbar-grid,
+body.login #mainTabs,
+body.login .tab-pane,
+body.login .refresh-bar,
+body.login #userInfo,
+body.login #dash-topbar {
+  display: none !important;
 }
 
 /* =========== 內容卡片樣式 =========== */
@@ -205,14 +222,12 @@ body.dark .veh-card{background:rgba(15,23,42,0.4);}
 .veh-title-main{font-weight:700;font-size:1.25rem; color:var(--text-strong);}
 .veh-title-sub{font-size:0.95rem; color:var(--text-muted);}
 
-/* 步驟列 */
 .step-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding: 4px 0; border-bottom: 1px dashed var(--gray-200); }
 .step-row:last-child { border-bottom: none; }
 .step-label { font-weight: 600; color: var(--text); flex: 1; }
 .step-time{ font-family: monospace; font-size: 1rem; font-weight: 600; color: var(--primary-600); }
 body.dark .step-time{color:#60a5fa}
 
-/* Buttons inside cards */
 .btn{
   border:0;border-radius:6px;padding:6px 12px;
   background:#0f6efc;color:#fff;font-size:14px;font-weight:500;cursor:pointer;
@@ -223,7 +238,6 @@ body.dark .step-time{color:#60a5fa}
 .btn--secondary{background:#fff;color:var(--primary-600);border:1px solid var(--border);} 
 .btn--sm{ padding: 4px 10px; font-size: 13px; }
 
-/* Dashboard 統計卡片 */
 .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top: 10px;}
 .stat-card{ border:1px solid var(--border); border-radius:12px; background:#fff; padding:12px; text-align: center; }
 body.dark .stat-card{ background:rgba(15,23,42,.30); }
@@ -239,32 +253,23 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
 .stat-num.todo{ color:#ef4444; }
 .stat-label{ font-size: 13px; color: var(--text-muted); margin-top: 4px; font-weight: 600; }
 
-/* 停車位置 */
 .loc-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:10px; }
 .loc-pill{ border:1px solid var(--border); border-radius:12px; padding:12px; background:#fff; display:flex; flex-direction:column; align-items:center; cursor:pointer; position: relative; overflow: hidden; }
 .loc-pill:hover { border-color: var(--primary-600); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1); }
 .loc-name{ font-weight:700; font-size: 15px; z-index: 1; }
 .loc-num{ font-size:32px; font-weight:900; color:#2563eb; z-index: 1; margin: 4px 0; }
 
-/* Modal */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); z-index: 9998; }
 .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 24px; border-radius: 16px; min-width: 320px; max-width: 90vw; box-shadow: 0 20px 40px rgba(0,0,0,0.3); z-index: 9999; animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 @keyframes modalIn { from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 .modal .dash-close{ position:absolute; right:16px; top:16px; font-size:24px; color: var(--gray-400); cursor:pointer; padding: 4px; border-radius: 50%; transition: .2s; }
 .modal .dash-close:hover { background: var(--gray-100); color: var(--gray-800); }
 
-/* Loading */
 #loading.loading{ position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,0.7); backdrop-filter: blur(5px); z-index: 10000; }
 #loading.loading.show{ display: flex; }
 .spinner{ width:30px; height:30px; border:3px solid var(--gray-200); border-top-color: var(--primary-600); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin{ to{ transform: rotate(360deg); } }
 
-/* Login View */
-body.login .wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 90vh; }
-body.login .topbar-grid, body.login #mainTabs, body.login .refresh-bar { display: none !important; }
-body.login #pageTitle { font-size: 40px; margin-bottom: 30px; text-align: center; }
-
-/* 個別情報樣式 */
 .indiv-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow-card); transition: transform .2s; cursor: pointer; }
 .indiv-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-float); }
 .single-line { text-align: center; margin-bottom: 6px; }
@@ -274,14 +279,23 @@ body.login #pageTitle { font-size: 40px; margin-bottom: 30px; text-align: center
 <body>
 
 <div class="wrap">
-  <div class="topbar-grid">
+  
+  <div id="login-center" class="hide">
+    <div class="login-card">
+      <h1 style="margin:0; color:#1f6fe5; font-size:32px;">車流人流退場情報</h1>
+      <p style="margin:12px 0 24px; color:#64748b;">請登入以繼續使用系統</p>
+      <div id="signin"></div>
+    </div>
+  </div>
+
+  <div class="topbar-grid" id="dash-topbar">
     <div class="left-title">
       <h1 id="pageTitle">車流人流退場情報</h1>
     </div>
 
     <div class="right-clock">
         <div class="clock" id="clockDisplay">--:--:--</div>
-        <div id="signin"></div> <div id="userInfo" class="hide" style="font-size: 14px; text-align: right;">
+        <div id="userInfo" class="hide" style="font-size: 14px; text-align: right;">
            <span id="userDisplay"></span>
            <button id="logoutBtn" class="btn btn--secondary btn--sm" style="margin-left: 8px;">登出</button>
         </div>
@@ -295,12 +309,14 @@ body.login #pageTitle { font-size: 40px; margin-bottom: 30px; text-align: center
         </div>
         
         <div class="refresh-bar">
-            <div class="seg-group" id="refreshControls"></div>
+             <div class="seg-group" id="refreshControls"></div>
         </div>
     </div>
   </div>
 
-  <div id="mainTabs" class="hide"></div> <div id="pane-punch" class="tab-pane hide">
+  <div id="mainTabs" class="hide"></div>
+
+  <div id="pane-punch" class="tab-pane hide">
     <div id="tabs" class="card" style="padding-bottom:6px;">
       <div class="sheet-tabs" id="sheetTabs"></div>
     </div>
@@ -346,7 +362,6 @@ body.login #pageTitle { font-size: 40px; margin-bottom: 30px; text-align: center
 
 <div id="notif" class="notif"></div>
 <div id="loading" class="loading"><div class="spinner"></div></div>
-
 <script>
 /* ============ CONFIG & SETUP ============ */
 const GOOGLE_CLIENT_ID = '368914333961-b8j4o6h73hurdoq5k377f6v2e1pg0r3p.apps.googleusercontent.com';
@@ -566,9 +581,20 @@ function stopDashboardAutoRefresh(){
 
 /* ============ GOOGLE AUTH ============ */
 function initGoogleSignIn() {
+    // 1. 加上 login class -> 觸發 CSS 隱藏導覽列，顯示 login-center
     document.body.classList.add('login');
+    
+    // 2. 鎖定我們剛剛新增的 #signin 容器
+    const signinDiv = document.getElementById('signin');
+    if (!signinDiv) {
+        console.error('找不到 id="signin" 的元素，請檢查 HTML');
+        return;
+    }
+    signinDiv.innerHTML = ''; 
+    
+    // 3. 渲染按鈕 (改用 pill 形狀更現代)
     google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
-    google.accounts.id.renderButton(document.getElementById('signin'), { theme:'outline', size:'large' });
+    google.accounts.id.renderButton(signinDiv, { theme:'outline', size:'large', shape:'pill', width: 250 });
 }
 async function handleCredential(resp){
     idToken = resp.credential;
@@ -582,11 +608,15 @@ async function handleCredential(resp){
     } catch(e) { showNotif(e.message, true); }
 }
 function finishLoginUI(){
+    // 1. 移除 login class -> login-center 消失，導覽列出現
     document.body.classList.remove('login');
-    document.getElementById('signin').classList.add('hide');
+    
+    // 2. 顯示使用者資訊
     document.getElementById('userInfo').classList.remove('hide');
-    document.getElementById('userDisplay').textContent = `${currentUser.name} (${currentUser.permission})`;
-    switchPane('pane-dashboard2'); // 預設進儀表板
+    document.getElementById('userDisplay').innerHTML = `<b>${currentUser.name}</b> (${currentUser.permission})`;
+    
+    // 3. 進來後預設切換到最新狀態
+    switchPane('pane-dashboard2'); 
 }
 function logout(){
     localStorage.removeItem('ddcc_user_token');

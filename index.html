@@ -351,7 +351,14 @@ body.dark .single-card{ background:rgba(15,23,42,.30); }
   margin-top: 4px !important;
   line-height: 1.4 !important;        /* 與小標題視覺一致 */
 }
-  
+/* 其他組負責的步驟 → 橘色底標示（極簡、專業） */
+.step-card.personnel {
+  background: #fff7ed !important;      /* 極淺橘底 */
+  border: 1px solid #fed7aa !important;
+}
+.step-card.personnel .stat-num.done   { color: #c2410c !important; }  /* 完成的數字變深橘 */
+.step-card.personnel .stat-num.todo   { color: #ea580c !important; }  /* 未完成的數字變更深橘 */
+.step-card.personnel .stat-head       { color: #c2410c !important; font-weight: 800; }  
 </style>
     </div>
 
@@ -557,7 +564,7 @@ function buildRefreshControls(){
   nowBtn.onclick = ()=> {
   if (isDashboardVisible()) {
     buildDashboard(false);
-    buildDashboard2(true);
+    (true);
     refreshAllActiveTodoModals();   // 加上這行
   } else showNotif('切到「整體情報」即可看到最新資料', false);
 };
@@ -695,7 +702,7 @@ function buildDashboardTabs2(){
       if (currentDashFilter2 === key) return;
       currentDashFilter2 = key; // 更新 2 的狀態
       updateDashTabActive2();   // 更新 2 的樣式
-      buildDashboard2(false);   // 重繪 2
+      (false);   // 重繪 2
     };
     box.appendChild(btn);
   };
@@ -1349,7 +1356,7 @@ function switchPane(id) {
   buildDashboardTabs2();
   currentDashFilter2 = 'ALL';     // 強制預設所有車輛
   updateDashTabActive2();         // 高亮「所有車輛」按鈕
-  buildDashboard2(false);
+  (false);
   startDashboardAutoRefresh();
   }
   else {
@@ -1378,7 +1385,7 @@ function startDashboardAutoRefresh() {
     }
     // 檢查 II 是否開著
     if (!document.getElementById('pane-dashboard2').classList.contains('hide')) {
-       buildDashboard2(true); // 呼叫 II 的靜默刷新
+       (true); // 呼叫 II 的靜默刷新
        refreshAllActiveTodoModals();
     }
   }, refreshMs);
@@ -1614,8 +1621,19 @@ async function buildDashboard2(silent = false){
             const v = col >= 0 ? r[col] : '';
             isCompletedValue(v) ? done++ : todo++;
           });
+        const card = document.createElement('div');
+        card.className = 'stat-card';
 
-          const card = document.createElement('div'); card.className = 'stat-card';
+        // —— 關鍵：判斷是否為「其他組負責」的步驟 → 加橘色底 ——
+        const personnelSteps = {
+          '地區專車退場（遊覽車平台）': ['退場人員已到齊', '人已前往平台'],
+          '地區專車退場（禪堂平台）'  : ['車已離開禪堂平台'],
+          '水陸專車退場'            : ['退場人員已到齊', '人已前往平台'],
+          '288法青退場'             : ['退場人員已到齊']
+        };
+        if (personnelSteps[cfg.key]?.includes(st)) {
+          card.classList.add('personnel');   // ← 加上橘色樣式
+        }
           card.innerHTML = `
             <div class="stat-head">${st}</div>
             <div class="stat-row">

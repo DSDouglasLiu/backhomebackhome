@@ -181,20 +181,17 @@ body.dark .seg-btn.active{ background: var(--gray-800); color: #fff; }
     .topbar-grid .left-tabs { grid-area: 2 / 1 / 3 / 4; display: flex; justify-content: space-between; align-items: center; }
 }
 
-/* =========== Login View (核心修正) =========== */
-/* 1. 預設 .hide 隱藏 */
+/* =========== Login View =========== */
 #login-center { display: none; }
 
-/* 2. 當 body 有 .login class 時：顯示登入卡片 */
 body.login #login-center {
   display: flex !important;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 85vh; /* 垂直置中 */
+  min-height: 85vh;
 }
 
-/* 3. 當 body 有 .login class 時：隱藏所有操作介面 */
 body.login #dash-topbar,
 body.login #mainTabs,
 body.login .tab-pane,
@@ -203,7 +200,6 @@ body.login #userInfo {
   display: none !important;
 }
 
-/* 登入卡片樣式 */
 .login-card {
   background: rgba(255,255,255,0.95);
   padding: 48px 60px;
@@ -230,16 +226,21 @@ body.dark .veh-card{background:rgba(15,23,42,0.4);}
 .step-label { font-weight: 600; color: var(--text); flex: 1; }
 .step-time{ font-family: monospace; font-size: 1rem; font-weight: 600; color: var(--primary-600); }
 body.dark .step-time{color:#60a5fa}
+.step-select{min-width:140px;padding:6px 8px;border-radius:var(--radius-md);border:1px solid var(--border);background:#fff;font-size:14px;}
 
-.btn{
+.btn,.step-btn{
   border:0;border-radius:6px;padding:6px 12px;
   background:#0f6efc;color:#fff;font-size:14px;font-weight:500;cursor:pointer;
   transition:.2s;
 }
 .btn:hover{ filter: brightness(1.1); transform: translateY(-1px); }
 .btn:active{ transform: translateY(0); }
+.btn--primary{background:var(--primary-600);} .btn--primary:hover{background:#165bd1;}
+.btn--success{background:#22c55e;} .btn--success:hover{background:#16a34a;}
+.btn--danger{background:#ef4444;}  .btn--danger:hover{background:#dc2626;}
 .btn--secondary{background:#fff;color:var(--primary-600);border:1px solid var(--border);} 
 .btn--sm{ padding: 4px 10px; font-size: 13px; }
+.btn-group{display:flex;gap:6px;}
 
 .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top: 10px;}
 .stat-card{ border:1px solid var(--border); border-radius:12px; background:#fff; padding:12px; text-align: center; }
@@ -262,11 +263,14 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
 .loc-name{ font-weight:700; font-size: 15px; z-index: 1; }
 .loc-num{ font-size:32px; font-weight:900; color:#2563eb; z-index: 1; margin: 4px 0; }
 
+/* Modal & Notif */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); z-index: 9998; }
-.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 24px; border-radius: 16px; min-width: 320px; max-width: 90vw; box-shadow: 0 20px 40px rgba(0,0,0,0.3); z-index: 9999; animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 24px; border-radius: 16px; min-width: 320px; max-width: 90vw; box-shadow: 0 20px 40px rgba(0,0,0,0.3); z-index: 9999; animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90vh; overflow-y: auto; }
 @keyframes modalIn { from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 .modal .dash-close{ position:absolute; right:16px; top:16px; font-size:24px; color: var(--gray-400); cursor:pointer; padding: 4px; border-radius: 50%; transition: .2s; }
 .modal .dash-close:hover { background: var(--gray-100); color: var(--gray-800); }
+.notif{position:fixed;right:16px;bottom:16px;background:rgba(15,23,42,.85);color:#fff;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(20px);transition:.2s;z-index:9990;}
+.notif.show{opacity:1;transform:translateY(0);}
 
 #loading.loading{ position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,0.7); backdrop-filter: blur(5px); z-index: 10000; }
 #loading.loading.show{ display: flex; }
@@ -276,32 +280,33 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
 .indiv-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow-card); transition: transform .2s; cursor: pointer; }
 .indiv-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-float); }
 .single-line { text-align: center; margin-bottom: 6px; }
+.detail-table{ width:100%; border-collapse:collapse; margin-top:8px; }
+.detail-table th, .detail-table td{ border:1px solid var(--border); padding:8px 10px; text-align:center; }
+.detail-table th{ background:var(--primary-600); color:#fff; }
+.time-edit{ display:flex; align-items:center; justify-content:center; gap:10px; margin:8px 0 4px; }
+.time-input{ width:64px; text-align:center; padding:6px 8px; border:1px solid var(--border); border-radius:10px; font-weight:600; }
 
 </style>
 </head>
-<!-- ★★★ 強制預設 login class，確保 FOUC 沒問題 ★★★ -->
 <body class="login">
 
 <div class="wrap">
   
-  <!-- 獨立的登入畫面區塊 (有 login class 時顯示) -->
+  <!-- 獨立的登入畫面 -->
   <div id="login-center">
     <div class="login-card">
       <h1 style="margin:0; color:#1f6fe5; font-size:32px; font-weight:800;">車流人流退場情報</h1>
       <p style="margin:16px 0 32px; color:#64748b; font-size:1.1rem;">請登入以繼續使用系統</p>
-      <!-- Google 按鈕容器 -->
       <div id="signin"></div>
     </div>
   </div>
 
-  <!-- 頂部導覽列 (有 login class 時隱藏) -->
+  <!-- 頂部導覽列 -->
   <div class="topbar-grid" id="dash-topbar">
-    <!-- 標題 -->
     <div class="left-title">
       <h1 id="pageTitle">車流人流退場情報</h1>
     </div>
 
-    <!-- 右上：時間顯示與使用者 -->
     <div class="right-clock">
         <div class="clock" id="clockDisplay">--:--:--</div>
         <div id="userInfo" class="hide" style="font-size: 14px; text-align: right;">
@@ -310,7 +315,6 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
         </div>
     </div>
 
-    <!-- 第二行：分頁切換 (上排) 與 更新頻率 -->
     <div class="left-tabs">
         <div class="tab-container-styled">
             <button class="main-tab active" data-target="pane-dashboard2">最新狀態</button>
@@ -324,13 +328,14 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
     </div>
   </div>
 
-  <!-- 分頁內容區 -->
+  <!-- 內容區 -->
   <div id="mainTabs" class="hide"></div>
 
   <!-- 1. 登錄與修改頁 -->
   <div id="pane-punch" class="tab-pane hide">
-    <div id="tabs" class="card" style="padding-bottom:6px;">
-      <div class="sheet-tabs" id="sheetTabs"></div>
+    <!-- 改用 styled container，確保顏色和樣式一致 -->
+    <div style="margin: 16px 0;">
+      <div class="tab-container-styled" id="sheetTabs"></div>
     </div>
     <div id="content" class="hide">
       <div id="vehList" class="veh-list"></div>
@@ -339,7 +344,6 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
 
   <!-- 2. 最新狀態 (整體情報 II) -->
   <div id="pane-dashboard2" class="tab-pane hide">
-    <!-- 下排分類按鈕 -->
     <div style="margin: 16px 0;">
         <div class="tab-container-styled" id="dashboardTabs2"></div>
     </div>
@@ -368,12 +372,6 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
     <div id="singleResults" class="single-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px;"></div>
   </div>
 
-  <!-- 舊的 Dashboard (隱藏) -->
-  <div id="pane-dashboard" class="tab-pane hide">
-    <div class="card"><div id="dashboardTabs"></div></div>
-    <div id="dashboard"></div>
-  </div>
-
 </div>
 
 <div id="notif" class="notif"></div>
@@ -395,7 +393,7 @@ const SHEET_CONFIGS = [
   { key:'水陸專車退場', sheet:'水陸專車退場', colorClass: 'theme-purple', steps:[
     '已 Call 車排車隊',
     '已排好車隊',
-    '車暫停位置',          // ★ 已修正：將停車位置移前，確保打卡順序正確
+    '車暫停位置',          // 順序修正
     '退場人員已到齊',
     '已 Call 車上遊覽車平台',
     '車已上遊覽車平台',
@@ -424,6 +422,7 @@ let dashTimer = null;
 let ALL_SHEETS = {};
 let activeTodoModals = new Set();
 let SINGLE_ITEMS = [];
+let sheetData = [];
 
 /* ============ INITIALIZATION ============ */
 window.onload = function(){
@@ -447,14 +446,16 @@ window.onload = function(){
     }).then(r=>r.json()).then(j=>{
        if(j.error) throw new Error(j.error);
        currentUser = j;
-       finishLoginUI(); // 登入成功，移除 login class
+       finishLoginUI(); 
+       // 預載
+       buildTabs(); 
        loadSheetData(currentSheetKey);
     }).catch(e=>{
        logout();
-       initGoogleSignIn(); // 失敗，進入登入模式
+       initGoogleSignIn(); 
     });
   } else {
-    initGoogleSignIn(); // 無 token，進入登入模式
+    initGoogleSignIn();
   }
   
   document.getElementById('logoutBtn').addEventListener('click', logout);
@@ -566,6 +567,7 @@ function switchPane(targetId){
   } else if (targetId === 'pane-punch') {
       stopDashboardAutoRefresh();
       buildTabs();
+      // ★ 修正：確保切換時載入資料
       loadSheetData(currentSheetKey);
   } else if (targetId === 'pane-single') {
       stopDashboardAutoRefresh();
@@ -628,12 +630,15 @@ function logout(){
 }
 
 /* ============ DATA FETCHING & RENDERING ============ */
+// ★ 修正：同步「登錄與修改」頁的按鈕配色
 function buildTabs(){
     const box = document.getElementById('sheetTabs');
     box.innerHTML = '';
     SHEET_CONFIGS.forEach(cfg => {
         const btn = document.createElement('button');
-        btn.className = 'btn-tab' + (cfg.key===currentSheetKey ? ' active' : '');
+        const active = (cfg.key===currentSheetKey ? ' active' : '');
+        // 加上 colored-btn 和對應顏色 class
+        btn.className = `btn-tab colored-btn ${cfg.colorClass || ''}${active}`;
         btn.textContent = cfg.key;
         btn.onclick = () => {
             currentSheetKey = cfg.key;
@@ -642,6 +647,27 @@ function buildTabs(){
         };
         box.appendChild(btn);
     });
+}
+
+async function loadSheetData(key, silent = false){
+  const cfg = SHEET_CONFIGS.find(s=>s.key===key);
+  if (!silent) {
+    document.getElementById('vehList').textContent = '讀取資料中...';
+  }
+  try {
+      const r = await fetch(
+        API_BASE + `?action=get&idToken=${encodeURIComponent(idToken || '')}&sheet=${encodeURIComponent(cfg.sheet)}`
+      );
+      const j = await r.json();
+      if (j.error){
+        document.getElementById('vehList').textContent = '❌' + j.error;
+        return;
+      }
+      sheetData = j.values || [];
+      renderVehicles(cfg, sheetData);
+  } catch(e) {
+      document.getElementById('vehList').textContent = '載入失敗';
+  }
 }
 
 async function buildDashboard2(silent){
@@ -677,7 +703,6 @@ async function buildDashboard2(silent){
 
 function renderDashboardUI(){
     const container = document.getElementById('dashboard2');
-    // container.innerHTML = ''; // 已在 buildDashboard2 清空
 
     SHEET_CONFIGS.forEach(cfg => {
         if(currentDashFilter2 !== 'ALL' && currentDashFilter2 !== cfg.key) return;
@@ -704,7 +729,6 @@ function renderDashboardUI(){
         cfg.steps.forEach(step => {
             // 若是停車位置，顯示專屬卡片
             if(step === '車暫停位置') {
-                // 這裡可視需求加入停車位置卡片，目前範例主要顯示統計
                 return; 
             }
 
@@ -733,7 +757,7 @@ function renderDashboardUI(){
         });
         section.appendChild(grid);
         
-        // 加入停車位置區塊 (如果有的話)
+        // 加入停車位置區塊
         const stopIdx = data.header.indexOf('車暫停位置');
         if(stopIdx >= 0) {
             const locWrap = document.createElement('div');
@@ -762,19 +786,158 @@ function renderDashboardUI(){
     });
 }
 
-/* ===== 彈窗功能 (簡化版示意，需補上實際邏輯) ===== */
-function openListModal2(sheetKey, step, type, locValue) {
-    // 這邊應整合您原本的 openListModal2 邏輯
-    // 為了完整性，建議保留您原有的詳細實作
-    // 這裡僅做簡單的資料讀取檢查
-    const data = ALL_SHEETS[sheetKey];
-    if(!data) return;
+/* 渲染打卡頁車輛列表 (沿用您原本的邏輯) */
+function renderVehicles(cfg, data) {
+  const box = document.getElementById('vehList'); box.innerHTML = '';
+  const canWrite = currentUser?.permission === '全功能';
+  const headerRowIdx = data.findIndex(row => Array.isArray(row) && String(row[0]||'').trim()==='編號');
+  
+  if (headerRowIdx === -1){ box.textContent='找不到表頭'; return; }
+  const header = data[headerRowIdx].map(c=>String(c||'').trim());
+  const rows = data.slice(headerRowIdx+1).filter(r => Array.isArray(r) && String(r[0]||'').trim());
+  
+  if (!rows.length){ box.textContent='(這張表目前沒有車輛資料)'; return; }
+
+  const cards=[];
+  rows.forEach((row, idx) => {
+    const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim(); 
+    const baseRow = headerRowIdx+2+idx;
     
-    // 建立彈窗 DOM... (請參考您上一版已有的 openListModal2)
-    alert(`(彈窗功能) 查看 ${sheetKey} - ${step} : ${type}`);
+    // 判斷完成度
+    let completed = 0;
+    cfg.steps.forEach(st => {
+        const colIdx = header.indexOf(st);
+        const val = (colIdx !== -1) ? row[colIdx] : '';
+        if(val && val !== '—') completed++;
+    });
+
+    const card = document.createElement('div');
+    card.className = 'veh-card';
+    card.innerHTML = `<div>
+       <div class="veh-title-main">${escapeHtml(area)}</div>
+       <div class="veh-title-sub">${escapeHtml(car)}</div>
+    </div>`;
+    
+    // 綁定詳細資料點擊
+    card.querySelector(':scope > div:first-child').onclick = () => openDetailModal(cfg, row, header);
+    card.querySelector(':scope > div:first-child').style.cursor = 'pointer';
+
+    const stepsBox=document.createElement('div');
+    cfg.steps.forEach(st=>{
+        const colIdx=header.indexOf(st);
+        const rawVal = (colIdx!==-1) ? String(row[colIdx]||'').trim(): '';
+        const displayVal = rawVal ? formatSheetTime(rawVal) : '';
+        
+        const rowEl=document.createElement('div'); rowEl.className='step-row';
+        rowEl.innerHTML = `<div class="step-label">${st}</div>`;
+        
+        if (st==='車暫停位置'){
+            const sel=document.createElement('select'); sel.className='step-select';
+            sel.innerHTML = '<option value="">— 請選擇 —</option>' + STOP_OPTIONS.map(o=>`<option value="${o}">${o}</option>`).join('');
+            if(rawVal) sel.value = rawVal;
+            if(!canWrite) sel.disabled = true;
+            else sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value, sel);
+            rowEl.appendChild(sel);
+        } else {
+            const timeSpan=document.createElement('span'); timeSpan.className='step-time'; 
+            timeSpan.textContent=displayVal||'—';
+            rowEl.appendChild(timeSpan);
+            
+            const btnG=document.createElement('div'); btnG.className='btn-group';
+            if(canWrite){
+                if(!rawVal) {
+                    const btnPunch=document.createElement('button'); 
+                    btnPunch.className='btn btn--primary btn--sm'; btnPunch.textContent='打卡';
+                    btnPunch.onclick = () => onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, null, null, rowEl);
+                    btnG.appendChild(btnPunch);
+                } else {
+                    const btnEdit=document.createElement('button'); 
+                    btnEdit.className='btn btn--success btn--sm'; btnEdit.textContent='修改';
+                    btnEdit.onclick = () => onEditTimeClick(cfg, baseRow, header, st, timeSpan, null, null, null, rowEl, displayVal);
+                    btnG.appendChild(btnEdit);
+                    
+                    const btnDel=document.createElement('button'); 
+                    btnDel.className='btn btn--danger btn--sm'; btnDel.textContent='刪除';
+                    btnDel.onclick = () => onDeleteTimeClick(cfg, baseRow, header, st, timeSpan);
+                    btnG.appendChild(btnDel);
+                }
+            }
+            rowEl.appendChild(btnG);
+        }
+        stepsBox.appendChild(rowEl);
+    });
+    card.appendChild(stepsBox);
+    cards.push({ el:card, completed, origOrder:idx });
+  });
+
+  cards.sort((a,b)=> (a.completed!==b.completed ? a.completed-b.completed : a.origOrder-b.origOrder));
+  cards.forEach(c=>box.appendChild(c.el));
+}
+
+/* 功能函式 (保留您的邏輯) */
+async function onStopSelect(cfg, row, header, st, val, el){
+    await withLoading(async()=>{
+        const col = header.indexOf(st) + 1;
+        await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({
+            sheet:cfg.sheet, idToken, writes:[{row, col, value:val}]
+        })});
+        await loadSheetData(cfg.key, true);
+    }, '更新中...');
+}
+
+async function onPunchClick(cfg, row, header, st, span, btn, e, d, el){
+    const now = getTaipeiHHMMSS();
+    await withLoading(async()=>{
+        const col = header.indexOf(st) + 1;
+        await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({
+            sheet:cfg.sheet, idToken, writes:[{row, col, value:now}]
+        })});
+        await loadSheetData(cfg.key, true);
+    }, '打卡中...');
+}
+
+async function onDeleteTimeClick(cfg, row, header, st, span){
+    if(!confirm('確定刪除?')) return;
+    await withLoading(async()=>{
+        const col = header.indexOf(st) + 1;
+        await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({
+            sheet:cfg.sheet, idToken, writes:[{row, col, value:''}]
+        })});
+        await loadSheetData(cfg.key, true);
+    }, '刪除中...');
+}
+
+function openDetailModal(cfg, row, header){
+    const box = document.createElement('div'); box.className = 'modal';
+    const area = row[1]; const car = row[2];
+    
+    let html = `<div class="dash-close" onclick="this.parentElement.remove();document.querySelector('.modal-backdrop').remove();document.body.classList.remove('modal-open')">✕</div>
+    <h3>${area} ${car}</h3><table class="detail-table">`;
+    
+    cfg.steps.forEach(st => {
+        const idx = header.indexOf(st);
+        const val = row[idx] || '';
+        html += `<tr><th>${st}</th><td>${val}</td></tr>`;
+    });
+    html += `</table>`;
+    box.innerHTML = html;
+    openModal(box);
+}
+
+function openModal(el){
+    const bg = document.createElement('div'); bg.className='modal-backdrop';
+    document.body.appendChild(bg);
+    document.body.appendChild(el);
+    document.body.classList.add('modal-open');
 }
 
 /* 工具函式 */
+function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
+function formatSheetTime(val){
+  if(!val) return '';
+  if(val.includes('T')) { const d=new Date(val); return d.toLocaleTimeString('zh-TW',{hour12:false}); }
+  return val; 
+}
 function showNotif(msg, isErr){
     const box = document.getElementById('notif');
     box.textContent = msg;
@@ -784,11 +947,14 @@ function showNotif(msg, isErr){
 }
 function showLoading(){ document.getElementById('loading').classList.add('show'); }
 function hideLoading(){ document.getElementById('loading').classList.remove('show'); }
-function withLoading(fn, msg){ showLoading(); return fn().finally(hideLoading); }
+async function withLoading(fn, msg){ showLoading(); try{ await fn(); }finally{ hideLoading(); } }
 const sleep = ms=>new Promise(r=>setTimeout(r,ms));
+function escapeHtml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
-/* 其他必要的輔助函式 (打卡、詳細資料等) 請從您原本的程式碼中保留 */
-/* ... */
+/* Individual Page (Stub) */
+function initSinglePage(){
+    // Reuse loadSheetData logic or specific logic
+}
 
 </script>
 </body>

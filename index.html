@@ -142,23 +142,21 @@ body.modal-open{ overflow:hidden; touch-action:none; }
 @media (prefers-reduced-motion: reduce){ .spinner{ animation: none; border-top-color:#cbd5e1; } }
 body.loading-open{ overflow:hidden; touch-action:none; overscroll-behavior: contain; }
 @supports (height: 100dvh){ .modal-backdrop{ height: 100dvh; } }
-/* ================== 登入畫面優化：置中白框卡片 (修正版) ================== */
+/* ================== 登入畫面優化：置中白框卡片 ================== */
+
 /* 1. 設定登入頁背景與置中佈局 */
 body.login {
   height: 100dvh;
-  /* 改為 auto 避免手機版鍵盤彈出時卡死 */
-  overflow: auto; 
-  background: #f1f5f9;
+  overflow: hidden;
+  background: #f1f5f9; /* 淺灰背景，突顯白框 */
 }
 
 body.login .wrap {
   height: 100%;
-  min-height: 100vh; /* 確保最小高度 */
   display: grid;
-  place-items: center;
-  max-width: 100%;
-  padding: 20px; /* 增加一點邊距以免貼邊 */
-  box-sizing: border-box;
+  place-items: center; /* 上下左右完全置中 */
+  max-width: 100%;     /* 解除原本 wrap 的寬度限制 */
+  padding: 0;
 }
 
 /* 2. 將上方標題列 (.topbar-grid) 變身為「登入卡片」 */
@@ -168,41 +166,22 @@ body.login .topbar-grid {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 32px; /* 標題與按鈕的距離 */
+  gap: 40px; /* 標題與按鈕的距離 */
 
   /* 白框卡片樣式 */
   background: #ffffff;
   padding: 60px 80px;
   border-radius: 24px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* 漂亮的浮起陰影 */
   border: 1px solid #e2e8f0;
   
   /* 寬度控制 */
   width: auto;
   min-width: 320px;
   max-width: 90vw;
-  
-  /* 確保卡片在最上層，避免被遮擋 */
-  position: relative;
-  z-index: 10;
 }
 
-/* 3. 關鍵修正：強制重置按鈕容器的排版 */
-body.login .right-user {
-  display: flex !important;
-  justify-content: center !important; /* 強制置中 */
-  align-items: center !important;
-  width: 100% !important;
-  grid-area: auto !important; /* 解除 Grid 限制 */
-  margin: 0 !important;
-}
-
-/* 4. 調整登入標題樣式 */
-body.login .left-title {
-  width: 100%;
-  text-align: center;
-}
-
+/* 3. 調整登入標題樣式 */
 body.login .left-title h1 {
   font-size: 42px;
   font-weight: 900;
@@ -210,18 +189,15 @@ body.login .left-title h1 {
   margin: 0;
   text-align: center;
   letter-spacing: 2px;
-  line-height: 1.2;
 }
 
-/* 5. 確保 Google 按鈕容器有空間 */
+/* 4. 放大 Google 登入按鈕 */
 body.login #signin {
   transform: scale(1.1);
   display: block !important;
-  min-height: 50px; /* 預留高度給按鈕，防止塌陷 */
-  min-width: 200px;
 }
 
-/* 6. 隱藏登入模式下不需要的元素 */
+/* 5. 隱藏登入模式下不需要的元素 */
 body.login .left-tabs,
 body.login .right-refresh,
 body.login #userInfo,
@@ -571,13 +547,7 @@ const SHEET_CONFIGS = [
     '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
   ]}
 ];
-/* === 新增：定義各區塊的外框顏色 (對應上方按鈕) === */
-const SECTION_BORDER_COLORS = {
-  '地區專車退場（遊覽車平台）': '#0ea5e9', // 天藍
-  '地區專車退場（禪堂平台）': '#8b5cf6', // 紫
-  '水陸專車退場': '#f59e0b',            // 橘黃
-  '288法青退場': '#10b981'             // 綠
-};
+
 /* ===== 新增：時鐘 + 自動更新頻率設定 ===== */
 const REFRESH_PRESETS = [
   { label:'5分',  ms: 5*60*1000 },
@@ -1680,11 +1650,7 @@ async function buildDashboard2(silent = false){
       // 建立外框
       const sec = document.createElement('section'); 
       sec.className = 'dash-section card';
-      const borderColor = SECTION_BORDER_COLORS[cfg.key];
-      if (borderColor) {
-        // 設定邊框顏色，並稍微加粗 (2px) 讓顏色更明顯
-        sec.style.border = `2px solid ${borderColor}`;
-      }
+      
       // 標題
       const title = document.createElement('div'); 
       title.className = 'dash-title'; 

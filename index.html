@@ -259,10 +259,46 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
 .spinner{ width:30px; height:30px; border:3px solid var(--gray-200); border-top-color: var(--primary-600); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin{ to{ transform: rotate(360deg); } }
 
-/* Login View */
-body.login .wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 90vh; }
-body.login .topbar-grid, body.login #mainTabs, body.login .refresh-bar { display: none !important; }
-body.login #pageTitle { font-size: 40px; margin-bottom: 30px; text-align: center; }
+/* =========== Login View (修正版) =========== */
+/* 登入模式下，隱藏原本的 Topbar 和所有內容 */
+body.login #dash-topbar,
+body.login .tab-pane,
+body.login .refresh-bar,
+body.login #notif, 
+body.login #userInfo {
+  display: none !important;
+}
+
+/* 登入模式下，顯示並排版登入區塊 */
+body.login #login-center {
+  display: flex !important;
+  height: 85vh; /* 讓登入框垂直置中 */
+  align-items: center;
+  justify-content: center;
+}
+
+/* 登入卡片美化 */
+.login-card {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 40px 60px;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.login-title {
+  font-size: 32px;
+  color: var(--primary-600);
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
 
 /* 個別情報樣式 */
 .indiv-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow-card); transition: transform .2s; cursor: pointer; }
@@ -274,14 +310,22 @@ body.login #pageTitle { font-size: 40px; margin-bottom: 30px; text-align: center
 <body>
 
 <div class="wrap">
-  <div class="topbar-grid">
+  
+  <div id="login-center" class="hide">
+    <div class="login-card">
+      <h1 class="login-title">車流人流退場情報</h1>
+      <div id="signin"></div>
+    </div>
+  </div>
+
+  <div class="topbar-grid" id="dash-topbar">
     <div class="left-title">
       <h1 id="pageTitle">車流人流退場情報</h1>
     </div>
 
     <div class="right-clock">
         <div class="clock" id="clockDisplay">--:--:--</div>
-        <div id="signin"></div> <div id="userInfo" class="hide" style="font-size: 14px; text-align: right;">
+        <div id="userInfo" class="hide" style="font-size: 14px; text-align: right;">
            <span id="userDisplay"></span>
            <button id="logoutBtn" class="btn btn--secondary btn--sm" style="margin-left: 8px;">登出</button>
         </div>
@@ -293,9 +337,8 @@ body.login #pageTitle { font-size: 40px; margin-bottom: 30px; text-align: center
             <button class="main-tab" data-target="pane-single">個別情報</button>
             <button class="main-tab" data-target="pane-punch">登錄與修改</button>
         </div>
-        
         <div class="refresh-bar">
-            <div class="seg-group" id="refreshControls"></div>
+             <div class="seg-group" id="refreshControls"></div>
         </div>
     </div>
   </div>
@@ -566,9 +609,17 @@ function stopDashboardAutoRefresh(){
 
 /* ============ GOOGLE AUTH ============ */
 function initGoogleSignIn() {
+    // 加上 login class，CSS 會自動隱藏儀表板，顯示 login-center
     document.body.classList.add('login');
+    
+    // 確保登入按鈕容器是乾淨的
+    const signinDiv = document.getElementById('signin');
+    signinDiv.innerHTML = ''; 
+    signinDiv.classList.remove('hide');
+
+    // 重新渲染 Google 按鈕
     google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
-    google.accounts.id.renderButton(document.getElementById('signin'), { theme:'outline', size:'large' });
+    google.accounts.id.renderButton(signinDiv, { theme:'outline', size:'large', shape:'pill' });
 }
 async function handleCredential(resp){
     idToken = resp.credential;
@@ -582,11 +633,14 @@ async function handleCredential(resp){
     } catch(e) { showNotif(e.message, true); }
 }
 function finishLoginUI(){
+    // 移除 login class，CSS 會自動隱藏 login-center，顯示儀表板
     document.body.classList.remove('login');
-    document.getElementById('signin').classList.add('hide');
+    
     document.getElementById('userInfo').classList.remove('hide');
-    document.getElementById('userDisplay').textContent = `${currentUser.name} (${currentUser.permission})`;
-    switchPane('pane-dashboard2'); // 預設進儀表板
+    document.getElementById('userDisplay').innerHTML = `<b>${currentUser.name}</b> (${currentUser.permission})`;
+    
+    // 進來後預設切換到儀表板
+    switchPane('pane-dashboard2'); 
 }
 function logout(){
     localStorage.removeItem('ddcc_user_token');

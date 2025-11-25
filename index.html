@@ -448,7 +448,14 @@ const SHEET_CONFIGS = [
     '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','車已離開禪堂平台'
   ]},
   { key:'水陸專車退場', sheet:'水陸專車退場', steps:[
-    '已 Call 車排車隊','已排好車隊','退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','車暫停位置','車已離開遊覽車平台'
+  '已 Call 車排車隊',
+  '已排好車隊',
+  '退場人員已到齊',
+  '已 Call 車上遊覽車平台',
+  '人已前往平台',
+  '車已上遊覽車平台',
+  '車暫停位置',
+  '車已離開遊覽車平台'
   ]},
   { key:'288法青退場', sheet:'288法青退場', steps:[
     '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
@@ -1633,33 +1640,31 @@ async function buildDashboard2(silent = false){
       // --- 1. 渲染上層步驟 ---
       renderGrid(topSteps);
 
-      // --- 2. 渲染中層：停車位置 (如果有的話) ---
+           // --- 2. 渲染中層：停車位置 + 下方的區隔線 ---
       if (stopColIdx >= 0) {
-        // 加個分隔標題，視覺比較清楚（依照 PDF 邏輯）
+        // 停車位置標題
         const locTitle = document.createElement('div');
         locTitle.className = 'dash-title';
-        locTitle.style.marginTop = '16px';
-        locTitle.style.marginBottom = '6px';
-        locTitle.style.fontSize = '16px'; // 稍微小一點的副標
+        locTitle.style.margin = '20px 0 8px 0';
+        locTitle.style.fontSize = '16px';
         locTitle.textContent = '停車位置';
         sec.appendChild(locTitle);
 
-        const locWrap = document.createElement('div'); 
+        // 停車位置 9 格
+        const locWrap = document.createElement('div');
         locWrap.className = 'loc-grid';
-        // 為了讓這區塊跟下面稍微有點距離
-        locWrap.style.marginBottom = '16px'; 
+        locWrap.style.marginBottom = '20px';
 
         const counter = new Map();
         STOP_OPTIONS.forEach(n => counter.set(n, 0));
-
         rows.forEach(r => {
           const v = String(r[stopColIdx] || '').trim();
           if (counter.has(v)) counter.set(v, counter.get(v) + 1);
         });
-
         STOP_OPTIONS.forEach(name => {
           const n = counter.get(name) || 0;
-          const pill = document.createElement('div'); pill.className = 'loc-pill';
+          const pill = document.createElement('div');
+          pill.className = 'loc-pill';
           pill.innerHTML = `
             <div class="loc-name">${name}</div>
             <div class="loc-num">${n}</div>
@@ -1670,6 +1675,13 @@ async function buildDashboard2(silent = false){
           locWrap.appendChild(pill);
         });
         sec.appendChild(locWrap);
+
+        // 重點：車暫停位置下方的區隔線（288 法青不會出現這條線）
+        const divider = document.createElement('div');
+        divider.style.height = '1px';
+        divider.style.background = 'var(--border)';
+        divider.style.margin = '8px 0 20px 0';
+        sec.appendChild(divider);
       }
 
       // --- 3. 渲染下層步驟 ---

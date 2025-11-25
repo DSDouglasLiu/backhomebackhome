@@ -205,6 +205,14 @@ body.login .tab-pane {
 .stat-num.todo{ color:#ef4444; }
 .stat-label{ font-size: 13px; color: var(--text-muted); margin-top: 4px; font-weight: 600; }
 
+/* ★★★ 新增：儀表板中不同組別的樣式 (僅邊框顏色，不顯示標題) ★★★ */
+.stat-card.alt-group-card {
+    border-color: var(--alt-600);
+    background-color: var(--alt-bg);
+}
+/* 讓橘色組別的數字也變色，增加辨識度 */
+.stat-card.alt-group-card .stat-head { color: #c2410c; }
+
 .loc-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:10px; }
 .loc-pill{ border:1px solid var(--border); border-radius:12px; padding:12px; background:#fff; display:flex; flex-direction:column; align-items:center; cursor:pointer; position: relative; overflow: hidden; }
 .loc-pill:hover { border-color: var(--primary-600); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1); }
@@ -227,18 +235,6 @@ body.login .tab-pane {
 .detail-table th, .detail-table td{ border:1px solid var(--border); padding:8px 10px; text-align:center; }
 .detail-table th{ background:var(--primary-600); color:#fff; }
 .single-line { text-align: center; margin-bottom: 6px; }
-
-/* 分組標題樣式 */
-.group-header {
-  grid-column: 1 / -1;
-  background: var(--gray-100);
-  padding: 4px 8px;
-  font-weight: 700;
-  color: var(--primary-600);
-  border-radius: 4px;
-  margin: 8px 0 4px 0;
-  font-size: 0.9rem;
-}
 </style>
 </head>
 <!-- 強制預設 login class -->
@@ -331,10 +327,8 @@ const SHEET_CONFIGS = [
       '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
       '退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台'
     ],
-    operatorGroups: {
-        '主要操作人員': ['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置','已 Call 車上遊覽車平台','車第二次上遊覽車平台','車已離開遊覽車平台'],
-        '第一組操作人員': ['退場人員已到齊','人已前往平台']
-    }
+    // 標示非主要操作的步驟 (第二組)
+    secondarySteps: ['退場人員已到齊','人已前往平台']
   },
   { 
     key:'地區專車退場（禪堂平台）', 
@@ -344,10 +338,8 @@ const SHEET_CONFIGS = [
       '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
       '人已前往禪堂平台','車已離開禪堂平台'
     ],
-    operatorGroups: {
-        '主要操作人員': ['車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置'],
-        '第二組操作人員': ['人已前往禪堂平台','車已離開禪堂平台']
-    }
+    // 標示非主要操作的步驟 (第二組)
+    secondarySteps: ['人已前往禪堂平台','車已離開禪堂平台']
   },
   { 
     key:'水陸專車退場', 
@@ -357,10 +349,8 @@ const SHEET_CONFIGS = [
       '已 Call 車排車隊','已排好車隊','車暫停位置',
       '退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','人已前往平台','車已離開遊覽車平台'
     ],
-    operatorGroups: {
-        '主要操作人員': ['已 Call 車排車隊','已排好車隊','車暫停位置','已 Call 車上遊覽車平台','車已上遊覽車平台','車已離開遊覽車平台'],
-        '第二組操作人員': ['退場人員已到齊','人已前往平台']
-    }
+    // 標示非主要操作的步驟 (第二組)
+    secondarySteps: ['退場人員已到齊','人已前往平台']
   },
   { 
     key:'288法青退場', 
@@ -369,9 +359,8 @@ const SHEET_CONFIGS = [
     steps:[
       '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
     ],
-    operatorGroups: {
-        '主要操作人員': ['退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台']
-    }
+    // 全部都是主要操作
+    secondarySteps: []
   }
 ];
 
@@ -424,7 +413,6 @@ function parseSheetData(values, cfg) {
         const car = String(row[carIdx] || '').trim();
         
         if (area && car) {
-            // 計算完成度
             let completed = 0;
             cfg.steps.forEach(st => {
                 const colIdx = header.indexOf(st);
@@ -437,7 +425,7 @@ function parseSheetData(values, cfg) {
                 rowIndex: i + 1, 
                 areaIdx,
                 carIdx,
-                completed // 排序用
+                completed 
             });
         }
     }
@@ -603,6 +591,7 @@ function renderDashboardUI(){
 
         const grid = document.createElement('div'); grid.className = 'stat-grid';
         
+        // 依照 cfg.steps 順序顯示 (不分組，但區分顏色)
         cfg.steps.forEach(step => {
             if(step === '車暫停位置') return;
             const colIdx = data.header.indexOf(step);
@@ -611,8 +600,12 @@ function renderDashboardUI(){
                 const r = item.data;
                 const v = colIdx>=0?r[colIdx]:''; (v&&v!=='—') ? done++ : todo++; 
             });
+            
+            // 判斷是否為第二組 (變色)
+            const isSecondary = cfg.secondarySteps.includes(step);
 
-            const card = document.createElement('div'); card.className = 'stat-card';
+            const card = document.createElement('div'); 
+            card.className = isSecondary ? 'stat-card alt-group-card' : 'stat-card';
             card.innerHTML = `<div class="stat-head">${step}</div><div class="stat-row"></div>`;
             const row = card.querySelector('.stat-row');
             row.appendChild(createPill(done, '完成', 'done', () => openListModal2(cfg.key, step, 'done')));
@@ -702,16 +695,18 @@ function renderVehicles(data) {
     card.appendChild(titleDiv);
 
     const stepsBox=document.createElement('div');
-    cfg.steps.forEach(st=>{
+    
+    // ★ 照順序渲染步驟，不分組，只變色 ★
+    cfg.steps.forEach(st => {
         const colIdx = header.indexOf(st);
         const rawVal = (colIdx!==-1) ? String(row[colIdx]||'').trim(): '';
         
-        // 判斷是否為主要操作步驟 (用於按鈕變色)
-        const isMain = cfg.operatorGroups && cfg.operatorGroups['主要操作人員'] ? cfg.operatorGroups['主要操作人員'].includes(st) : true;
+        // 判斷是否為第二組 (變色)
+        const isSecondary = cfg.secondarySteps.includes(st);
 
         const rowEl = document.createElement('div'); 
         // 如果是非主要操作，加上特殊樣式 (例如左側標線)
-        rowEl.className = isMain ? 'step-row' : 'step-row alt-group';
+        rowEl.className = isSecondary ? 'step-row alt-group' : 'step-row';
         
         // 1. 左欄
         const labelEl = document.createElement('div');
@@ -746,8 +741,8 @@ function renderVehicles(data) {
                 const prevCol = prevStep ? header.indexOf(prevStep) : -1;
                 const prevDone = !prevStep || (prevCol>=0 && row[prevCol]);
                 
-                // ★ 根據是否為主要操作，決定按鈕顏色
-                const btnClass = isMain ? 'btn btn--primary btn--sm' : 'btn btn--warning btn--sm';
+                // ★ 根據是否為第二組，決定按鈕顏色
+                const btnClass = isSecondary ? 'btn btn--warning btn--sm' : 'btn btn--primary btn--sm';
                 const btn = createBtn('打卡', btnClass, ()=>doUpdate(cfg, baseRow, colIdx+1, getTaipeiHHMMSS(), ()=>loadSheetData(cfg.key, true)));
                 
                 if(!prevDone) { btn.disabled=true; btn.style.opacity=0.5; btn.title='前一步驟未完成'; }
@@ -766,6 +761,7 @@ function renderVehicles(data) {
 
         stepsBox.appendChild(rowEl);
     });
+    
     card.appendChild(stepsBox);
     box.appendChild(card);
   });

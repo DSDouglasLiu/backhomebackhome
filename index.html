@@ -101,9 +101,25 @@ body.login #login-center { display: flex !important; flex-direction: column; ali
 body.login #dash-topbar, body.login #mainTabs, body.login .tab-pane { display: none !important; }
 .login-card { background: rgba(255,255,255,0.95); padding: 48px 60px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.8); text-align: center; backdrop-filter: blur(8px); }
 
-/* Cards */
+/* Cards & Lists */
 .veh-list, .single-list { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:12px; margin-top:12px; }
-.veh-card, .indiv-card { background:#fff; border-radius:12px; border:1px solid var(--border); padding:16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+
+.veh-card, .indiv-card { 
+  background:#fff; border-radius:12px; border:1px solid var(--border); padding:16px; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
+  transition: all 0.2s ease;
+}
+
+/* ★★★ 修復：強制讓個別情報卡片變成手指游標，並增加懸停效果 ★★★ */
+.indiv-card {
+  cursor: pointer !important;
+}
+.indiv-card:hover {
+  border-color: var(--primary-600);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
 .veh-title-main{font-weight:700;font-size:1.25rem;}
 .step-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding: 4px 0; border-bottom: 1px dashed var(--gray-200); }
 .step-row:last-child { border-bottom: none; }
@@ -519,6 +535,7 @@ function renderVehicles(data) {
     const baseRow = headIdx + 2 + idx;
     
     const card = document.createElement('div'); card.className = 'veh-card';
+    // Title Clickable with Cursor Pointer
     const titleDiv = document.createElement('div');
     titleDiv.innerHTML = `<div class="veh-title-main">${escapeHtml(area)}</div><div class="veh-title-sub">${escapeHtml(car)}</div>`;
     titleDiv.style.cursor = 'pointer';
@@ -545,7 +562,7 @@ function renderVehicles(data) {
             const btnG=document.createElement('div'); btnG.className='btn-group';
             if(canWrite){
                 if(!rawVal) {
-                    // ★ Check Prev Step
+                    // Check Prev Step
                     const stepIdx = cfg.steps.indexOf(st);
                     const prevStep = stepIdx>0 ? cfg.steps[stepIdx-1] : null;
                     const prevCol = prevStep ? header.indexOf(prevStep) : -1;

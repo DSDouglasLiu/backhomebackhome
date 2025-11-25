@@ -327,7 +327,7 @@ const SHEET_CONFIGS = [
       '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
       '退場人員已到齊','已 Call 車上遊覽車平台','人已前往平台','車第二次上遊覽車平台','車已離開遊覽車平台'
     ],
-    // 標示非主要操作的步驟 (第二組)
+    // 標示非主要操作的步驟 (第二組 - 橘色)
     secondarySteps: ['退場人員已到齊','人已前往平台']
   },
   { 
@@ -338,7 +338,7 @@ const SHEET_CONFIGS = [
       '車長通知行李到齊','Call 車上行李','車已上遊覽車平台','車前往排車隊','車暫停位置',
       '人已前往禪堂平台','車已離開禪堂平台'
     ],
-    // 標示非主要操作的步驟 (第二組)
+    // 標示非主要操作的步驟 (第二組 - 橘色)
     secondarySteps: ['人已前往禪堂平台','車已離開禪堂平台']
   },
   { 
@@ -349,7 +349,7 @@ const SHEET_CONFIGS = [
       '已 Call 車排車隊','已排好車隊','車暫停位置',
       '退場人員已到齊','已 Call 車上遊覽車平台','車已上遊覽車平台','人已前往平台','車已離開遊覽車平台'
     ],
-    // 標示非主要操作的步驟 (第二組)
+    // 標示非主要操作的步驟 (第二組 - 橘色)
     secondarySteps: ['退場人員已到齊','人已前往平台']
   },
   { 
@@ -359,7 +359,7 @@ const SHEET_CONFIGS = [
     steps:[
       '退場人員已到齊','車已經上遊覽車平台','車已經離開遊覽車平台'
     ],
-    // 全部都是主要操作
+    // 全部都是主要操作 (藍色)
     secondarySteps: []
   }
 ];
@@ -695,9 +695,7 @@ function renderVehicles(data) {
     card.appendChild(titleDiv);
 
     const stepsBox=document.createElement('div');
-    
-    // ★ 照順序渲染步驟，不分組，只變色 ★
-    cfg.steps.forEach(st => {
+    cfg.steps.forEach(st=>{
         const colIdx = header.indexOf(st);
         const rawVal = (colIdx!==-1) ? String(row[colIdx]||'').trim(): '';
         
@@ -761,7 +759,6 @@ function renderVehicles(data) {
 
         stepsBox.appendChild(rowEl);
     });
-    
     card.appendChild(stepsBox);
     box.appendChild(card);
   });

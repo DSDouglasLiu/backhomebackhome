@@ -286,6 +286,12 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
 .time-edit{ display:flex; align-items:center; justify-content:center; gap:10px; margin:8px 0 4px; }
 .time-input{ width:64px; text-align:center; padding:6px 8px; border:1px solid var(--border); border-radius:10px; font-weight:600; }
 
+/* 清單項目樣式 */
+.list-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+.list-left { display: flex; flex-direction: column; gap: 2px; }
+.list-title { font-weight: 800; }
+.list-sub { font-size: 13px; opacity: 0.85; }
+
 </style>
 </head>
 <body class="login">
@@ -323,6 +329,7 @@ body.dark .stat-card{ background:rgba(15,23,42,.30); }
         </div>
         
         <div class="refresh-bar">
+             <!-- 這裡會動態顯示/隱藏 -->
              <div class="seg-group" id="refreshControls"></div>
         </div>
     </div>
@@ -393,7 +400,7 @@ const SHEET_CONFIGS = [
   { key:'水陸專車退場', sheet:'水陸專車退場', colorClass: 'theme-purple', steps:[
     '已 Call 車排車隊',
     '已排好車隊',
-    '車暫停位置',          // 順序修正
+    '車暫停位置', 
     '退場人員已到齊',
     '已 Call 車上遊覽車平台',
     '車已上遊覽車平台',
@@ -420,7 +427,6 @@ let currentSheetKey = SHEET_CONFIGS[0].key;
 let currentDashFilter2 = 'ALL';
 let dashTimer = null;
 let ALL_SHEETS = {};
-let activeTodoModals = new Set();
 let SINGLE_ITEMS = [];
 let sheetData = [];
 
@@ -447,9 +453,12 @@ window.onload = function(){
        if(j.error) throw new Error(j.error);
        currentUser = j;
        finishLoginUI(); 
-       // 預載
+       // 預載資料
        buildTabs(); 
-       loadSheetData(currentSheetKey);
+       // 預設載入第一張表
+       loadSheetData(currentSheetKey, true);
+       // 預載個別情報資料
+       loadSingleData();
     }).catch(e=>{
        logout();
        initGoogleSignIn(); 
@@ -459,6 +468,14 @@ window.onload = function(){
   }
   
   document.getElementById('logoutBtn').addEventListener('click', logout);
+  
+  // 個別情報事件
+  document.getElementById('btnQuery').addEventListener('click', onSingleQuery);
+  document.getElementById('btnReset').addEventListener('click', onSingleReset);
+  ['selSheet','selArea','selCar'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('change', rebuildSelectOptions);
+  });
 };
 
 /* ============ UI BUILDERS ============ */
@@ -521,7 +538,10 @@ function buildRefreshControls(){
   nowBtn.onclick = () => {
       if(isDashboardVisible()) {
           buildDashboard2(true);
-          refreshAllActiveTodoModals();
+          // 這裡需要確保刷新後會更新頁面
+          // 呼叫 refreshAllActiveTodoModals 或直接 rebuild
+          // 為了簡單直接 rebuild
+          buildDashboard2(true);
           showNotif('已重新整理', false);
       } else {
           showNotif('請先切換至「最新狀態」', true);
@@ -546,33 +566,47 @@ function startClock(){
   }, 1000);
 }
 
-/* ============ CORE LOGIC ============ */
+/* ============ CORE LOGIC (Switch Pane & Refresh Control) ============ */
 function switchPane(targetId){
   if(!currentUser) return;
   
+  // 1. 切換 Tab 狀態
   document.querySelectorAll('.tab-container-styled .main-tab').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.target === targetId);
   });
 
+  // 2. 顯示/隱藏面板
   document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hide'));
   const target = document.getElementById(targetId);
   if(target) target.classList.remove('hide');
 
+  // 3. 控制「更新頻率」按鈕顯示：只在 dashboard2 顯示
+  const refreshBar = document.querySelector('.refresh-bar');
+  if(refreshBar) {
+      refreshBar.style.visibility = (targetId === 'pane-dashboard2') ? 'visible' : 'hidden';
+  }
+
+  // 4. 執行各頁面初始化邏輯
   if(targetId === 'pane-dashboard2'){
       if(!document.getElementById('dashboardTabs2').hasChildNodes()){
           buildDashboardTabs2();
       }
       buildDashboard2(false);
       startDashboardAutoRefresh();
-  } else if (targetId === 'pane-punch') {
+  } 
+  else if (targetId === 'pane-punch') {
       stopDashboardAutoRefresh();
       buildTabs();
-      // ★ 修正：確保切換時載入資料
+      // ★ 關鍵修復：切換過來時載入資料
       loadSheetData(currentSheetKey);
-  } else if (targetId === 'pane-single') {
+  } 
+  else if (targetId === 'pane-single') {
       stopDashboardAutoRefresh();
-      initSinglePage();
-  } else {
+      // ★ 關鍵修復：確保下拉選單有資料
+      if(SINGLE_ITEMS.length === 0) loadSingleData();
+      else rebuildSelectOptions();
+  } 
+  else {
       stopDashboardAutoRefresh();
   }
 }
@@ -586,7 +620,6 @@ function startDashboardAutoRefresh(){
     dashTimer = setInterval(()=>{
         if(isDashboardVisible()){
             buildDashboard2(true);
-            refreshAllActiveTodoModals();
         }
     }, refreshMs);
 }
@@ -629,15 +662,14 @@ function logout(){
     location.reload();
 }
 
-/* ============ DATA FETCHING & RENDERING ============ */
-// ★ 修正：同步「登錄與修改」頁的按鈕配色
+/* ============ DATA FETCHING - PUNCH PAGE ============ */
 function buildTabs(){
     const box = document.getElementById('sheetTabs');
     box.innerHTML = '';
     SHEET_CONFIGS.forEach(cfg => {
         const btn = document.createElement('button');
         const active = (cfg.key===currentSheetKey ? ' active' : '');
-        // 加上 colored-btn 和對應顏色 class
+        // 同步配色
         btn.className = `btn-tab colored-btn ${cfg.colorClass || ''}${active}`;
         btn.textContent = cfg.key;
         btn.onclick = () => {
@@ -670,6 +702,7 @@ async function loadSheetData(key, silent = false){
   }
 }
 
+/* ============ DATA FETCHING - DASHBOARD ============ */
 async function buildDashboard2(silent){
     if(!silent) showLoading();
     
@@ -694,7 +727,6 @@ async function buildDashboard2(silent){
             };
         });
 
-        // ★ 修正：先清空再繪製，避免重複顯示
         dash.innerHTML = '';
         renderDashboardUI();
     } catch(e) { console.error(e); }
@@ -727,7 +759,6 @@ function renderDashboardUI(){
         grid.className = 'stat-grid';
         
         cfg.steps.forEach(step => {
-            // 若是停車位置，顯示專屬卡片
             if(step === '車暫停位置') {
                 return; 
             }
@@ -757,7 +788,6 @@ function renderDashboardUI(){
         });
         section.appendChild(grid);
         
-        // 加入停車位置區塊
         const stopIdx = data.header.indexOf('車暫停位置');
         if(stopIdx >= 0) {
             const locWrap = document.createElement('div');
@@ -786,7 +816,119 @@ function renderDashboardUI(){
     });
 }
 
-/* 渲染打卡頁車輛列表 (沿用您原本的邏輯) */
+/* ============ DATA FETCHING - SINGLE PAGE ============ */
+async function loadSingleData(){
+  SINGLE_ITEMS = [];
+  try {
+      const requests = SHEET_CONFIGS.map(cfg => 
+          fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}&idToken=${idToken}`)
+          .then(r=>r.json())
+          .then(j=> ({ key:cfg.key, cfg, values:j.values||[] }))
+      );
+      const results = await Promise.all(requests);
+      
+      results.forEach(res => {
+          const headIdx = res.values.findIndex(r => r[0]==='編號');
+          if(headIdx < 0) return;
+          const header = res.values[headIdx];
+          const rows = res.values.slice(headIdx+1);
+          rows.forEach(r => {
+              if(r[1] && r[2]) SINGLE_ITEMS.push({ sheetKey: res.key, cfg: res.cfg, header, row: r });
+          });
+      });
+      
+      fillSheetOptions();
+      rebuildSelectOptions();
+  } catch(e) { console.error(e); }
+}
+
+function fillSheetOptions(){
+  const sel = document.getElementById('selSheet');
+  sel.innerHTML = '<option value="">— 全部 Tab —</option>' + 
+    SHEET_CONFIGS.map(s=>`<option value="${s.key}">${s.key}</option>`).join('');
+}
+
+function rebuildSelectOptions(){
+  const selSheet = document.getElementById('selSheet');
+  const selArea = document.getElementById('selArea');
+  const selCar = document.getElementById('selCar');
+  
+  const sheetVal = selSheet.value;
+  const areaVal = selArea.value;
+  const carVal = selCar.value;
+  
+  const filtered = SINGLE_ITEMS.filter(it => 
+      (!sheetVal || it.sheetKey === sheetVal) &&
+      (!areaVal || it.row[1] === areaVal) &&
+      (!carVal || it.row[2] === carVal)
+  );
+  
+  const areas = [...new Set(filtered.map(it => it.row[1]))].sort();
+  const cars = [...new Set(filtered.map(it => it.row[2]))].sort();
+  
+  // 保留原本選擇 (如果還在範圍內)
+  const newAreaHtml = '<option value="">— 全部 區域車次編號 —</option>' + areas.map(a=>`<option value="${a}">${a}</option>`).join('');
+  selArea.innerHTML = newAreaHtml;
+  if(areas.includes(areaVal)) selArea.value = areaVal;
+  
+  const newCarHtml = '<option value="">— 全部 車號 —</option>' + cars.map(c=>`<option value="${c}">${c}</option>`).join('');
+  selCar.innerHTML = newCarHtml;
+  if(cars.includes(carVal)) selCar.value = carVal;
+}
+
+function onSingleQuery(){
+  const sheetVal = document.getElementById('selSheet').value;
+  const areaVal = document.getElementById('selArea').value;
+  const carVal = document.getElementById('selCar').value;
+  
+  const filtered = SINGLE_ITEMS.filter(it => 
+      (!sheetVal || it.sheetKey === sheetVal) &&
+      (!areaVal || it.row[1] === areaVal) &&
+      (!carVal || it.row[2] === carVal)
+  );
+  
+  const box = document.getElementById('singleResults');
+  box.innerHTML = '';
+  
+  if(filtered.length === 0) {
+      box.innerHTML = '<div style="text-align:center; opacity:0.6; grid-column:1/-1">沒有符合的資料</div>';
+      return;
+  }
+  
+  filtered.forEach(it => {
+      const card = document.createElement('div');
+      card.className = 'indiv-card';
+      // 計算最新狀態
+      let status = '尚未開始';
+      for(let i=it.cfg.steps.length-1; i>=0; i--){
+          const st = it.cfg.steps[i];
+          const idx = it.header.indexOf(st);
+          if(it.row[idx] && it.row[idx] !== '—') {
+              status = (st === '車暫停位置') ? `位置：${it.row[idx]}` : st;
+              break;
+          }
+      }
+      
+      card.innerHTML = `
+        <div class="single-line" style="font-weight:bold; color:var(--primary-600)">${it.sheetKey}</div>
+        <div class="single-line" style="font-size:1.2rem; font-weight:800">${it.row[1]}</div>
+        <div class="single-line" style="font-size:1.1rem">${it.row[2]}</div>
+        <div class="single-line" style="margin-top:8px; color:var(--text-muted)">${status}</div>
+      `;
+      card.onclick = () => openDetailModal(it.cfg, it.row, it.header);
+      box.appendChild(card);
+  });
+}
+
+function onSingleReset(){
+    document.getElementById('selSheet').value = '';
+    document.getElementById('selArea').value = '';
+    document.getElementById('selCar').value = '';
+    rebuildSelectOptions();
+    document.getElementById('singleResults').innerHTML = '';
+}
+
+/* ============ RENDER VEHICLES (Punch Page) ============ */
 function renderVehicles(cfg, data) {
   const box = document.getElementById('vehList'); box.innerHTML = '';
   const canWrite = currentUser?.permission === '全功能';
@@ -803,7 +945,6 @@ function renderVehicles(cfg, data) {
     const area=String(row[1]||'').trim(); const car=String(row[2]||'').trim(); 
     const baseRow = headerRowIdx+2+idx;
     
-    // 判斷完成度
     let completed = 0;
     cfg.steps.forEach(st => {
         const colIdx = header.indexOf(st);
@@ -818,7 +959,6 @@ function renderVehicles(cfg, data) {
        <div class="veh-title-sub">${escapeHtml(car)}</div>
     </div>`;
     
-    // 綁定詳細資料點擊
     card.querySelector(':scope > div:first-child').onclick = () => openDetailModal(cfg, row, header);
     card.querySelector(':scope > div:first-child').style.cursor = 'pointer';
 
@@ -836,7 +976,7 @@ function renderVehicles(cfg, data) {
             sel.innerHTML = '<option value="">— 請選擇 —</option>' + STOP_OPTIONS.map(o=>`<option value="${o}">${o}</option>`).join('');
             if(rawVal) sel.value = rawVal;
             if(!canWrite) sel.disabled = true;
-            else sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value, sel);
+            else sel.onchange = () => onStopSelect(cfg, baseRow, header, st, sel.value);
             rowEl.appendChild(sel);
         } else {
             const timeSpan=document.createElement('span'); timeSpan.className='step-time'; 
@@ -848,12 +988,12 @@ function renderVehicles(cfg, data) {
                 if(!rawVal) {
                     const btnPunch=document.createElement('button'); 
                     btnPunch.className='btn btn--primary btn--sm'; btnPunch.textContent='打卡';
-                    btnPunch.onclick = () => onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, null, null, rowEl);
+                    btnPunch.onclick = () => onPunchClick(cfg, baseRow, header, st, timeSpan, btnPunch, rowEl);
                     btnG.appendChild(btnPunch);
                 } else {
                     const btnEdit=document.createElement('button'); 
                     btnEdit.className='btn btn--success btn--sm'; btnEdit.textContent='修改';
-                    btnEdit.onclick = () => onEditTimeClick(cfg, baseRow, header, st, timeSpan, null, null, null, rowEl, displayVal);
+                    btnEdit.onclick = () => onEditTimeClick(cfg, baseRow, header, st, timeSpan, rowEl, displayVal);
                     btnG.appendChild(btnEdit);
                     
                     const btnDel=document.createElement('button'); 
@@ -874,8 +1014,8 @@ function renderVehicles(cfg, data) {
   cards.forEach(c=>box.appendChild(c.el));
 }
 
-/* 功能函式 (保留您的邏輯) */
-async function onStopSelect(cfg, row, header, st, val, el){
+/* ============ ACTIONS & MODALS ============ */
+async function onStopSelect(cfg, row, header, st, val){
     await withLoading(async()=>{
         const col = header.indexOf(st) + 1;
         await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({
@@ -885,7 +1025,7 @@ async function onStopSelect(cfg, row, header, st, val, el){
     }, '更新中...');
 }
 
-async function onPunchClick(cfg, row, header, st, span, btn, e, d, el){
+async function onPunchClick(cfg, row, header, st, span, btn, el){
     const now = getTaipeiHHMMSS();
     await withLoading(async()=>{
         const col = header.indexOf(st) + 1;
@@ -907,11 +1047,79 @@ async function onDeleteTimeClick(cfg, row, header, st, span){
     }, '刪除中...');
 }
 
+function onEditTimeClick(cfg, row, header, st, span, el, oldVal){
+    // 簡易實作：提示輸入時間
+    const newVal = prompt("請輸入新時間 (HH:mm:ss)", oldVal);
+    if(newVal && newVal !== oldVal){
+        withLoading(async()=>{
+            const col = header.indexOf(st) + 1;
+            await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({
+                sheet:cfg.sheet, idToken, writes:[{row, col, value:newVal}]
+            })});
+            await loadSheetData(cfg.key, true);
+        }, '修改中...');
+    }
+}
+
+/* ★★★ 補回：清單彈窗完整功能 ★★★ */
+function openListModal2(sheetKey, step, type, locValue) {
+    const data = ALL_SHEETS[sheetKey];
+    if(!data) return;
+    
+    const list = [];
+    if (type === 'loc') {
+        const c = data.header.indexOf('車暫停位置');
+        data.rows.forEach(r => {
+            if (c >= 0 && String(r[c] || '').trim() === locValue) list.push(r);
+        });
+    } else {
+        const c = data.header.indexOf(step);
+        data.rows.forEach(r => {
+            const v = c >= 0 ? r[c] : '';
+            const hasVal = (v && v !== '—' && v !== '');
+            if ((type === 'done' && hasVal) || (type === 'todo' && !hasVal)) list.push(r);
+        });
+    }
+
+    const box = document.createElement('div');
+    box.className = 'modal';
+    box.innerHTML = `
+      <div class="dash-close">✕</div>
+      <h3 style="font-size:18px;margin:0 0 8px;">${sheetKey}：${step} (${type==='loc'?locValue : (type==='done'?'完成':'未完成')})</h3>
+      <div style="max-height:60vh; overflow:auto; padding-right:6px;">
+        ${list.length ? '' : '<div style="opacity:.7; text-align:center; padding:20px;">無資料</div>'}
+      </div>
+    `;
+    
+    // 綁定關閉
+    box.querySelector('.dash-close').onclick = () => {
+        box.remove();
+        document.querySelector('.modal-backdrop')?.remove();
+        document.body.classList.remove('modal-open');
+    };
+
+    const container = box.querySelector('div[style*="overflow"]');
+    list.forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.innerHTML = `
+          <div class="list-left">
+            <div class="list-title">${r[1]} ${r[2]}</div>
+          </div>
+          <button class="btn btn--secondary btn--sm">詳細</button>
+        `;
+        item.querySelector('button').onclick = () => openDetailModal(data.cfg, r, data.header);
+        container.appendChild(item);
+    });
+
+    openModal(box);
+}
+
 function openDetailModal(cfg, row, header){
     const box = document.createElement('div'); box.className = 'modal';
     const area = row[1]; const car = row[2];
     
-    let html = `<div class="dash-close" onclick="this.parentElement.remove();document.querySelector('.modal-backdrop').remove();document.body.classList.remove('modal-open')">✕</div>
+    let html = `<div class="dash-close">✕</div>
     <h3>${area} ${car}</h3><table class="detail-table">`;
     
     cfg.steps.forEach(st => {
@@ -921,11 +1129,22 @@ function openDetailModal(cfg, row, header){
     });
     html += `</table>`;
     box.innerHTML = html;
+    
+    box.querySelector('.dash-close').onclick = () => {
+        box.remove();
+        document.querySelector('.modal-backdrop')?.remove();
+        document.body.classList.remove('modal-open');
+    };
     openModal(box);
 }
 
 function openModal(el){
     const bg = document.createElement('div'); bg.className='modal-backdrop';
+    bg.onclick = () => {
+        el.remove();
+        bg.remove();
+        document.body.classList.remove('modal-open');
+    };
     document.body.appendChild(bg);
     document.body.appendChild(el);
     document.body.classList.add('modal-open');
@@ -950,11 +1169,6 @@ function hideLoading(){ document.getElementById('loading').classList.remove('sho
 async function withLoading(fn, msg){ showLoading(); try{ await fn(); }finally{ hideLoading(); } }
 const sleep = ms=>new Promise(r=>setTimeout(r,ms));
 function escapeHtml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
-
-/* Individual Page (Stub) */
-function initSinglePage(){
-    // Reuse loadSheetData logic or specific logic
-}
 
 </script>
 </body>

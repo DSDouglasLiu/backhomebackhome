@@ -1185,7 +1185,11 @@ window.onload = function(){
     // ★★★ FIX: 修正登入驗證為 POST 請求 (使用 apiRequest) ★★★
     apiRequest({ action: 'verify' })
     .then(j=>{
-       if(j.error) throw new Error(j.error);
+       if(j.error) {
+           // ★★★ NEW: 記錄伺服器返回的錯誤訊息 ★★★
+           console.error("伺服器錯誤 (驗證):", j.error);
+           throw new Error(j.error);
+       }
        currentUser = j;
        finishLoginUI(); 
        buildTabs(); 
@@ -1193,7 +1197,8 @@ window.onload = function(){
        loadSingleData(true); 
     })
     .catch(e=>{ 
-       console.error("驗證失敗:", e);
+       // ★★★ NEW: 記錄客戶端或連線錯誤 ★★★
+       console.error("驗證連線失敗或客戶端錯誤:", e.message || e);
        document.body.classList.remove('auto-login'); 
        logout(); 
        initGoogleSignIn(); 

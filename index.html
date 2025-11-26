@@ -420,6 +420,17 @@ function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt
 function getTaipeiHHMMSS(){ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date()); }
 function formatSheetTime(v){ if(v&&v.includes('T')) return new Date(v).toLocaleTimeString('zh-TW',{hour12:false}); return v; }
 
+/* ============ API HANDLER (SECURITY FIX) ============ */
+// ★★★ FIX: 統一使用 POST 請求並將 idToken 放入 Body ★★★
+async function apiRequest(payload) {
+    if (!idToken) throw new Error("Authentication token is missing.");
+    return fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken, ...payload })
+    }).then(r => r.json());
+}
+
 /* ============ DATA PARSER (SMART) ============ */
 function parseSheetData(values, cfg) {
     if (!values || values.length === 0) return null;
@@ -573,15 +584,23 @@ function finishLoginUI(){
 }
 function logout(){ localStorage.removeItem('ddcc_user_token'); location.reload(); }
 
-/* ============ API ============ */
+/* ============ API CALLERS ============ */
 async function fetchSheetData(cfg){
-    const r = await fetch(API_BASE + `?action=get&sheet=${encodeURIComponent(cfg.sheet)}&idToken=${idToken}`);
-    const j = await r.json();
+    // ★★★ FIX: 使用 apiRequest 替換 GET 請求 ★★★
+    const j = await apiRequest({
+        action: 'get',
+        sheet: cfg.sheet
+    });
     return { key:cfg.key, cfg, values:j.values||[] };
 }
 async function doUpdate(cfg, row, col, value, callback){
     await withLoading(async()=>{
-        await fetch(API_BASE+'?action=update', {method:'POST', body:JSON.stringify({sheet:cfg.sheet, idToken, writes:[{row, col, value}]})});
+        // ★★★ FIX: 使用 apiRequest 替換 POST + URL參數 ★★★
+        await apiRequest({
+            action: 'update',
+            sheet: cfg.sheet,
+            writes: [{row, col, value}]
+        });
         if(callback) await callback();
     });
 }
@@ -845,13 +864,26 @@ function renderVehicles(data) {
                 const prevCol = prevStep ? header.indexOf(prevStep) : -1;
                 
                 const prevVal = prevCol >= 0 ? String(row[prevCol] || '').trim() : '';
-                // ★★★ 修正: 增加檢查 '—' (破折號)，避免被視為完成 ★★★
+                // ★★★ FIX (Bugfix): 檢查前一步驟是否完成，並排除 '—'。
                 const prevDone = !prevStep || (prevVal !== '' && prevVal !== '—');
 
                 const btnClass = isSecondary ? 'btn btn--warning btn--sm' : 'btn btn--primary btn--sm';
                 const btn = createBtn('打卡', btnClass, ()=>doUpdate(cfg, baseRow, colIdx+1, getTaipeiHHMMSS(), ()=>loadSheetData(cfg.key, true)));
                 
-                if(!prevDone) { btn.disabled=true; btn.style.opacity=0.5; btn.title='前一步驟未完成'; }
+                if(!prevDone) { 
+                    btn.disabled=true; 
+                    btn.style.opacity=0.5; 
+                    btn.title='前一步驟未完成'; 
+                } else if (prevStep === '車暫停位置') {
+                    // ★★★ Bugfix: 專門檢查「車暫停位置」是否已選定 ★★★
+                    const stopVal = String(row[prevCol] || '').trim();
+                    if (stopVal === '' || stopVal === '—' || STOP_OPTIONS.indexOf(stopVal) === -1) {
+                         btn.disabled=true; 
+                         btn.style.opacity=0.5; 
+                         btn.title='請先選定停車位置'; 
+                    }
+                }
+
                 btnG.appendChild(btn);
             } else {
                 const btnEdit=createBtn('修改','btn btn--success btn--sm', ()=>{
@@ -933,7 +965,20 @@ function openListModal2(sheetKey, step, type, locValue) {
                  });
              });
              
-             if(!prevDone) { btnPunch.disabled=true; btnPunch.style.opacity=0.5; btnPunch.title='前一步驟未完成'; }
+             if(!prevDone) { 
+                btnPunch.disabled=true; 
+                btnPunch.style.opacity=0.5; 
+                btnPunch.title='前一步驟未完成'; 
+             } else if (prevStep === '車暫停位置') {
+                // ★★★ Bugfix: 彈窗內也要檢查「車暫停位置」是否已選定 ★★★
+                const stopVal = String(r[prevCol] || '').trim();
+                if (stopVal === '' || stopVal === '—' || STOP_OPTIONS.indexOf(stopVal) === -1) {
+                    btnPunch.disabled=true; 
+                    btnPunch.style.opacity=0.5; 
+                    btnPunch.title='請先選定停車位置'; 
+                }
+             }
+
              btnGroup.appendChild(btnPunch);
         }
 
@@ -1137,8 +1182,8 @@ window.onload = function(){
     document.body.classList.add('auto-login'); 
     showLoading();
 
-    fetch(API_BASE + '?action=verify', { method: 'POST', headers: { 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken }) })
-    .then(r=>r.json())
+    // ★★★ FIX: 修正登入驗證為 POST 請求 (使用 apiRequest) ★★★
+    apiRequest({ action: 'verify' })
     .then(j=>{
        if(j.error) throw new Error(j.error);
        currentUser = j;
@@ -1148,6 +1193,7 @@ window.onload = function(){
        loadSingleData(true); 
     })
     .catch(e=>{ 
+       console.error("驗證失敗:", e);
        document.body.classList.remove('auto-login'); 
        logout(); 
        initGoogleSignIn(); 

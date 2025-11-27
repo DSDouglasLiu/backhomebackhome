@@ -648,7 +648,8 @@ function renderDashboardUI(){
 
         // ★ 拆分進場與退場步驟 ★
         const steps = cfg.steps;
-        const stopIdx = steps.indexOf('車暫停位置');
+        let stopIdx = steps.indexOf('車暫停位置');
+        if (stopIdx === -1) stopIdx = steps.indexOf('車停靠位置');
         
         const inboundSteps = stopIdx >= 0 ? steps.slice(0, stopIdx) : steps; // 進場
         const outboundSteps = stopIdx >= 0 ? steps.slice(stopIdx + 1) : []; // 退場 (排除車暫停位置)
@@ -662,7 +663,8 @@ function renderDashboardUI(){
 
         // 2. 渲染停車位置 (Middle)
         if(stopIdx >= 0) {
-            const stopColIdx = data.header.indexOf('車暫停位置');
+            let stopColIdx = data.header.indexOf('車暫停位置');
+            if (stopColIdx === -1) stopColIdx = data.header.indexOf('車停靠位置');
             const locWrap = document.createElement('div'); locWrap.className = 'loc-grid'; 
             
             const counter = new Map(); STOP_OPTIONS.forEach(n => counter.set(n, 0));
@@ -822,7 +824,7 @@ function renderVehicles(data) {
         const middleEl = document.createElement('div');
         middleEl.className = 'step-middle';
         
-        if (st==='車暫停位置'){
+        if (st==='車暫停位置' || st==='車停靠位置'){
             const sel=document.createElement('select'); sel.className='step-select';
             sel.innerHTML = '<option value="">— 請選擇 —</option>' + STOP_OPTIONS.map(o=>`<option value="${o}">${o}</option>`).join('');
             if(rawVal) sel.value = rawVal;
@@ -837,7 +839,7 @@ function renderVehicles(data) {
 
         const btnG = document.createElement('div'); btnG.className='btn-group';
         
-        if (st !== '車暫停位置' && canWrite) { 
+        if (st !== '車暫停位置' && st !== '車停靠位置' && canWrite) {
              if(!rawVal) {
                 const stepIdx = cfg.steps.indexOf(st);
                 const prevStep = stepIdx>0 ? cfg.steps[stepIdx-1] : null;
@@ -879,7 +881,8 @@ function openListModal2(sheetKey, step, type, locValue) {
     const colIdx = data.header.indexOf(step);
     
     if(type==='loc'){
-        const c = data.header.indexOf('車暫停位置');
+        let c = data.header.indexOf('車暫停位置');
+        if (c === -1) c = data.header.indexOf('車停靠位置');
         data.rows.forEach(item => { if(String(item.data[c]||'').trim() === locValue) list.push(item); });
     } else {
         data.rows.forEach(item => { 
@@ -942,7 +945,7 @@ function openListModal2(sheetKey, step, type, locValue) {
         c.appendChild(d);
     });
     
-    if (step === '車暫停位置' && type === 'loc' && currentUser?.permission === '全功能') {
+    if ((step === '車暫停位置' || step === '車停靠位置') && type === 'loc' && currentUser?.permission === '全功能') {
         const stepIdx = data.cfg.steps.indexOf(step);
         const prevStep = stepIdx > 0 ? data.cfg.steps[stepIdx - 1] : null;
         

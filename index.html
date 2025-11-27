@@ -878,13 +878,18 @@ function openListModal2(sheetKey, step, type, locValue) {
     const data = ALL_SHEETS[sheetKey];
     if(!data) return;
     const list = [];
+    
+    // 1. 取得欄位索引 (如果 step 對應不到 header，會回傳 -1，但在這裡通常是正確的)
     const colIdx = data.header.indexOf(step);
     
     if(type==='loc'){
+        // 如果是地點清單，要同時檢查兩種可能的停車欄位名稱
         let c = data.header.indexOf('車暫停位置');
         if (c === -1) c = data.header.indexOf('車停靠位置');
+        
         data.rows.forEach(item => { if(String(item.data[c]||'').trim() === locValue) list.push(item); });
     } else {
+        // 如果是完成/未完成清單
         data.rows.forEach(item => { 
             const v = colIdx>=0 ? String(item.data[colIdx]||'').trim() : ''; 
             const ok = (v && v !== '—' && v !== ''); 
@@ -909,20 +914,20 @@ function openListModal2(sheetKey, step, type, locValue) {
 
     list.forEach(item => {
         const r = item.data;
-        // ★★★ 修正：使用預存變數 ★★★
         const { area, car } = item;
         const d = document.createElement('div'); d.className='list-item';
         d.innerHTML = `<div class="list-left"><div class="list-title">${area} ${car}</div></div>`;
         
         const btnGroup = document.createElement('div');
         btnGroup.style.display='flex'; btnGroup.style.gap='8px';
+
+        // 2. 修正打卡按鈕顯示條件：這裡最容易出錯，務必確保判斷式正確
         if(type === 'todo' && step !== '車暫停位置' && step !== '車停靠位置' && canWrite) {
              const stepIdx = data.cfg.steps.indexOf(step);
              const prevStep = stepIdx>0 ? data.cfg.steps[stepIdx-1] : null;
              const prevCol = prevStep ? data.header.indexOf(prevStep) : -1;
              
              const prevVal = prevCol >= 0 ? String(r[prevCol] || '').trim() : '';
-             // ★★★ 修正: 增加檢查 '—' (破折號) ★★★
              const prevDone = !prevStep || (prevVal !== '' && prevVal !== '—');
              
              const btnPunch = createBtn('打卡', 'btn btn--primary btn--sm', async () => {
@@ -944,13 +949,14 @@ function openListModal2(sheetKey, step, type, locValue) {
         c.appendChild(d);
     });
     
+    // 3. 修正底部新增車輛區塊：支援兩種欄位名稱
     if ((step === '車暫停位置' || step === '車停靠位置') && type === 'loc' && currentUser?.permission === '全功能') {
         const stepIdx = data.cfg.steps.indexOf(step);
         const prevStep = stepIdx > 0 ? data.cfg.steps[stepIdx - 1] : null;
         
         if (prevStep) {
             const prevColIdx = data.header.indexOf(prevStep);
-            const stopColIdx = data.header.indexOf(step);
+            const stopColIdx = data.header.indexOf(step); // 直接使用當前步驟名稱對應的索引
             
             const candidates = data.rows.filter(item => {
                 const r = item.data;
@@ -976,7 +982,6 @@ function openListModal2(sheetKey, step, type, locValue) {
                 sel.innerHTML = '<option value="">請選擇車輛...</option>';
                 
                 candidates.forEach(c => {
-                    // ★★★ 修正：使用預存變數 ★★★
                     const opt = document.createElement('option');
                     opt.value = c.rowIndex; 
                     opt.textContent = `${c.area} ${c.car}`;

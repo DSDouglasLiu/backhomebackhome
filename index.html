@@ -677,7 +677,7 @@ function renderDashboardUI(){
             STOP_OPTIONS.forEach(name => {
                 const pill = document.createElement('div'); pill.className = 'loc-pill';
                 pill.innerHTML = `<div class="loc-name">${name}</div><div class="loc-num">${counter.get(name)||0}</div><div class="stat-label">台</div>`;
-                pill.addEventListener('click', () => openListModal2(cfg.key, '車暫停位置', 'loc', name));
+                pill.addEventListener('click', () => (cfg.key, '車暫停位置', 'loc', name));
                 locWrap.appendChild(pill);
             });
             section.appendChild(locWrap);
@@ -715,8 +715,8 @@ function renderStatCard(step, data, container, cfg) {
     // ★★★ 修改：方框去背 ★★★
     card.innerHTML = `<div class="stat-head">${step}</div><div class="stat-row"></div>`;
     const row = card.querySelector('.stat-row');
-    row.appendChild(createPill(done, '完成', 'done', () => openListModal2(cfg.key, step, 'done')));
-    row.appendChild(createPill(todo, '未完成', 'todo', () => openListModal2(cfg.key, step, 'todo')));
+    row.appendChild(createPill(done, '完成', 'done', () => (cfg.key, step, 'done')));
+    row.appendChild(createPill(todo, '未完成', 'todo', () => (cfg.key, step, 'todo')));
     container.appendChild(card);
 }
 
@@ -916,8 +916,7 @@ function openListModal2(sheetKey, step, type, locValue) {
         
         const btnGroup = document.createElement('div');
         btnGroup.style.display='flex'; btnGroup.style.gap='8px';
-
-        if(type === 'todo' && step !== '車暫停位置' && canWrite) {
+        if(type === 'todo' && step !== '車暫停位置' && step !== '車停靠位置' && canWrite) {
              const stepIdx = data.cfg.steps.indexOf(step);
              const prevStep = stepIdx>0 ? data.cfg.steps[stepIdx-1] : null;
              const prevCol = prevStep ? data.header.indexOf(prevStep) : -1;
@@ -1073,7 +1072,7 @@ function onSingleQuery(){
       let status = '尚未開始';
       for(let i=it.cfg.steps.length-1; i>=0; i--){
           const idx = it.header.indexOf(it.cfg.steps[i]);
-          if(it.row[idx] && it.row[idx] !== '—') { status = (it.cfg.steps[i] === '車暫停位置') ? `位置：${it.row[idx]}` : it.cfg.steps[i]; break; }
+          if(it.row[idx] && it.row[idx] !== '—') { status = (it.cfg.steps[i] === '車暫停位置' || it.cfg.steps[i] === '車停靠位置') ? `位置：${it.row[idx]}` : it.cfg.steps[i]; break; }
       }
       // ★★★ 修正：顯示使用預存變數 ★★★
       card.innerHTML = `<div class="single-line" style="color:var(--primary-600)">${it.sheetKey}</div><div class="single-line" style="font-size:1.2rem;font-weight:800">${it.area}</div><div class="single-line">${it.car}</div><div class="single-line" style="color:var(--text-muted)">${status}</div>`;

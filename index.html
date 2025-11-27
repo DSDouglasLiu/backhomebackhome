@@ -839,22 +839,46 @@ function renderVehicles(data) {
         const middleEl = document.createElement('div');
         middleEl.className = 'step-middle';
         
-        if (st==='車暫停位置' || st==='車停靠位置'){
-            const sel=document.createElement('select'); sel.className='step-select';
-            sel.innerHTML = '<option value="">— 請選擇 —</option>' + STOP_OPTIONS.map(o=>`<option value="${o}">${o}</option>`).join('');
-            if(rawVal) sel.value = rawVal;
-            sel.disabled = !canWrite;
-            if(canWrite) sel.addEventListener('change', () => doUpdate(cfg, baseRow, colIdx+1, sel.value, () => loadSheetData(cfg.key, true)));
-            middleEl.appendChild(sel);
-        } else {
-            const timeSpan=document.createElement('span'); timeSpan.className='step-time'; timeSpan.textContent=rawVal?formatSheetTime(rawVal):'—';
+        // ============ 停車位置欄位（車暫停位置 或 車停靠位置） ============
+if (st === '車暫停位置' || st === '車停靠位置') {
+    const sel = document.createElement('select');
+    sel.className = 'step-select';
+    sel.innerHTML = '<option value="">— 請選擇 —</option>' + STOP_OPTIONS.map(o => `<option value="${o}">${o}</option>`).join('');
+    if (rawVal) sel.value = rawVal;
+
+    // 找出前一個步驟（例如「車前往排車隊」）
+    const stepIdx = cfg.steps.indexOf(st);
+    const prevStep = stepIdx > 0 ? cfg.steps[stepIdx - 1] : null;
+    const prevCol = prevStep ? header.indexOf(prevStep) : -1;
+    const prevVal = prevCol >= 0 ? String(row[prevCol] || '').trim() : '';
+    const prevDone = prevVal !== '' && prevVal !== '—';
+
+    // 如果前一步還沒完成，就鎖住下拉選單
+    if (!prevDone || !canWrite) {
+        sel.disabled = true;
+        sel.style.opacity = '0.5';
+        sel.title = prevStep ? '請先完成「' + prevStep + '」' : '無權限';
+    } else {
+        sel.disabled = false;
+        sel.addEventListener('change', () => {
+            doUpdate(cfg, baseRow, colIdx + 1, sel.value, () => loadSheetData(cfg.key, true));
+        });
+    }
+
+    middleEl.appendChild(sel);
+    continue; // 很重要！避免下面又加一次打卡按鈕
+}
+                } else {
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'step-time';
+            timeSpan.textContent = rawVal ? formatSheetTime(rawVal) : '—';
             middleEl.appendChild(timeSpan);
         }
         rowEl.appendChild(middleEl);
 
         const btnG = document.createElement('div'); btnG.className='btn-group';
         
-        if (st !== '車暫停位置' && st !== '車停靠位置' && canWrite) {
+        if ((st !== '車暫停位置' && st !== '車停靠位置') && canWrite) {
              if(!rawVal) {
                 const stepIdx = cfg.steps.indexOf(st);
                 const prevStep = stepIdx>0 ? cfg.steps[stepIdx-1] : null;

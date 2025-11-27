@@ -677,7 +677,7 @@ function renderDashboardUI(){
             STOP_OPTIONS.forEach(name => {
                 const pill = document.createElement('div'); pill.className = 'loc-pill';
                 pill.innerHTML = `<div class="loc-name">${name}</div><div class="loc-num">${counter.get(name)||0}</div><div class="stat-label">台</div>`;
-                pill.addEventListener('click', () => (cfg.key, '車暫停位置', 'loc', name));
+                pill.addEventListener('click', () => openListModal2(cfg.key, steps[stopIdx], 'loc', name));
                 locWrap.appendChild(pill);
             });
             section.appendChild(locWrap);

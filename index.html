@@ -630,63 +630,78 @@ async function buildDashboard2(silent, force = false){
 }
 function renderDashboardUI(){
     const container = document.getElementById('dashboard2');
-    container.innerHTML = ''; // Ensure clean slate
+    container.innerHTML = ''; // 清空
+
     SHEET_CONFIGS.forEach(cfg => {
         if(currentDashFilter2 !== 'ALL' && currentDashFilter2 !== cfg.key) return;
         const data = ALL_SHEETS[cfg.key];
         if(!data || !data.rows.length) return;
 
-        const section = document.createElement('section'); section.className = 'card';
+        const section = document.createElement('section');
+        section.className = 'card';
         section.style.borderTop = `4px solid var(--primary-600)`;
-        if(cfg.colorClass === 'theme-teal') section.style.borderTopColor = '#059669';
-        if(cfg.colorClass === 'theme-orange') section.style.borderTopColor = '#d97706';
-        if(cfg.colorClass === 'theme-purple') section.style.borderTopColor = '#7c3aed';
-        if(cfg.colorClass === 'theme-pink') section.style.borderTopColor = '#db2777';
+        if(cfg.colorClass === 'theme-teal')  section.style.borderTopColor = '#059669';
+        if(cfg.colorClass === 'theme-orange')section.style.borderTopColor = '#d97706';
+        if(cfg.colorClass === 'theme-purple')section.style.borderTopColor = '#7c3aed';
+        if(cfg.colorClass === 'theme-pink')  section.style.borderTopColor = '#db2777';
 
-        const title = document.createElement('h3'); title.textContent = cfg.key; title.style.margin = '0 0 16px 0';
+        const title = document.createElement('h3');
+        title.textContent = cfg.key;
+        title.style.margin = '0 0 16px 0';
         section.appendChild(title);
 
-        // ★ 拆分進場與退場步驟 ★
+        // 拆分步驟：找出「車暫停位置」或「車停靠位置」是第幾步
         const steps = cfg.steps;
         let stopIdx = steps.indexOf('車暫停位置');
         if (stopIdx === -1) stopIdx = steps.indexOf('車停靠位置');
-        
-        const inboundSteps = stopIdx >= 0 ? steps.slice(0, stopIdx) : steps; // 進場
-        const outboundSteps = stopIdx >= 0 ? steps.slice(stopIdx + 1) : []; // 退場 (排除車暫停位置)
 
-        // 1. 渲染進場 (Top)
+        const inboundSteps  = stopIdx >= 0 ? steps.slice(0, stopIdx) : steps;
+        const outboundSteps = stopIdx >= 0 ? steps.slice(stopIdx + 1) : [];
+
+        // 1. 進場步驟（上方）
         if(inboundSteps.length > 0) {
-            const grid = document.createElement('div'); grid.className = 'stat-grid';
+            const grid = document.createElement('div');
+            grid.className = 'stat-grid';
             inboundSteps.forEach(step => renderStatCard(step, data, grid, cfg));
             section.appendChild(grid);
         }
 
-        // 2. 渲染停車位置 (Middle)
+        // 2. 停車位置（中間） ← 這邊最重要
         if(stopIdx >= 0) {
-            let stopColIdx = data.header.indexOf('車暫停位置');
-            if (stopColIdx === -1) stopColIdx = data.header.indexOf('車停靠位置');
-            const locWrap = document.createElement('div'); locWrap.className = 'loc-grid'; 
-            
-            const counter = new Map(); STOP_OPTIONS.forEach(n => counter.set(n, 0));
-            data.rows.forEach(item => { 
-                const r = item.data;
-                const v = String(r[stopColIdx] || '').trim(); 
-                if(counter.has(v)) counter.set(v, counter.get(v)+1); 
+            const actualStopField = steps[stopIdx];          // 一定是「車暫停位置」或「車停靠位置」
+            const stopColIdx = data.header.indexOf(actualStopField);
+
+            const locWrap = document.createElement('div');
+            locWrap.className = 'loc-grid';
+
+            const counter = new Map();
+            STOP_OPTIONS.forEach(n => counter.set(n, 0));
+
+            data.rows.forEach(item => {
+                const v = String(item.data[stopColIdx] || '').trim();
+                if(counter.has(v)) counter.set(v, counter.get(v) + 1);
             });
-            
+
             STOP_OPTIONS.forEach(name => {
-                const pill = document.createElement('div'); pill.className = 'loc-pill';
-                pill.innerHTML = `<div class="loc-name">${name}</div><div class="loc-num">${counter.get(name)||0}</div><div class="stat-label">台</div>`;
-                pill.addEventListener('click', () => openListModal2(cfg.key, steps[stopIdx], 'loc', name));
+                const pill = document.createElement('div');
+                pill.className = 'loc-pill';
+                pill.innerHTML = `
+                    <div class="loc-name">${name}</div>
+                    <div class="loc-num">${counter.get(name)||0}</div>
+                    <div class="stat-label">台</div>
+                `;
+                // 這裡一定要傳正確傳欄位名稱進去，否則 modal 會找不到欄位
+                pill.addEventListener('click', () => openListModal2(cfg.key, actualStopField, 'loc', name));
                 locWrap.appendChild(pill);
             });
+
             section.appendChild(locWrap);
         }
 
-        // 3. 渲染退場 (Bottom)
+        // 3. 退場步驟（下方）
         if(outboundSteps.length > 0) {
-            const grid = document.createElement('div'); grid.className = 'stat-grid';
-            // grid.style.marginTop = '16px'; // 稍微分開
+            const grid = document.createElement('div');
+            grid.className = 'stat-grid';
             outboundSteps.forEach(step => renderStatCard(step, data, grid, cfg));
             section.appendChild(grid);
         }
@@ -715,8 +730,8 @@ function renderStatCard(step, data, container, cfg) {
     // ★★★ 修改：方框去背 ★★★
     card.innerHTML = `<div class="stat-head">${step}</div><div class="stat-row"></div>`;
     const row = card.querySelector('.stat-row');
-    row.appendChild(createPill(done, '完成', 'done', () => (cfg.key, step, 'done')));
-    row.appendChild(createPill(todo, '未完成', 'todo', () => (cfg.key, step, 'todo')));
+    row.appendChild(createPill(done, '完成', 'done', () => openListModal2(cfg.key, step, 'done')));
+    row.appendChild(createPill(todo, '未完成', 'todo', () => openListModal2(cfg.key, step, 'todo')));
     container.appendChild(card);
 }
 

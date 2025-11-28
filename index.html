@@ -424,7 +424,7 @@ function parseSheetData(values, cfg) {
     if (!values || values.length === 0) return null;
    
     let headIdx = -1;
-    for (let i = 0; i < Math.min(values.length, 15); i++) {
+    for (let i = 0; i < Math.min(values.length, 15); i++) {  // 多看幾行
         const rowStr = values[i].join(' ').toLowerCase();
         if (rowStr.includes('車號') && (rowStr.includes('區域') || rowStr.includes('編號'))) {
             headIdx = i;
@@ -440,23 +440,25 @@ function parseSheetData(values, cfg) {
     if (areaIdx === -1 || carIdx === -1) return null;
    
     const validItems = [];
-    const seen = new Set();  // 關鍵！去重神器！
+    const seen = new Set();  // 去重神器
 
-    for(let i = headIdx + 1; i < values.length; i++) {
+    for (let i = headIdx + 1; i < values.length; i++) {
         const row = values[i];
         const area = String(row[areaIdx] || '').trim();
         const car = String(row[carIdx] || '').trim();
        
-        // 加強條件：避免標題行或空白行被誤抓
-        if (area && car && !area.includes('區域') && !area.includes('編號') && !car.includes('車號')) {
-            const key = `${area}-${car}`;  // 唯一鍵值
+        // 嚴格判斷：有區域+車號 + 不是標題行
+        if (area && car && 
+            !area.includes('區域') && !area.includes('編號') && 
+            !car.includes('車號')) {
+            const key = `${area}-${car}`;  // 唯一鍵
             if (!seen.has(key)) {
                 seen.add(key);
                 let completed = 0;
                 cfg.steps.forEach(st => {
                     const colIdx = header.indexOf(st);
                     const val = (colIdx !== -1) ? String(row[colIdx]||'').trim() : '';
-                    if(val && val !== '—') completed++;
+                    if (val && val !== '—') completed++;
                 });
                 validItems.push({
                     data: row,

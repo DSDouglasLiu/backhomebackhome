@@ -422,58 +422,62 @@ function formatSheetTime(v){ if(v&&v.includes('T')) return new Date(v).toLocaleT
 /* ============ DATA PARSER (SMART) ============ */
 function parseSheetData(values, cfg) {
     if (!values || values.length === 0) return null;
-    
+   
     let headIdx = -1;
-    for (let i = 0; i < Math.min(values.length, 10); i++) {
+    for (let i = 0; i < Math.min(values.length, 15); i++) {
         const rowStr = values[i].join(' ').toLowerCase();
-        if (rowStr.includes('車號') || rowStr.includes('編號')) {
+        if (rowStr.includes('車號') && (rowStr.includes('區域') || rowStr.includes('編號'))) {
             headIdx = i;
             break;
         }
     }
-    if (headIdx === -1) return null; 
-    
+    if (headIdx === -1) return null;
+   
     const header = values[headIdx].map(s => String(s).trim());
-    
-    let areaIdx = header.findIndex(c => c.includes('區域'));
-    if (areaIdx === -1) areaIdx = header.findIndex(c => c.includes('編號')); 
+   
+    let areaIdx = header.findIndex(c => c.includes('區域') || c.includes('編號'));
     const carIdx = header.findIndex(c => c.includes('車號'));
-    
+    if (areaIdx === -1 || carIdx === -1) return null;
+   
     const validItems = [];
-    
+    const seen = new Set();  // 關鍵！去重神器！
+
     for(let i = headIdx + 1; i < values.length; i++) {
         const row = values[i];
-        // ★★★ 修正: 在 Parse 階段就處理 area/car，減少重複操作 ★★★
         const area = String(row[areaIdx] || '').trim();
         const car = String(row[carIdx] || '').trim();
-        
-        if (area && car) {
-            let completed = 0;
-            cfg.steps.forEach(st => {
-                const colIdx = header.indexOf(st);
-                const val = (colIdx !== -1) ? String(row[colIdx]||'').trim() : '';
-                if(val && val !== '—') completed++;
-            });
-
-            validItems.push({
-                data: row,
-                rowIndex: i + 1, 
-                areaIdx,
-                carIdx,
-                area, // New: 預存區域
-                car,  // New: 預存車號
-                completed 
-            });
+       
+        // 加強條件：避免標題行或空白行被誤抓
+        if (area && car && !area.includes('區域') && !area.includes('編號') && !car.includes('車號')) {
+            const key = `${area}-${car}`;  // 唯一鍵值
+            if (!seen.has(key)) {
+                seen.add(key);
+                let completed = 0;
+                cfg.steps.forEach(st => {
+                    const colIdx = header.indexOf(st);
+                    const val = (colIdx !== -1) ? String(row[colIdx]||'').trim() : '';
+                    if(val && val !== '—') completed++;
+                });
+                validItems.push({
+                    data: row,
+                    rowIndex: i + 1,
+                    areaIdx,
+                    carIdx,
+                    area,
+                    car,
+                    completed
+                });
+            }
         }
     }
-    
-    return { 
-        cfg, 
-        header, 
-        rows: validItems, 
+   
+    return {
+        cfg,
+        header,
+        rows: validItems,
         headIdx,
-        areaIdx, 
-        carIdx 
+        areaIdx,
+        carIdx
     };
 }
 
